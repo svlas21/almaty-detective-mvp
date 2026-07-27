@@ -1,0 +1,535 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import PanoramaViewer from "@/components/PanoramaViewer";
+import EvidenceSearch from "@/components/EvidenceSearch";
+import MapView from "@/components/MapView";
+import Sidebar, { SidebarTab } from "@/components/Sidebar";
+import Loader from "@/components/Loader";
+import SuspectsList, { SuspectListItem } from "@/components/SuspectsList";
+import ExpertsList from "@/components/ExpertsList";
+import SuspectDetail from "@/components/SuspectDetail";
+import IntroScreen from "@/components/IntroScreen";
+
+const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
+
+interface UnlockedLocation {
+  id: string;
+  name: string;
+  image_url: string | null;
+  map_pos_x: number;
+  map_pos_y: number;
+  preview_image_url: string | null;
+  short_description: string | null;
+  is_searchable: boolean;
+  unlocked: true;
+}
+
+interface LockedLocation {
+  id: string;
+  map_pos_x: number;
+  map_pos_y: number;
+  unlocked: false;
+}
+
+type MapLocation = UnlockedLocation | LockedLocation;
+
+interface LogEntry {
+  type: string;
+  text: string;
+  at: string;
+}
+
+interface CollectedEvidenceItem {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface StateResponse {
+  session: { elapsed_minutes: number; status: string; intro_seen: boolean };
+  location: {
+    id: string;
+    name: string;
+    image_url: string | null;
+    short_description: string | null;
+    is_searchable: boolean;
+  } | null;
+  allLocations: MapLocation[];
+  allSuspects: SuspectListItem[];
+  experts: SuspectListItem[];
+  motherUnlocked: boolean;
+  mapImageUrl: string | null;
+  collectedEvidence: CollectedEvidenceItem[];
+  log: LogEntry[];
+}
+
+interface EvidencePoolItem {
+  id: string;
+  name: string;
+}
+
+function formatTime(minutes: number) {
+  const h = Math.floor(minutes / 60).toString().padStart(2, "0");
+  const m = (minutes % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+export default function GameScreen() {
+  const { sessionId } = useParams<{ sessionId: string }>();
+  const [state, setState] = useState<StateResponse | null>(null);
+  const [pool, setPool] = useState<EvidencePoolItem[]>([]);
+  const [triedIds, setTriedIds] = useState<Set<string>>(new Set());
+  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<SidebarTab>("map");
+  const [mapView, setMapView] = useState<"map" | "location">("map");
+  const [locationPhase, setLocationPhase] = useState<"hub" | "warning" | "searching" | "timeout">("hub");
+  const [secondsLeft, setSecondsLeft] = useState(40);
+  const [panoramaReady, setPanoramaReady] = useState(false);
+  const [selectedSuspect, setSelectedSuspect] = useState<SuspectListItem | null>(null);
+  const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string } | null>(null);
+  const [suspectConfession, setSuspectConfession] = useState<string | null>(null);
+  const [presentingEvidenceId, setPresentingEvidenceId] = useState<string | null>(null);
+
+  async function loadState(options?: { silent?: boolean }) {
+    if (!options?.silent) setLoading(true);
+    const res = await fetch(`/api/games/${sessionId}/state`);
+    let data: StateResponse | null = null;
+    if (res.ok) {
+      data = await res.json();
+      setState(data);
+    }
+    if (!options?.silent) setLoading(false);
+    return data;
+  }
+
+  async function loadPool() {
+    const res = await fetch(`/api/games/${sessionId}/evidence/pool`);
+    if (res.ok) {
+      const data = await res.json();
+      setPool(data.pool);
+    }
+  }
+
+  useEffect(() => {
+    if (sessionId) {
+      loadState();
+      loadPool();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (locationPhase !== "searching" || !panoramaReady) return;
+    if (secondsLeft <= 0) {
+      setLocationPhase("timeout");
+      return;
+    }
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [locationPhase, secondsLeft, panoramaReady]);
+
+  async function visitLocation(locationId: string) {
+    if (state?.location?.id !== locationId) {
+      await fetch(`/api/games/${sessionId}/travel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId }),
+      });
+    }
+    setTriedIds(new Set());
+    setLastResult(null);
+    setMapView("location");
+    setLocationPhase("hub");
+    await loadState({ silent: true });
+  }
+
+  function startSearch() {
+    setLocationPhase("searching");
+    setSecondsLeft(40);
+    setPanoramaReady(false);
+  }
+
+  async function guessEvidence(evidenceId: string) {
+    const guessedItem = pool.find((p) => p.id === evidenceId);
+    const res = await fetch(`/api/games/${sessionId}/evidence/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evidenceId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setLastResult({
+        name: guessedItem?.name ?? "",
+        text: data.relevant ? data.description : data.message,
+        relevant: data.relevant,
+      });
+      setTriedIds((prev) => new Set(prev).add(evidenceId));
+      loadState({ silent: true });
+    }
+  }
+
+  async function openSuspect(person: SuspectListItem) {
+    setSuspectReaction(null);
+    setSuspectConfession(null);
+    setSelectedSuspect(person);
+    await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
+    await loadState({ silent: true });
+  }
+
+  async function presentEvidenceToSuspect(evidence: CollectedEvidenceItem) {
+    if (!selectedSuspect) return;
+    setPresentingEvidenceId(evidence.id);
+    const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/present`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evidenceId: evidence.id }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
+      if (data.confession) setSuspectConfession(data.confession);
+      await loadState({ silent: true });
+    }
+    setPresentingEvidenceId(null);
+  }
+
+  async function handleIntroFinish(characterId: string) {
+    await fetch(`/api/games/${sessionId}/intro/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterId }),
+    });
+    // После брифинга игрок сразу внутри ГУВД (хаб), а не на карте дела —
+    // тот же экран, что открывается кнопкой "Выехать на место".
+    setMapView("location");
+    setLocationPhase("hub");
+    await loadState({ silent: true });
+  }
+
+  if (loading) return <Loader />;
+  if (!state) return <div className="container">Партия не найдена.</div>;
+
+  if (!state.session.intro_seen) {
+    const introCharacter = state.allSuspects.find(
+      (s) => s.unlocked && s.name === "Азамат Нурланович"
+    );
+    return (
+      <div className="container">
+        {introCharacter && (
+          <IntroScreen character={introCharacter} onFinish={() => handleIntroFinish(introCharacter.id)} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="game-shell">
+      <Sidebar active={tab} onChange={setTab} />
+
+      <div className="game-main">
+        <div className="timer-badge">
+          <div className="value">{formatTime(state.session.elapsed_minutes)}</div>
+          <div className="label">игрового времени</div>
+        </div>
+
+        {tab === "map" && mapView === "map" && (
+          <div className="card">
+            <h2>Карта дела</h2>
+            {state.mapImageUrl ? (
+              <MapView
+                imageUrl={state.mapImageUrl}
+              points={state.allLocations.map((l) => ({
+                  id: l.id,
+                  name: l.unlocked ? l.name : "???",
+                  x: l.map_pos_x,
+                  y: l.map_pos_y,
+                  previewImageUrl: l.unlocked ? l.preview_image_url : null,
+                  shortDescription: l.unlocked ? l.short_description : null,
+                  unlocked: l.unlocked,
+                }))}
+                onVisit={visitLocation}
+              />
+            ) : (
+              <p className="muted">Карта дела ещё не загружена.</p>
+            )}
+          </div>
+        )}
+
+        {tab === "map" && mapView === "location" && locationPhase === "hub" && (
+          <>
+            <div className="card">
+              <h2>{state.location?.name}</h2>
+              {state.location?.short_description && (
+                <p className="muted">{state.location.short_description}</p>
+              )}
+            </div>
+
+            <div className="people-sheet-tab-row">
+              <span className="people-sheet-tab">Место · {state.location?.name}</span>
+            </div>
+            <div className="people-sheet-card">
+              {(() => {
+                const peopleHere = state.allSuspects.filter(
+                  (person) => person.unlocked === true && person.location_id === state.location?.id
+                );
+                return (
+                  <>
+                    <div className="people-sheet-header">
+                      <span>
+                        Люди здесь <span className="people-sheet-count">· {peopleHere.length}</span>
+                      </span>
+                    </div>
+
+                    {peopleHere.length === 0 ? (
+                      <p className="muted">Здесь никого не найдено.</p>
+                    ) : (
+                      <div className="people-slip-list">
+                        {peopleHere.map((person) => {
+                          const isValentinaLocked =
+                            person.name === "Валентина Сартакова" && !state.motherUnlocked;
+                          if (isValentinaLocked) {
+                            return (
+                              <div key={person.id} className="people-slip people-slip-locked">
+                                <div className="people-slip-info">
+                                  <p className="people-slip-name">{person.name}</p>
+                                  <p className="people-slip-role">
+                                    Вернитесь после разговора с Алией Сартаковой
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          const interviewLabel = person.is_suspect ? "Допросить →" : "Говорить →";
+                          return (
+                            <div
+                              key={person.id}
+                              className="people-slip"
+                              onClick={() => {
+                                setTab("suspects");
+                                openSuspect(person);
+                              }}
+                            >
+                              <div className="people-slip-photo-wrap">
+                                <div className="people-slip-clip" />
+                                {person.portrait_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={person.portrait_url}
+                                    alt={person.name ?? ""}
+                                    className="people-slip-photo"
+                                  />
+                                ) : (
+                                  <div className="people-slip-photo-fallback">
+                                    {(person.name ?? "")
+                                      .split(" ")
+                                      .filter(Boolean)
+                                      .slice(0, 2)
+                                      .map((part) => part[0])
+                                      .join("")
+                                      .toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="people-slip-info">
+                                <p className="people-slip-name">{person.name}</p>
+                                {person.role && <p className="people-slip-role">{person.role}</p>}
+                              </div>
+
+                              <div className="people-slip-side">
+                                {person.is_suspect && person.viewed && (
+                                  <span className="people-slip-stamp people-slip-stamp-interviewed">
+                                    Опрошен
+                                  </span>
+                                )}
+                                {person.is_suspect && !person.viewed && (
+                                  <span className="people-slip-stamp people-slip-stamp-not-interviewed">
+                                    Не опрошен
+                                  </span>
+                                )}
+                                <span className="people-slip-cta">{interviewLabel}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="people-sheet-actions">
+                      {state.location?.is_searchable && (
+                        <button className="people-sheet-search-btn" onClick={startSearch}>
+                          🔍 Обыскать место
+                        </button>
+                      )}
+                      <button className="people-sheet-map-btn" onClick={() => setMapView("map")}>
+                        🗺 Карта Алматы
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </>
+        )}
+
+        {tab === "map" && mapView === "location" && locationPhase === "warning" && (
+          <div className="card" style={{ textAlign: "center" }}>
+            <h2>⏱ У вас есть 40 секунд на осмотр места преступления</h2>
+            <p className="muted">Действуйте быстро и внимательно.</p>
+            <div style={{ marginTop: 16, display: "flex", gap: 12, justifyContent: "center" }}>
+              <button className="btn" onClick={startSearch}>🔍 Обыскать</button>
+              <button className="map-return-btn" onClick={() => setMapView("map")}>
+                🗺 Карта Алматы
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "map" && mapView === "location" && locationPhase === "searching" && (
+          <>
+            <button className="map-return-btn" style={{ marginBottom: 16 }} onClick={() => setMapView("map")}>
+              🗺 Карта Алматы
+            </button>
+
+            <div className="timer-badge" style={{ position: "static", marginBottom: 12, display: "inline-block" }}>
+              <div className="value">{panoramaReady ? `${secondsLeft}с` : "…"}</div>
+              <div className="label">{panoramaReady ? "осталось на осмотр" : "загружаем панораму"}</div>
+            </div>
+
+            <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              <h3>Осмотр места «{state.location?.name}»</h3>
+              <PanoramaViewer
+                imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
+                onReady={() => setPanoramaReady(true)}
+              />
+            </div>
+          </>
+        )}
+
+        {tab === "map" && mapView === "location" && locationPhase === "timeout" && (
+          <div className="card" style={{ textAlign: "center" }}>
+            <h2>⏱ Время осмотра истекло</h2>
+            <p className="muted">Вы можете вернуться и осмотреть место ещё раз.</p>
+
+            <EvidenceSearch pool={pool} onGuess={guessEvidence} triedIds={triedIds} />
+
+            {lastResult && (
+              <div className="card" style={{ borderColor: lastResult.relevant ? "#4caf7d" : undefined }}>
+                <strong>{lastResult.name}</strong>
+                <p style={{ marginTop: 8 }}>{lastResult.text}</p>
+              </div>
+            )}
+
+            <div style={{ marginTop: 16, display: "flex", gap: 12, justifyContent: "center" }}>
+              <button className="btn" onClick={startSearch}>🔍 Осмотреть снова</button>
+              <button className="map-return-btn" onClick={() => setMapView("map")}>
+                🗺 Карта Алматы
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "suspects" && (
+          selectedSuspect ? (
+            <>
+              <button
+                className="btn"
+                style={{ background: "#384050", marginBottom: 16 }}
+                onClick={() => setSelectedSuspect(null)}
+              >
+                ← Назад к списку
+              </button>
+              <SuspectDetail
+                suspect={selectedSuspect}
+                collectedEvidence={state.collectedEvidence}
+                reaction={suspectReaction}
+                confession={suspectConfession}
+                presentingId={presentingEvidenceId}
+                onPresent={presentEvidenceToSuspect}
+              />
+            </>
+          ) : (
+            <SuspectsList suspects={state.allSuspects} onSelect={openSuspect} />
+          )
+        )}
+
+        {tab === "expertise" && (
+          selectedSuspect ? (
+            <>
+              <button
+                className="btn"
+                style={{ background: "#384050", marginBottom: 16 }}
+                onClick={() => setSelectedSuspect(null)}
+              >
+                ← Назад к списку
+              </button>
+              <SuspectDetail
+                suspect={selectedSuspect}
+                collectedEvidence={state.collectedEvidence}
+                reaction={suspectReaction}
+                confession={suspectConfession}
+                presentingId={presentingEvidenceId}
+                onPresent={presentEvidenceToSuspect}
+              />
+            </>
+          ) : (
+            <ExpertsList experts={state.experts} onSelect={openSuspect} />
+          )
+        )}
+
+        {tab === "evidence" && (
+          <div className="card">
+            <h2>Собранные улики ({state.collectedEvidence.length})</h2>
+            {state.collectedEvidence.length === 0 && (
+              <p className="muted">Пока ничего не найдено — осмотрите локации.</p>
+            )}
+            {state.collectedEvidence.map((e) => (
+              <div key={e.id} className="card" style={{ marginBottom: 8 }}>
+                <strong>{e.name}</strong>
+                <p style={{ marginTop: 8 }}>{e.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "accuse" && (
+          <div className="card">
+            <h2>Обвинение</h2>
+            <p className="muted">
+              Финальный экран обвинения ещё не подключён к этому делу — появится,
+              когда добавим accusation_questions в базу.
+            </p>
+          </div>
+        )}
+
+        {tab === "log" && (
+          <div className="card">
+            <h2>Журнал действий</h2>
+            {state.log.length === 0 && <p className="muted">Пока пусто.</p>}
+            {[...state.log].reverse().map((entry, i) => (
+              <div key={i} className="log-entry">
+                <div className="time">
+                  {new Date(entry.at).toLocaleTimeString("ru-RU")}
+                </div>
+                {entry.text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "help" && (
+          <div className="card">
+            <h2>Как играть</h2>
+            <p>1. На карте кликайте открытые точки → «Осмотреть».</p>
+            <p>2. На месте нажмите «Да» на вопрос про улики и выбирайте варианты из облака.</p>
+            <p>3. Собранные улики смотрите во вкладке «Улики».</p>
+            <p>4. Когда будете готовы — переходите в «Обвинение» (скоро).</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
