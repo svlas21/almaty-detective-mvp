@@ -77,6 +77,7 @@ export async function GET(
 
   const aliyaLocation = (caseLocations ?? []).find((l) => l.name === "Квартира Сартакова");
   const guvdLocation = (caseLocations ?? []).find((l) => l.name === "ГУВД города Алматы");
+  const parkingLocation = (caseLocations ?? []).find((l) => l.name === "Парковка у посольства");
 
   const aliyaCharacter = (caseSuspects ?? []).find((c) => c.name === "Алия Сартакова");
   const valentinaCharacter = (caseSuspects ?? []).find((c) => c.name === "Валентина Сартакова");
@@ -101,6 +102,12 @@ export async function GET(
     viewedCharacters.includes(daniyarCharacter.id) &&
     viewedCharacters.includes(victorCharacter.id);
   if (aliyaLocation && apartmentUnlockCondition) discoveredLocationIds.add(aliyaLocation.id);
+
+  // Парковка у посольства — открывается, когда допрошена Валентина Сартакова
+  // (в отличие от Квартиры Сартакова, условие на одного персонажа, не двух).
+  const parkingUnlockCondition =
+    !!valentinaCharacter && viewedCharacters.includes(valentinaCharacter.id);
+  if (parkingLocation && parkingUnlockCondition) discoveredLocationIds.add(parkingLocation.id);
 
   const newlyDiscoveredLocationIds = [...discoveredLocationIds].filter(
     (id) => !state.discovered_locations.includes(id)
