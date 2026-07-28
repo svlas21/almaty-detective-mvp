@@ -33,7 +33,10 @@
       "Bash(lsof -iTCP -sTCP:LISTEN -P)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([e['name'] for e in d['collectedEvidence']]\\)\")",
       "Bash(git check-ignore *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(python3 *)"
     ]
   }
 }

@@ -13,7 +13,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("discovered_characters, collected_evidence, log")
+    .select("discovered_characters, discovered_evidence, collected_evidence, discovered_locations, log")
     .eq("session_id", sessionId)
     .single();
 
@@ -31,7 +31,7 @@ export async function POST(
 
   const { data: character, error: characterError } = await db
     .from("characters")
-    .select("name, reactions, confession_text, confession_requires_evidence, is_expert")
+    .select("case_id, name, reactions, confession_text, confession_requires_evidence, is_expert")
     .eq("id", characterId)
     .single();
 
@@ -51,9 +51,54 @@ export async function POST(
       ? "По этому материалу заключения пока нет."
       : "«Не понимаю, к чему вы клоните» — пожимает плечами.");
 
+  // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
+  // и не допросом, а после того как игрок увидел конкретную реакцию конкретного
+  // персонажа на другую улику. Пока один такой переход:
+  // Ежедневник → реакция Виктора ИЛИ Данияра → "Звонок Марата".
+  let collectedEvidence = state.collected_evidence;
+  let discoveredEvidence = state.discovered_evidence ?? [];
+
+  if (
+    evidence?.name === "Ежедневник на столе" &&
+    (character.name === "Виктор Гринько" || character.name === "Данияр Ахметов")
+  ) {
+    const { data: zvonokMarata } = await db
+      .from("evidence")
+      .select("id")
+      .eq("case_id", character.case_id)
+      .eq("name", "Звонок Марата")
+      .maybeSingle();
+
+    if (zvonokMarata && !collectedEvidence.includes(zvonokMarata.id)) {
+      collectedEvidence = [...collectedEvidence, zvonokMarata.id];
+      discoveredEvidence = Array.from(new Set([...discoveredEvidence, zvonokMarata.id]));
+    }
+  }
+
+  // Открытие локации "Съёмная квартира «Марата»" (Дело №9704): триггер — игрок
+  // увидел реакцию эксперта Рината на "Звонок Марата" (экспертиза связывает
+  // звонок с конкретным адресом).
+  let discoveredLocations = state.discovered_locations;
+
+  if (character.name === "Ринат Абишев" && evidence?.name === "Звонок Марата") {
+    const { data: maratLocation } = await db
+      .from("locations")
+      .select("id")
+      .eq("case_id", character.case_id)
+      .eq("name", "Съёмная квартира «Марата»")
+      .maybeSingle();
+
+    if (maratLocation && !discoveredLocations.includes(maratLocation.id)) {
+      discoveredLocations = [...discoveredLocations, maratLocation.id];
+    }
+  }
+
   await db
     .from("session_state")
     .update({
+      collected_evidence: collectedEvidence,
+      discovered_evidence: discoveredEvidence,
+      discovered_locations: discoveredLocations,
       log: [
         ...(state.log ?? []),
         {
@@ -70,7 +115,7 @@ export async function POST(
   if (
     character.confession_requires_evidence &&
     character.confession_requires_evidence.length > 0 &&
-    character.confession_requires_evidence.every((id: string) => state.collected_evidence.includes(id))
+    character.confession_requires_evidence.every((id: string) => collectedEvidence.includes(id))
   ) {
     response.confession = character.confession_text;
   }
