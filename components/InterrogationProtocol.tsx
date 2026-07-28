@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface InterrogationQuestion {
   q: string;
@@ -11,14 +11,23 @@ interface InterrogationProtocolProps {
   questions: InterrogationQuestion[];
   /** Рендерится под списком вопросов; получает allViewed (например, кнопка "Открыть карту Алматы" в IntroScreen). */
   footer?: (allViewed: boolean) => ReactNode;
+  /** Вызывается один раз за монтирование, когда раскрыты все вопросы протокола. */
+  onAllViewed?: () => void;
 }
 
-export default function InterrogationProtocol({ questions, footer }: InterrogationProtocolProps) {
+export default function InterrogationProtocol({ questions, footer, onAllViewed }: InterrogationProtocolProps) {
   const [viewed, setViewed] = useState<Set<number>>(new Set());
+  const firedRef = useRef(false);
+  const allViewed = questions.length > 0 && viewed.size === questions.length;
+
+  useEffect(() => {
+    if (allViewed && !firedRef.current) {
+      firedRef.current = true;
+      onAllViewed?.();
+    }
+  }, [allViewed, onAllViewed]);
 
   if (questions.length === 0) return null;
-
-  const allViewed = viewed.size === questions.length;
 
   function viewQuestion(i: number) {
     setViewed((prev) => new Set(prev).add(i));

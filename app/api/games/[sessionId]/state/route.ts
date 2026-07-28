@@ -77,8 +77,6 @@ export async function GET(
 
   const aliyaLocation = (caseLocations ?? []).find((l) => l.name === "Квартира Сартакова");
   const guvdLocation = (caseLocations ?? []).find((l) => l.name === "ГУВД города Алматы");
-  const parkingLocation = (caseLocations ?? []).find((l) => l.name === "Парковка у посольства");
-  const maratLocation = (caseLocations ?? []).find((l) => l.name === "Съёмная квартира «Марата»");
 
   const aliyaCharacter = (caseSuspects ?? []).find((c) => c.name === "Алия Сартакова");
   const valentinaCharacter = (caseSuspects ?? []).find((c) => c.name === "Валентина Сартакова");
@@ -103,15 +101,6 @@ export async function GET(
     viewedCharacters.includes(daniyarCharacter.id) &&
     viewedCharacters.includes(victorCharacter.id);
   if (aliyaLocation && apartmentUnlockCondition) discoveredLocationIds.add(aliyaLocation.id);
-
-  // TODO(дело №9704): для "Парковки у посольства" и "Съёмной квартиры «Марата»"
-  // сюжетный триггер открытия ещё не определён. Пока держим их открытыми
-  // только в dev, чтобы можно было тестировать ветку Ерлана/признания, не
-  // блокируя прод-игроков ещё не реализованной загадкой.
-  if (process.env.NODE_ENV !== "production") {
-    if (parkingLocation) discoveredLocationIds.add(parkingLocation.id);
-    if (maratLocation) discoveredLocationIds.add(maratLocation.id);
-  }
 
   const newlyDiscoveredLocationIds = [...discoveredLocationIds].filter(
     (id) => !state.discovered_locations.includes(id)

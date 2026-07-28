@@ -144,6 +144,7 @@ export default function GameScreen() {
     setMapView("location");
     setLocationPhase("hub");
     await loadState({ silent: true });
+    await loadPool();
   }
 
   function startSearch() {
@@ -176,6 +177,11 @@ export default function GameScreen() {
     setSuspectConfession(null);
     setSelectedSuspect(person);
     await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
+    await loadState({ silent: true });
+  }
+
+  async function completeInterrogation(characterId: string) {
+    await fetch(`/api/games/${sessionId}/suspects/${characterId}/interrogated`, { method: "POST" });
     await loadState({ silent: true });
   }
 
@@ -449,6 +455,7 @@ export default function GameScreen() {
                 confession={suspectConfession}
                 presentingId={presentingEvidenceId}
                 onPresent={presentEvidenceToSuspect}
+                onInterrogationComplete={completeInterrogation}
               />
             </>
           ) : (
@@ -473,6 +480,7 @@ export default function GameScreen() {
                 confession={suspectConfession}
                 presentingId={presentingEvidenceId}
                 onPresent={presentEvidenceToSuspect}
+                onInterrogationComplete={completeInterrogation}
               />
             </>
           ) : (

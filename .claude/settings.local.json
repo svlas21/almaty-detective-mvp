@@ -29,7 +29,11 @@
       "Bash(curl -s http://localhost:3000/api/games/73b5cf97-63eb-4458-824a-7bf58a8b021a/state -w \"\\\\nHTTP_STATUS:%{http_code}\\\\n\")",
       "Bash(curl *)",
       "Read(//Users/macbookprovlad/Desktop/**)",
-      "Read(//Users/macbookprovlad/**)"
+      "Read(//Users/macbookprovlad/**)",
+      "Bash(lsof -iTCP -sTCP:LISTEN -P)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([e['name'] for e in d['collectedEvidence']]\\)\")",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)"
     ]
   }
 }

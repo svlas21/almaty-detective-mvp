@@ -12,7 +12,7 @@ export async function GET(
 
   const { data: session, error: sessionError } = await db
     .from("game_sessions")
-    .select("purchase_id")
+    .select("purchase_id, current_location_id")
     .eq("id", sessionId)
     .single();
 
@@ -34,6 +34,8 @@ export async function GET(
     .from("evidence")
     .select("id, name")
     .eq("case_id", purchase.case_id)
+    .eq("location_id", session.current_location_id)
+    .is("granted_by_character_id", null)
     .order("name");
 
   if (poolError) {
