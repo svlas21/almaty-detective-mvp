@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
       discovered_evidence: [],
       collected_evidence: [],
       viewed_characters: [],
+      viewed_reactions: [],
       log: [],
     })
     .eq("session_id", sessionId);

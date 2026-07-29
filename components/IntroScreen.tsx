@@ -54,7 +54,7 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
           allViewed && (
             <div style={{ textAlign: "center", marginTop: 20 }}>
               <button className="dossier-btn" onClick={onFinish}>
-                Открыть карту Алматы
+                Допросить подозреваемых
               </button>
             </div>
           )

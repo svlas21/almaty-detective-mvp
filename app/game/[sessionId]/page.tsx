@@ -187,6 +187,15 @@ export default function GameScreen() {
     await loadState({ silent: true });
   }
 
+  async function questionViewed(characterId: string, questionIndex: number) {
+    await fetch(`/api/games/${sessionId}/suspects/${characterId}/question-viewed`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionIndex }),
+    });
+    await loadState({ silent: true });
+  }
+
   async function presentEvidenceToSuspect(evidence: CollectedEvidenceItem) {
     if (!selectedSuspect) return;
     setPresentingEvidenceId(evidence.id);
@@ -458,6 +467,7 @@ export default function GameScreen() {
                 presentingId={presentingEvidenceId}
                 onPresent={presentEvidenceToSuspect}
                 onInterrogationComplete={completeInterrogation}
+                onQuestionViewed={questionViewed}
               />
             </>
           ) : (
@@ -483,6 +493,7 @@ export default function GameScreen() {
                 presentingId={presentingEvidenceId}
                 onPresent={presentEvidenceToSuspect}
                 onInterrogationComplete={completeInterrogation}
+                onQuestionViewed={questionViewed}
               />
             </>
           ) : (

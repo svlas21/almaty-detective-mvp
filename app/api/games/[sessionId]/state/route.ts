@@ -83,7 +83,9 @@ export async function GET(
   const valentinaCharacter = (caseSuspects ?? []).find((c) => c.name === "Валентина Сартакова");
   const daniyarCharacter = (caseSuspects ?? []).find((c) => c.name === "Данияр Ахметов");
   const victorCharacter = (caseSuspects ?? []).find((c) => c.name === "Виктор Гринько");
+  const rinatCharacter = (caseExperts ?? []).find((c) => c.name === "Ринат Абишев");
   const viewedCharacters: string[] = state.viewed_characters ?? [];
+  const viewedReactions: string[] = state.viewed_reactions ?? [];
 
   // Триггеры открытия локаций (Дело №9704): считаются заново на каждый
   // запрос из уже собранных полей session_state, без новых столбцов.
@@ -103,10 +105,21 @@ export async function GET(
     viewedCharacters.includes(victorCharacter.id);
   if (aliyaLocation && apartmentUnlockCondition) discoveredLocationIds.add(aliyaLocation.id);
 
-  // Парковка у посольства — открывается, когда допрошена Валентина Сартакова
-  // (в отличие от Квартиры Сартакова, условие на одного персонажа, не двух).
+  // Парковка у посольства — открывается, когда игрок увидел реакцию эксперта
+  // Рината на "Автомобиль потерпевшего" (тот же паттерн, что и открытие
+  // Кв. «Марата» через реакцию Рината на "Звонок Марата", см. .../present).
+  // Раньше условием был допрос Валентины — заменено полностью, без fallback.
+  const { data: avtomobilEvidence } = await db
+    .from("evidence")
+    .select("id")
+    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
+    .eq("name", "Автомобиль потерпевшего")
+    .maybeSingle();
+
   const parkingUnlockCondition =
-    !!valentinaCharacter && viewedCharacters.includes(valentinaCharacter.id);
+    !!rinatCharacter &&
+    !!avtomobilEvidence &&
+    viewedReactions.includes(`${rinatCharacter.id}:${avtomobilEvidence.id}`);
   if (parkingLocation && parkingUnlockCondition) discoveredLocationIds.add(parkingLocation.id);
 
   const newlyDiscoveredLocationIds = [...discoveredLocationIds].filter(
@@ -213,7 +226,6 @@ export async function GET(
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
-  const viewedReactions: string[] = state.viewed_reactions ?? [];
   const requiredEvidenceIds: string[] = accusation?.required_evidence_ids ?? [];
   const accomplices: { character_id: string; required_reaction_evidence_id: string }[] =
     accusation?.accomplices ?? [];

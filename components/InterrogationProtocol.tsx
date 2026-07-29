@@ -9,13 +9,20 @@ export interface InterrogationQuestion {
 
 interface InterrogationProtocolProps {
   questions: InterrogationQuestion[];
-  /** Рендерится под списком вопросов; получает allViewed (например, кнопка "Открыть карту Алматы" в IntroScreen). */
+  /** Рендерится под списком вопросов; получает allViewed (например, кнопка "Допросить подозреваемых" в IntroScreen). */
   footer?: (allViewed: boolean) => ReactNode;
   /** Вызывается один раз за монтирование, когда раскрыты все вопросы протокола. */
   onAllViewed?: () => void;
+  /** Вызывается один раз за монтирование для КАЖДОГО вопроса при его первом раскрытии. */
+  onQuestionViewed?: (index: number) => void;
 }
 
-export default function InterrogationProtocol({ questions, footer, onAllViewed }: InterrogationProtocolProps) {
+export default function InterrogationProtocol({
+  questions,
+  footer,
+  onAllViewed,
+  onQuestionViewed,
+}: InterrogationProtocolProps) {
   const [viewed, setViewed] = useState<Set<number>>(new Set());
   const firedRef = useRef(false);
   const allViewed = questions.length > 0 && viewed.size === questions.length;
@@ -30,7 +37,11 @@ export default function InterrogationProtocol({ questions, footer, onAllViewed }
   if (questions.length === 0) return null;
 
   function viewQuestion(i: number) {
-    setViewed((prev) => new Set(prev).add(i));
+    setViewed((prev) => {
+      if (prev.has(i)) return prev;
+      onQuestionViewed?.(i);
+      return new Set(prev).add(i);
+    });
   }
 
   return (

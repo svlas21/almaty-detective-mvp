@@ -17,6 +17,7 @@ interface SuspectDetailProps {
   presentingId: string | null;
   onPresent: (evidence: CollectedEvidenceItem) => void;
   onInterrogationComplete: (characterId: string) => void;
+  onQuestionViewed: (characterId: string, questionIndex: number) => void;
 }
 
 export default function SuspectDetail({
@@ -27,6 +28,7 @@ export default function SuspectDetail({
   presentingId,
   onPresent,
   onInterrogationComplete,
+  onQuestionViewed,
 }: SuspectDetailProps) {
   return (
     <div className="dossier-page">
@@ -61,6 +63,7 @@ export default function SuspectDetail({
       <InterrogationProtocol
         questions={suspect.fixed_questions ?? []}
         onAllViewed={() => onInterrogationComplete(suspect.id)}
+        onQuestionViewed={(i) => onQuestionViewed(suspect.id, i)}
       />
 
       {(suspect.is_suspect === true || suspect.is_expert === true) && (
