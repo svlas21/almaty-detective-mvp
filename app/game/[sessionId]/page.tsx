@@ -94,6 +94,7 @@ export default function GameScreen() {
   const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string } | null>(null);
   const [suspectConfession, setSuspectConfession] = useState<string | null>(null);
   const [presentingEvidenceId, setPresentingEvidenceId] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
   async function loadState(options?: { silent?: boolean }) {
     if (!options?.silent) setLoading(true);
@@ -134,19 +135,27 @@ export default function GameScreen() {
   }, [locationPhase, secondsLeft, panoramaReady]);
 
   async function visitLocation(locationId: string) {
-    if (state?.location?.id !== locationId) {
-      await fetch(`/api/games/${sessionId}/travel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId }),
-      });
+    setNavigating(true);
+    try {
+      if (state?.location?.id !== locationId) {
+        await fetch(`/api/games/${sessionId}/travel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationId }),
+        });
+      }
+      setTriedIds(new Set());
+      setLastResult(null);
+      // Данные новой локации грузятся ДО переключения экрана — иначе hub
+      // на миг рендерится с state.location от предыдущей локации (race
+      // condition: экран уже "location", а state ещё старый).
+      await loadState({ silent: true });
+      await loadPool();
+      setMapView("location");
+      setLocationPhase("hub");
+    } finally {
+      setNavigating(false);
     }
-    setTriedIds(new Set());
-    setLastResult(null);
-    setMapView("location");
-    setLocationPhase("hub");
-    await loadState({ silent: true });
-    await loadPool();
   }
 
   function startSearch() {
@@ -175,11 +184,16 @@ export default function GameScreen() {
   }
 
   async function openSuspect(person: SuspectListItem) {
-    setSuspectReaction(null);
-    setSuspectConfession(null);
-    setSelectedSuspect(person);
-    await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
-    await loadState({ silent: true });
+    setNavigating(true);
+    try {
+      setSuspectReaction(null);
+      setSuspectConfession(null);
+      await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
+      await loadState({ silent: true });
+      setSelectedSuspect(person);
+    } finally {
+      setNavigating(false);
+    }
   }
 
   async function completeInterrogation(characterId: string) {
@@ -214,22 +228,35 @@ export default function GameScreen() {
   }
 
   async function handleIntroFinish(characterId: string) {
-    await fetch(`/api/games/${sessionId}/intro/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ characterId }),
-    });
-    // После брифинга игрок сразу внутри ГУВД (хаб), а не на карте дела —
-    // тот же экран, что открывается кнопкой "Выехать на место".
-    setMapView("location");
-    setLocationPhase("hub");
-    await loadState({ silent: true });
+    setNavigating(true);
+    try {
+      await fetch(`/api/games/${sessionId}/intro/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characterId }),
+      });
+      await loadState({ silent: true });
+      // После брифинга игрок сразу внутри ГУВД (хаб), а не на карте дела —
+      // тот же экран, что открывается кнопкой "Выехать на место".
+      setMapView("location");
+      setLocationPhase("hub");
+    } finally {
+      setNavigating(false);
+    }
   }
 
   if (loading) return <Loader />;
   if (!state) return <div className="container">Партия не найдена.</div>;
 
   if (!state.session.intro_seen) {
+    if (navigating) {
+      return (
+        <div className="container">
+          <Loader />
+        </div>
+      );
+    }
+
     const introCharacter = state.allSuspects.find(
       (s) => s.unlocked && s.name === "Азамат Нурланович"
     );
@@ -252,7 +279,9 @@ export default function GameScreen() {
           <div className="label">игрового времени</div>
         </div>
 
-        {selectedSuspect ? (
+        {navigating ? (
+          <Loader />
+        ) : selectedSuspect ? (
           <>
             <button
               className="btn"
