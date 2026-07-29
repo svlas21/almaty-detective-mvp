@@ -24,10 +24,10 @@ export async function POST(
     .from("evidence")
     .select("*")
     .eq("id", evidenceId)
-    .single();
+    .maybeSingle();
 
-  if (evidenceError || !evidence) {
-    return NextResponse.json({ error: "Предмет не найден" }, { status: 404 });
+  if (evidenceError) {
+    return NextResponse.json({ error: "Не удалось проверить улику" }, { status: 500 });
   }
 
   const { data: updatedSession } = await db
@@ -36,8 +36,6 @@ export async function POST(
     .eq("id", sessionId)
     .select()
     .single();
-
-  const isCorrectGuess = evidence.is_relevant && evidence.location_id === session.current_location_id;
 
   const { data: stateForLog } = await db
     .from("session_state")
@@ -49,6 +47,24 @@ export async function POST(
     ...(stateForLog?.log ?? []),
     { type: "evidence", text, at: new Date().toISOString() },
   ];
+
+  // evidenceId может быть обманкой из case_decoy_categories — категорией
+  // облака осмотра без реальной улики за ней. Ведём себя как при обычном
+  // неверном варианте, без намёка, что это была заведомая пустышка.
+  if (!evidence) {
+    await db
+      .from("session_state")
+      .update({ log: appendLog("Проверили — не относится к делу") })
+      .eq("session_id", sessionId);
+
+    return NextResponse.json({
+      relevant: false,
+      message: "Здесь такого не нашли.",
+      session: updatedSession,
+    });
+  }
+
+  const isCorrectGuess = evidence.is_relevant && evidence.location_id === session.current_location_id;
 
   if (!isCorrectGuess) {
     await db
