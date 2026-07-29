@@ -13,7 +13,9 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("discovered_characters, discovered_evidence, collected_evidence, discovered_locations, log")
+    .select(
+      "discovered_characters, discovered_evidence, collected_evidence, discovered_locations, viewed_reactions, log"
+    )
     .eq("session_id", sessionId)
     .single();
 
@@ -93,12 +95,20 @@ export async function POST(
     }
   }
 
+  // Факт "игрок предъявил улику X персонажу Y и увидел экран реакции" —
+  // ключ для финального экрана "Обвинение" (case_accusation.accomplices[].
+  // required_reaction_evidence_id), фиксируется на любую реакцию, включая
+  // общую фразу-заглушку — экран реакции показывается в обоих случаях.
+  const viewedReactionKey = `${characterId}:${evidenceId}`;
+  const viewedReactions = Array.from(new Set([...(state.viewed_reactions ?? []), viewedReactionKey]));
+
   await db
     .from("session_state")
     .update({
       collected_evidence: collectedEvidence,
       discovered_evidence: discoveredEvidence,
       discovered_locations: discoveredLocations,
+      viewed_reactions: viewedReactions,
       log: [
         ...(state.log ?? []),
         {

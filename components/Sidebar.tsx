@@ -8,6 +8,7 @@ export type SidebarTab = "map" | "suspects" | "expertise" | "evidence" | "accuse
 interface SidebarProps {
   active: SidebarTab;
   onChange: (tab: SidebarTab) => void;
+  accusationUnlocked: boolean;
 }
 
 const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
@@ -25,7 +26,7 @@ const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
 // в app/api/dev/reset-session/route.ts.
 const IS_DEV = process.env.NODE_ENV !== "production";
 
-export default function Sidebar({ active, onChange }: SidebarProps) {
+export default function Sidebar({ active, onChange, accusationUnlocked }: SidebarProps) {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -48,16 +49,20 @@ export default function Sidebar({ active, onChange }: SidebarProps) {
   return (
     <>
       <nav className="sidebar">
-        {ITEMS.map((item) => (
-          <button
-            key={item.id}
-            className={`sidebar-btn ${active === item.id ? "active" : ""}`}
-            onClick={() => onChange(item.id)}
-            title={item.label}
-          >
-            {item.icon}
-          </button>
-        ))}
+        {ITEMS.map((item) => {
+          const disabled = item.id === "accuse" && !accusationUnlocked;
+          return (
+            <button
+              key={item.id}
+              className={`sidebar-btn ${active === item.id ? "active" : ""}`}
+              onClick={() => (disabled ? undefined : onChange(item.id))}
+              disabled={disabled}
+              title={disabled ? undefined : item.label}
+            >
+              {item.icon}
+            </button>
+          );
+        })}
 
         {IS_DEV && (
           <button

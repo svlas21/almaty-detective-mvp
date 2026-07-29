@@ -114,6 +114,16 @@ body {
   color: white;
 }
 
+.sidebar-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.sidebar-btn:disabled:hover {
+  background: transparent;
+  color: #8a8f9a;
+}
+
 .sidebar-label {
   font-size: 9px;
   color: #6b7280;

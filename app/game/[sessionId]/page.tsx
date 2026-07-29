@@ -11,6 +11,7 @@ import SuspectsList, { SuspectListItem } from "@/components/SuspectsList";
 import ExpertsList from "@/components/ExpertsList";
 import SuspectDetail from "@/components/SuspectDetail";
 import IntroScreen from "@/components/IntroScreen";
+import AccusationScreen from "@/components/AccusationScreen";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
 
@@ -60,6 +61,7 @@ interface StateResponse {
   allSuspects: SuspectListItem[];
   experts: SuspectListItem[];
   motherUnlocked: boolean;
+  accusationUnlocked: boolean;
   mapImageUrl: string | null;
   collectedEvidence: CollectedEvidenceItem[];
   log: LogEntry[];
@@ -233,7 +235,7 @@ export default function GameScreen() {
 
   return (
     <div className="game-shell">
-      <Sidebar active={tab} onChange={setTab} />
+      <Sidebar active={tab} onChange={setTab} accusationUnlocked={state.accusationUnlocked} />
 
       <div className="game-main">
         <div className="timer-badge">
@@ -503,14 +505,8 @@ export default function GameScreen() {
           </div>
         )}
 
-        {tab === "accuse" && (
-          <div className="card">
-            <h2>Обвинение</h2>
-            <p className="muted">
-              Финальный экран обвинения ещё не подключён к этому делу — появится,
-              когда добавим accusation_questions в базу.
-            </p>
-          </div>
+        {tab === "accuse" && state.accusationUnlocked && (
+          <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} />
         )}
 
         {tab === "log" && (

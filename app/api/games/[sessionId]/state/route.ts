@@ -203,6 +203,28 @@ export async function GET(
     .select("id, name, description")
     .in("id", state.collected_evidence.length ? state.collected_evidence : ["00000000-0000-0000-0000-000000000000"]);
 
+  // Готовность к финальному экрану "Обвинение" (Дело №9704): считается на
+  // сервере из уже собранных полей session_state, наружу отдаётся только
+  // булев флаг — ни required_evidence_ids, ни organizer/accomplices сюда
+  // не попадают, чтобы не спойлерить условия до самого экрана.
+  const { data: accusation } = await db
+    .from("case_accusation")
+    .select("required_evidence_ids, accomplices")
+    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
+    .maybeSingle();
+
+  const viewedReactions: string[] = state.viewed_reactions ?? [];
+  const requiredEvidenceIds: string[] = accusation?.required_evidence_ids ?? [];
+  const accomplices: { character_id: string; required_reaction_evidence_id: string }[] =
+    accusation?.accomplices ?? [];
+
+  const accusationUnlocked =
+    !!accusation &&
+    requiredEvidenceIds.every((id) => state.collected_evidence.includes(id)) &&
+    accomplices.every((acc) =>
+      viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
+    );
+
   return NextResponse.json({
     session,
     location,
@@ -210,6 +232,7 @@ export async function GET(
     allSuspects,
     experts,
     motherUnlocked,
+    accusationUnlocked,
     mapImageUrl: caseRecord?.map_image_url ?? null,
     collectedEvidenceCount: state.collected_evidence.length,
     collectedEvidence: collectedEvidenceDetails ?? [],
