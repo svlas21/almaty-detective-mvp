@@ -72,6 +72,20 @@ body {
   background: #313847;
 }
 
+/* Облако осмотра локации — 30+ вариантов-категорий разом, поэтому сетка
+   вместо построчного flex-wrap: ряды остаются ровными на любой ширине
+   экрана, чипы не тянутся длинной "простынёй" текста. */
+.evidence-cloud {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.evidence-cloud .topic-chip {
+  margin: 0;
+  text-align: center;
+}
+
 /* --- Игровой каркас: боковое меню + контент + таймер --- */
 .game-shell {
   display: flex;

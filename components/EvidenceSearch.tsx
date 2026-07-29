@@ -33,7 +33,7 @@ export default function EvidenceSearch({ pool, onGuess, triedIds }: EvidenceSear
   return (
     <div className="card">
       <p className="muted">Выберите, что, по-вашему, могло быть на месте:</p>
-      <div>
+      <div className="evidence-cloud">
         {pool.map((item) => (
           <span
             key={item.id}
