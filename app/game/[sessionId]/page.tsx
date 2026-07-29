@@ -252,6 +252,28 @@ export default function GameScreen() {
           <div className="label">игрового времени</div>
         </div>
 
+        {selectedSuspect ? (
+          <>
+            <button
+              className="btn"
+              style={{ background: "#384050", marginBottom: 16 }}
+              onClick={() => setSelectedSuspect(null)}
+            >
+              ← Назад к списку
+            </button>
+            <SuspectDetail
+              suspect={selectedSuspect}
+              collectedEvidence={state.collectedEvidence}
+              reaction={suspectReaction}
+              confession={suspectConfession}
+              presentingId={presentingEvidenceId}
+              onPresent={presentEvidenceToSuspect}
+              onInterrogationComplete={completeInterrogation}
+              onQuestionViewed={questionViewed}
+            />
+          </>
+        ) : (
+          <>
         {tab === "map" && mapView === "map" && (
           <div className="card">
             <h2>Карта дела</h2>
@@ -324,10 +346,7 @@ export default function GameScreen() {
                             <div
                               key={person.id}
                               className="people-slip"
-                              onClick={() => {
-                                setTab("suspects");
-                                openSuspect(person);
-                              }}
+                              onClick={() => openSuspect(person)}
                             >
                               <div className="people-slip-photo-wrap">
                                 <div className="people-slip-clip" />
@@ -449,57 +468,9 @@ export default function GameScreen() {
           </div>
         )}
 
-        {tab === "suspects" && (
-          selectedSuspect ? (
-            <>
-              <button
-                className="btn"
-                style={{ background: "#384050", marginBottom: 16 }}
-                onClick={() => setSelectedSuspect(null)}
-              >
-                ← Назад к списку
-              </button>
-              <SuspectDetail
-                suspect={selectedSuspect}
-                collectedEvidence={state.collectedEvidence}
-                reaction={suspectReaction}
-                confession={suspectConfession}
-                presentingId={presentingEvidenceId}
-                onPresent={presentEvidenceToSuspect}
-                onInterrogationComplete={completeInterrogation}
-                onQuestionViewed={questionViewed}
-              />
-            </>
-          ) : (
-            <SuspectsList suspects={state.allSuspects} onSelect={openSuspect} />
-          )
-        )}
+        {tab === "suspects" && <SuspectsList suspects={state.allSuspects} onSelect={openSuspect} />}
 
-        {tab === "expertise" && (
-          selectedSuspect ? (
-            <>
-              <button
-                className="btn"
-                style={{ background: "#384050", marginBottom: 16 }}
-                onClick={() => setSelectedSuspect(null)}
-              >
-                ← Назад к списку
-              </button>
-              <SuspectDetail
-                suspect={selectedSuspect}
-                collectedEvidence={state.collectedEvidence}
-                reaction={suspectReaction}
-                confession={suspectConfession}
-                presentingId={presentingEvidenceId}
-                onPresent={presentEvidenceToSuspect}
-                onInterrogationComplete={completeInterrogation}
-                onQuestionViewed={questionViewed}
-              />
-            </>
-          ) : (
-            <ExpertsList experts={state.experts} onSelect={openSuspect} />
-          )
-        )}
+        {tab === "expertise" && <ExpertsList experts={state.experts} onSelect={openSuspect} />}
 
         {tab === "evidence" && (
           <div className="card">
@@ -543,6 +514,8 @@ export default function GameScreen() {
             <p>3. Собранные улики смотрите во вкладке «Улики».</p>
             <p>4. Когда будете готовы — переходите в «Обвинение» (скоро).</p>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
