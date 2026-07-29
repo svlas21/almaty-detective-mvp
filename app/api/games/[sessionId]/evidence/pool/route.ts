@@ -32,7 +32,7 @@ export async function GET(
 
   const { data: pool, error: poolError } = await db
     .from("evidence")
-    .select("id, name")
+    .select("id, name, generic_category")
     .eq("case_id", purchase.case_id)
     .eq("location_id", session.current_location_id)
     .is("granted_by_character_id", null)
@@ -42,5 +42,14 @@ export async function GET(
     return NextResponse.json({ error: "Не удалось загрузить список улик" }, { status: 500 });
   }
 
-  return NextResponse.json({ pool: pool ?? [] });
+  // Облако осмотра не должно спойлерить реальное название улики — показываем
+  // generic_category (маскирующую категорию вроде "Книги и блокноты").
+  // Фолбэк на name — только для случая, если у какой-то локационной улики
+  // категория не заполнена (не должно случаться в норме).
+  const maskedPool = (pool ?? []).map((item) => ({
+    id: item.id,
+    name: item.generic_category ?? item.name,
+  }));
+
+  return NextResponse.json({ pool: maskedPool });
 }
