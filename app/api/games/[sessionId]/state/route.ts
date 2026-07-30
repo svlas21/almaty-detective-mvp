@@ -204,9 +204,13 @@ export async function GET(
       fixed_questions: fixedQuestions,
       unlocked: true,
       mentioned: false,
-      // "Опрошен" — только для подозреваемых (их допрашивают); со свидетелями
-      // вроде начальника ГУВД или Валентины просто разговаривают.
-      viewed: suspect.is_suspect === true && viewedCharacters.includes(suspect.id),
+      // Открывал ли игрок карточку этого персонажа (viewedCharacters
+      // фиксируется в /suspects/[id]/view при первом открытии — см. комментарий
+      // там), независимо от is_suspect: сам факт "поговорили"/"допросили"
+      // одинаково значим и для подозреваемых, и для свидетелей. Где именно
+      // показывать бейдж (например, только для is_suspect на "Люди здесь")
+      // решают уже потребители поля, не этот флаг.
+      viewed: viewedCharacters.includes(suspect.id),
       wanted,
     };
   });
