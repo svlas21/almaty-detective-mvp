@@ -66,7 +66,8 @@ export default function SuspectDetail({
         onQuestionViewed={(i) => onQuestionViewed(suspect.id, i)}
       />
 
-      {(suspect.is_suspect === true || suspect.is_expert === true) && (
+      {(suspect.is_suspect === true || suspect.is_expert === true) &&
+        (suspect.fixed_questions?.length ?? 0) > 0 && (
         <div className="dossier-card">
           <div className="dossier-section-label">
             {suspect.is_expert ? "Передать на экспертизу" : "Предъявить улику"}

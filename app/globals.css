@@ -692,32 +692,6 @@ body {
   background: #f4efdd;
 }
 
-.people-slip-wanted {
-  cursor: default;
-  border-left-color: var(--stamp);
-  background: repeating-linear-gradient(135deg, #f4efdd, #f4efdd 10px, #efe6d0 10px, #efe6d0 20px);
-}
-
-.people-slip-wanted:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.people-slip-wanted-stamp {
-  flex-shrink: 0;
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--stamp);
-  border: 2px solid var(--stamp);
-  border-radius: 4px;
-  padding: 6px 10px;
-  transform: rotate(-6deg);
-  white-space: nowrap;
-}
-
 .people-slip-photo-wrap {
   position: relative;
   flex-shrink: 0;
