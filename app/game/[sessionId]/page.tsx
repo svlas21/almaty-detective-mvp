@@ -530,11 +530,10 @@ export default function GameScreen() {
               </div>
             ) : (
               <div className="evidence-doc-list">
-                {state.collectedEvidence.map((e, i) => {
+                {state.collectedEvidence.map((e) => {
                   const Icon = getEvidenceIcon(e);
                   return (
                     <div key={e.id} className="evidence-doc">
-                      <div className="evidence-doc-number">Вещдок №{i + 1}</div>
                       <div className="evidence-doc-body">
                         <h3 className="evidence-doc-name">
                           <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
