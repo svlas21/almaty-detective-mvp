@@ -26,15 +26,19 @@ import {
   Image,
   Key,
   Mail,
+  MessageCircle,
   PanelTop,
   PenTool,
+  Phone,
   Pill,
+  Quote,
   Radio,
   Receipt,
   Shirt,
   Sparkles,
   SprayCan,
   Sprout,
+  StickyNote,
   Tag,
   Trash2,
   Umbrella,
@@ -46,11 +50,13 @@ import {
 } from "lucide-react";
 
 /**
- * label (evidence.generic_category / case_decoy_categories.label) -> иконка.
- * Единая система для настоящих категорий локации и обманок — оба берут
- * иконку по одному и тому же совпадению текста, отдельного списка нет.
+ * Единый источник истины для иконок улик (Дело №9704) — используется и
+ * облаком осмотра (EvidenceSearch), и "Собранными уликами" (GameScreen),
+ * чтобы одна и та же улика/категория всегда получала одну и ту же иконку.
  */
-const EVIDENCE_CATEGORY_ICONS: Record<string, LucideIcon> = {
+
+/** evidence.generic_category / case_decoy_categories.label -> иконка. */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   // Реальные категории (evidence.generic_category по всем делам/локациям)
   "Бутылки": Wine,
   "Визитки и реклама": Contact,
@@ -98,9 +104,36 @@ const EVIDENCE_CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Электроника": Cpu,
 };
 
-/** Категория без явного соответствия (новая обманка и т.п.) — не пустое место. */
-const DEFAULT_EVIDENCE_CATEGORY_ICON: LucideIcon = Tag;
+/**
+ * evidence.name -> иконка, для улик БЕЗ generic_category — те, что выдаются
+ * допросом/предъявлением, а не осмотром локации (granted_by_character_id
+ * или reaction-chain), и потому в облаке осмотра никогда не появляются.
+ */
+const NAME_ICONS: Record<string, LucideIcon> = {
+  "Опрос соседки": MessageCircle,
+  "Звонок Марата": Phone,
+  "Записка от Игоря": StickyNote,
+  "Показания Олжаса": Quote,
+  "Автомобиль потерпевшего": Car,
+};
 
-export function getEvidenceCategoryIcon(label: string): LucideIcon {
-  return EVIDENCE_CATEGORY_ICONS[label] ?? DEFAULT_EVIDENCE_CATEGORY_ICON;
+/** Категория/имя без явного соответствия — не пустое место. */
+const DEFAULT_EVIDENCE_ICON: LucideIcon = Tag;
+
+/**
+ * Единая точка выбора иконки для любой улики/варианта облака: сначала
+ * generic_category (если есть) -> иконка по категории; если категории нет —
+ * по name; если нигде нет совпадения — общий фолбэк. Облако осмотра зовёт
+ * её с уже промаскированным label в обоих полях (там label и есть
+ * категория — отдельной "настоящей" улики за decoy не стоит), "Собранные
+ * улики" — с реальными name/generic_category конкретной улики.
+ */
+export function getEvidenceIcon(evidence: {
+  name: string;
+  generic_category?: string | null;
+}): LucideIcon {
+  if (evidence.generic_category) {
+    return CATEGORY_ICONS[evidence.generic_category] ?? DEFAULT_EVIDENCE_ICON;
+  }
+  return NAME_ICONS[evidence.name] ?? DEFAULT_EVIDENCE_ICON;
 }

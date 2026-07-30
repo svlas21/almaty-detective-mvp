@@ -12,6 +12,7 @@ import ExpertsList from "@/components/ExpertsList";
 import SuspectDetail from "@/components/SuspectDetail";
 import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
+import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
 
@@ -46,6 +47,7 @@ interface CollectedEvidenceItem {
   id: string;
   name: string;
   description: string | null;
+  generic_category?: string | null;
 }
 
 interface StateResponse {
@@ -519,15 +521,21 @@ export default function GameScreen() {
               </div>
             ) : (
               <div className="evidence-doc-list">
-                {state.collectedEvidence.map((e, i) => (
-                  <div key={e.id} className="evidence-doc">
-                    <div className="evidence-doc-number">Вещдок №{i + 1}</div>
-                    <div className="evidence-doc-body">
-                      <h3 className="evidence-doc-name">{e.name}</h3>
-                      <p className="evidence-doc-description">{e.description}</p>
+                {state.collectedEvidence.map((e, i) => {
+                  const Icon = getEvidenceIcon(e);
+                  return (
+                    <div key={e.id} className="evidence-doc">
+                      <div className="evidence-doc-number">Вещдок №{i + 1}</div>
+                      <div className="evidence-doc-body">
+                        <h3 className="evidence-doc-name">
+                          <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
+                          {e.name}
+                        </h3>
+                        <p className="evidence-doc-description">{e.description}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getEvidenceCategoryIcon } from "@/lib/evidenceCategoryIcons";
+import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 interface EvidencePoolItem {
   id: string;
@@ -38,7 +38,11 @@ export default function EvidenceSearch({ pool, onGuess, triedIds }: EvidenceSear
       <p className="evidence-cloud-prompt">Выберите, что, по-вашему, могло быть на месте:</p>
       <div className="evidence-cloud">
         {pool.map((item) => {
-          const Icon = getEvidenceCategoryIcon(item.name);
+          // Label облака уже промаскирован под категорию (реальную или
+          // decoy) — своей отдельной "настоящей" улики за ним нет, так что
+          // передаём его и как name, и как generic_category: та же функция,
+          // что и у "Собранных улик", просто всегда попадает в первую ветку.
+          const Icon = getEvidenceIcon({ name: item.name, generic_category: item.name });
           return (
             <span
               key={item.id}

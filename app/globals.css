@@ -1149,11 +1149,22 @@ body {
 }
 
 .evidence-doc-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-pt-serif), serif;
   font-weight: 700;
   font-size: 18px;
   color: var(--ink);
   margin: 0 0 8px;
+}
+
+/* Та же currentColor-логика, что у иконок облака осмотра — часть той же
+   "печати", что и текст, не отдельный акцентный цвет. */
+.evidence-doc-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .evidence-doc-description {
@@ -1184,6 +1195,11 @@ body {
 
   .evidence-doc-name {
     font-size: 16px;
+  }
+
+  .evidence-doc-icon {
+    width: 17px;
+    height: 17px;
   }
 }
 

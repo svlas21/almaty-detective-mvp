@@ -213,7 +213,7 @@ export async function GET(
 
   const { data: collectedEvidenceDetails } = await db
     .from("evidence")
-    .select("id, name, description")
+    .select("id, name, description, generic_category")
     .in("id", state.collected_evidence.length ? state.collected_evidence : ["00000000-0000-0000-0000-000000000000"]);
 
   // Готовность к финальному экрану "Обвинение" (Дело №9704): считается на
