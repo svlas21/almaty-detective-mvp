@@ -1037,6 +1037,139 @@ body {
 }
 
 /* ============================================================
+   Экран "Собранные улики" — папка дела, те же токены и паттерн
+   "ДЕЛО № · ЛЕЙБЛ" + отдельный счётчик, что у corkboard-header
+   (SuspectsList), но в кремовой досье-палитре, а не на тёмной доске.
+   ============================================================ */
+
+.evidence-folder-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  gap: 12px;
+  padding: 0 6px;
+  margin-bottom: 14px;
+  /* .timer-badge fixed справа сверху — резервируем ему место, как и
+     .corkboard-header, чтобы счётчик не уезжал под таймер. */
+  padding-right: 140px;
+}
+
+.evidence-folder-tab {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: rgba(217, 154, 68, 0.08);
+  border: 1px solid rgba(217, 154, 68, 0.35);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 14px;
+}
+
+.evidence-folder-count {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8f9a;
+  white-space: nowrap;
+}
+
+.evidence-folder-count strong {
+  color: var(--amber);
+  font-size: 13px;
+}
+
+.evidence-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.evidence-doc {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px 10px 10px 10px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 1px 0 var(--paper-shadow) inset;
+  padding: 18px 20px;
+}
+
+/* "Живая" стопка листов дела: поворот только у части карточек, не у всех
+   подряд — иначе выйдет шум вместо лёгкого эффекта неидеальной стопки. */
+.evidence-doc:nth-child(3n + 2) {
+  transform: rotate(-0.6deg);
+}
+
+.evidence-doc-number {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-right: 1px dashed var(--paper-shadow);
+  padding-right: 14px;
+}
+
+.evidence-doc-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.evidence-doc-name {
+  font-family: var(--font-pt-serif), serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.evidence-doc-description {
+  font-family: var(--font-pt-serif), serif;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.evidence-doc-empty {
+  align-items: center;
+  color: var(--ink-soft);
+  font-family: var(--font-pt-serif), serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .evidence-folder-header {
+    padding-right: 0;
+  }
+
+  .evidence-doc {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+  .evidence-doc-name {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================
    Доска расследования: экран "Подозреваемые" (SuspectsList)
    ============================================================ */
 

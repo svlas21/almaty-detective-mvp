@@ -504,18 +504,33 @@ export default function GameScreen() {
         {tab === "expertise" && <ExpertsList experts={state.experts} onSelect={openSuspect} />}
 
         {tab === "evidence" && (
-          <div className="card">
-            <h2>Собранные улики ({state.collectedEvidence.length})</h2>
-            {state.collectedEvidence.length === 0 && (
-              <p className="muted">Пока ничего не найдено — осмотрите локации.</p>
-            )}
-            {state.collectedEvidence.map((e) => (
-              <div key={e.id} className="card" style={{ marginBottom: 8 }}>
-                <strong>{e.name}</strong>
-                <p style={{ marginTop: 8 }}>{e.description}</p>
+          <>
+            <div className="evidence-folder-header">
+              <span className="evidence-folder-tab">Дело №9704 · Вещественные доказательства</span>
+              <span className="evidence-folder-count">
+                Приобщено: <strong>{state.collectedEvidence.length}</strong>
+              </span>
+            </div>
+
+            {state.collectedEvidence.length === 0 ? (
+              <div className="evidence-doc evidence-doc-empty">
+                <div className="dossier-evidence-empty-icon" />
+                <span>Пока ничего не найдено — осмотрите локации.</span>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="evidence-doc-list">
+                {state.collectedEvidence.map((e, i) => (
+                  <div key={e.id} className="evidence-doc">
+                    <div className="evidence-doc-number">Вещдок №{i + 1}</div>
+                    <div className="evidence-doc-body">
+                      <h3 className="evidence-doc-name">{e.name}</h3>
+                      <p className="evidence-doc-description">{e.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {tab === "accuse" && state.accusationUnlocked && (
