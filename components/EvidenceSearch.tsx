@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getEvidenceCategoryIcon } from "@/lib/evidenceCategoryIcons";
 
 interface EvidencePoolItem {
   id: string;
@@ -36,16 +37,20 @@ export default function EvidenceSearch({ pool, onGuess, triedIds }: EvidenceSear
     <div>
       <p className="evidence-cloud-prompt">Выберите, что, по-вашему, могло быть на месте:</p>
       <div className="evidence-cloud">
-        {pool.map((item) => (
-          <span
-            key={item.id}
-            className="evidence-tag-label"
-            style={triedIds.has(item.id) ? { opacity: 0.4, pointerEvents: "none" } : undefined}
-            onClick={() => onGuess(item.id)}
-          >
-            {item.name}
-          </span>
-        ))}
+        {pool.map((item) => {
+          const Icon = getEvidenceCategoryIcon(item.name);
+          return (
+            <span
+              key={item.id}
+              className="evidence-tag-label"
+              style={triedIds.has(item.id) ? { opacity: 0.4, pointerEvents: "none" } : undefined}
+              onClick={() => onGuess(item.id)}
+            >
+              <Icon className="evidence-tag-icon" strokeWidth={1.75} aria-hidden />
+              {item.name}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
