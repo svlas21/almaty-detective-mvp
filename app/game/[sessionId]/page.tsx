@@ -342,21 +342,35 @@ export default function GameScreen() {
             </div>
             <div className="people-sheet-card">
               {(() => {
-                const peopleHere = state.allSuspects.filter(
+                const locationPeople = state.allSuspects.filter(
                   (person) => person.unlocked === true && person.location_id === state.location?.id
                 );
+                // Разыскиваемые (например «Марат») присутствуют по локации, но
+                // недопрашиваемы — protocol/reactions для них не заполнены и
+                // допрос по канону невозможен: показываем штампом, не карточкой.
+                const peopleHere = locationPeople.filter((person) => !person.wanted);
+                const wantedHere = locationPeople.filter((person) => person.wanted);
                 return (
                   <>
                     <div className="people-sheet-header">
                       <span>
-                        Люди здесь <span className="people-sheet-count">· {peopleHere.length}</span>
+                        Люди здесь <span className="people-sheet-count">· {locationPeople.length}</span>
                       </span>
                     </div>
 
-                    {peopleHere.length === 0 ? (
+                    {peopleHere.length === 0 && wantedHere.length === 0 ? (
                       <p className="muted">Здесь никого не найдено.</p>
                     ) : (
                       <div className="people-slip-list">
+                        {wantedHere.map((person) => (
+                          <div key={person.id} className="people-slip people-slip-wanted">
+                            <span className="people-slip-wanted-stamp">В розыске</span>
+                            <div className="people-slip-info">
+                              <p className="people-slip-name">{person.name}</p>
+                              {person.role && <p className="people-slip-role">{person.role}</p>}
+                            </div>
+                          </div>
+                        ))}
                         {peopleHere.map((person) => {
                           const isValentinaLocked =
                             person.name === "Валентина Сартакова" && !state.motherUnlocked;
