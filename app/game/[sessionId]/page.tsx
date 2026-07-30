@@ -475,21 +475,23 @@ export default function GameScreen() {
         )}
 
         {tab === "map" && mapView === "location" && locationPhase === "timeout" && (
-          <div className="card" style={{ textAlign: "center" }}>
-            <h2>⏱ Время осмотра истекло</h2>
-            <p className="muted">Вы можете вернуться и осмотреть место ещё раз.</p>
+          <div className="evidence-timeout-card">
+            <h2 className="evidence-timeout-title">⏱ Время осмотра истекло</h2>
+            <p className="evidence-timeout-subtitle">Вы можете вернуться и осмотреть место ещё раз.</p>
 
             <EvidenceSearch pool={pool} onGuess={guessEvidence} triedIds={triedIds} />
 
             {lastResult && (
-              <div className="card" style={{ borderColor: lastResult.relevant ? "#4caf7d" : undefined }}>
-                <strong>{lastResult.name}</strong>
-                <p style={{ marginTop: 8 }}>{lastResult.text}</p>
+              <div className={`evidence-result${lastResult.relevant ? " is-relevant" : ""}`}>
+                <div className="evidence-result-label">{lastResult.name}</div>
+                <p>{lastResult.text}</p>
               </div>
             )}
 
-            <div style={{ marginTop: 16, display: "flex", gap: 12, justifyContent: "center" }}>
-              <button className="btn" onClick={startSearch}>🔍 Осмотреть снова</button>
+            <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
+              <button className="people-sheet-search-btn" onClick={startSearch}>
+                🔍 Осмотреть снова
+              </button>
               <button className="map-return-btn" onClick={() => setMapView("map")}>
                 🗺 Карта Алматы
               </button>

@@ -18,26 +18,28 @@ export default function EvidenceSearch({ pool, onGuess, triedIds }: EvidenceSear
 
   if (askedYet === "idle") {
     return (
-      <div className="card">
+      <div className="evidence-ask-prompt">
         <p>Вы заметили какие-либо улики на месте?</p>
-        <button className="btn" onClick={() => setAskedYet("searching")} style={{ marginRight: 8 }}>
-          Да
-        </button>
-        <button className="btn" style={{ background: "#384050" }} onClick={() => setAskedYet("idle")}>
-          Нет
-        </button>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button className="people-sheet-search-btn" onClick={() => setAskedYet("searching")}>
+            Да
+          </button>
+          <button className="dossier-btn-muted" onClick={() => setAskedYet("idle")}>
+            Нет
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="card">
-      <p className="muted">Выберите, что, по-вашему, могло быть на месте:</p>
+    <div>
+      <p className="evidence-cloud-prompt">Выберите, что, по-вашему, могло быть на месте:</p>
       <div className="evidence-cloud">
         {pool.map((item) => (
           <span
             key={item.id}
-            className="topic-chip"
+            className="evidence-tag-label"
             style={triedIds.has(item.id) ? { opacity: 0.4, pointerEvents: "none" } : undefined}
             onClick={() => onGuess(item.id)}
           >
