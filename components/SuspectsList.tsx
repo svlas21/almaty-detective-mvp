@@ -14,6 +14,7 @@ export interface SuspectListItem {
   portrait_url?: string | null;
   is_suspect?: boolean;
   is_expert?: boolean;
+  is_case_subject?: boolean;
   specialization?: string | null;
   viewed?: boolean;
   wanted?: boolean;
@@ -120,7 +121,14 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                       {initials(s.name ?? "")}
                     </div>
                   )}
-                  {s.viewed && <span className="stamp stamp-militia">ОПРОШЕН</span>}
+                  {/* is_case_subject=false — нарративные персонажи вроде дежурного
+                      ГУВД, который выдаёт вводную по делу: допрос к ним не
+                      применим, статус "опрошен" не показываем, в отличие от
+                      is_suspect (которое лишь различает "подозреваемый"/
+                      "свидетель" и не отражает этот случай). */}
+                  {s.viewed && s.is_case_subject !== false && (
+                    <span className="stamp stamp-militia">ОПРОШЕН</span>
+                  )}
                   {s.wanted && <span className="stamp stamp-wanted">В РОЗЫСКЕ</span>}
                 </div>
                 <strong className="polaroid-name">{s.name}</strong>

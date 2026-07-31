@@ -55,7 +55,9 @@ export async function GET(
 
   const { data: caseSuspects } = await db
     .from("characters")
-    .select("id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, mentions")
+    .select(
+      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions"
+    )
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .eq("is_expert", false);
 
