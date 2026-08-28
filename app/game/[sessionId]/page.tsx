@@ -12,6 +12,7 @@ import ExpertsList from "@/components/ExpertsList";
 import SuspectDetail from "@/components/SuspectDetail";
 import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
+import PhoneCallOverlay, { PendingCall } from "@/components/PhoneCallOverlay";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
@@ -64,6 +65,7 @@ interface StateResponse {
   experts: SuspectListItem[];
   motherUnlocked: boolean;
   accusationUnlocked: boolean;
+  pendingCall: PendingCall | null;
   mapImageUrl: string | null;
   collectedEvidence: CollectedEvidenceItem[];
   log: LogEntry[];
@@ -229,6 +231,14 @@ export default function GameScreen() {
     setPresentingEvidenceId(null);
   }
 
+  async function answerCall(callId: string) {
+    await fetch(`/api/games/${sessionId}/calls/${callId}/answer`, { method: "POST" });
+  }
+
+  async function closeCall() {
+    await loadState({ silent: true });
+  }
+
   async function handleIntroFinish(characterId: string) {
     setNavigating(true);
     try {
@@ -273,6 +283,14 @@ export default function GameScreen() {
 
   return (
     <div className="game-shell">
+      {state.pendingCall && (
+        <PhoneCallOverlay
+          call={state.pendingCall}
+          onAnswer={() => answerCall(state.pendingCall!.id)}
+          onClose={closeCall}
+        />
+      )}
+
       <Sidebar active={tab} onChange={setTab} accusationUnlocked={state.accusationUnlocked} />
 
       <div className="game-main">

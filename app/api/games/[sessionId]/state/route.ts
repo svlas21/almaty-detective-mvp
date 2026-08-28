@@ -86,8 +86,50 @@ export async function GET(
   const daniyarCharacter = (caseSuspects ?? []).find((c) => c.name === "Данияр Ахметов");
   const victorCharacter = (caseSuspects ?? []).find((c) => c.name === "Виктор Гринько");
   const rinatCharacter = (caseExperts ?? []).find((c) => c.name === "Ринат Абишев");
+  const seitovaCharacter = (caseExperts ?? []).find((c) => c.name === "Гульнара Ержановна Сеитова");
+  const kanCharacter = (caseExperts ?? []).find((c) => c.name === "Юрий Николаевич Кан");
   const viewedCharacters: string[] = state.viewed_characters ?? [];
   const viewedReactions: string[] = state.viewed_reactions ?? [];
+  const viewedCalls: string[] = state.viewed_calls ?? [];
+
+  // Звонки (Дело №9704): живые входящие вызовы во время партии — отдельный
+  // механизм от "Звонок Марата" (та улика по-прежнему собирается и
+  // показывается через present/route.ts, локацию она больше не открывает).
+  // unlock_condition_key — не универсальный движок условий, а просто метка;
+  // реальные условия прописаны здесь же, тем же паттерном, что и
+  // apartmentUnlockCondition/parkingUnlockCondition выше.
+  const allExpertsInterviewed =
+    !!seitovaCharacter &&
+    !!rinatCharacter &&
+    !!kanCharacter &&
+    viewedCharacters.includes(seitovaCharacter.id) &&
+    viewedCharacters.includes(rinatCharacter.id) &&
+    viewedCharacters.includes(kanCharacter.id);
+
+  const callUnlockConditions: Record<string, boolean> = {
+    all_experts_interviewed: allExpertsInterviewed,
+  };
+
+  const { data: casePhoneCalls } = await db
+    .from("phone_calls")
+    .select(
+      "id, caller_role, unlock_condition_key, dialogue_text, unlocks_location_id, order_index, characters(name)"
+    )
+    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
+    .order("order_index", { ascending: true });
+
+  const pendingCallRow = (casePhoneCalls ?? []).find(
+    (c) => !viewedCalls.includes(c.id) && callUnlockConditions[c.unlock_condition_key]
+  );
+
+  const pendingCall = pendingCallRow
+    ? {
+        id: pendingCallRow.id,
+        callerName: (pendingCallRow.characters as { name: string } | null)?.name ?? "",
+        callerRole: pendingCallRow.caller_role,
+        dialogueText: pendingCallRow.dialogue_text,
+      }
+    : null;
 
   // Триггеры открытия локаций (Дело №9704): считаются заново на каждый
   // запрос из уже собранных полей session_state, без новых столбцов.
@@ -251,6 +293,7 @@ export async function GET(
     experts,
     motherUnlocked,
     accusationUnlocked,
+    pendingCall,
     mapImageUrl: caseRecord?.map_image_url ?? null,
     collectedEvidenceCount: state.collected_evidence.length,
     collectedEvidence: collectedEvidenceDetails ?? [],

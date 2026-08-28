@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       collected_evidence: [],
       viewed_characters: [],
       viewed_reactions: [],
+      viewed_calls: [],
       log: [],
     })
     .eq("session_id", sessionId);

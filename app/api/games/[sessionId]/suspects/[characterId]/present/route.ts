@@ -77,23 +77,10 @@ export async function POST(
     }
   }
 
-  // Открытие локации "Съёмная квартира «Марата»" (Дело №9704): триггер — игрок
-  // увидел реакцию эксперта Рината на "Звонок Марата" (экспертиза связывает
-  // звонок с конкретным адресом).
-  let discoveredLocations = state.discovered_locations;
-
-  if (character.name === "Ринат Абишев" && evidence?.name === "Звонок Марата") {
-    const { data: maratLocation } = await db
-      .from("locations")
-      .select("id")
-      .eq("case_id", character.case_id)
-      .eq("name", "Съёмная квартира «Марата»")
-      .maybeSingle();
-
-    if (maratLocation && !discoveredLocations.includes(maratLocation.id)) {
-      discoveredLocations = [...discoveredLocations, maratLocation.id];
-    }
-  }
+  // Открытие локации "Съёмная квартира «Марата»" теперь идёт только через
+  // звонок Азамата после допроса всех экспертов (см. phone_calls в
+  // state/route.ts и /calls/[callId]/answer) — реакция Рината на "Звонок
+  // Марата" саму улику по-прежнему показывает, но локацию больше не открывает.
 
   // Факт "игрок предъявил улику X персонажу Y и увидел экран реакции" —
   // ключ для финального экрана "Обвинение" (case_accusation.accomplices[].
@@ -107,7 +94,6 @@ export async function POST(
     .update({
       collected_evidence: collectedEvidence,
       discovered_evidence: discoveredEvidence,
-      discovered_locations: discoveredLocations,
       viewed_reactions: viewedReactions,
       log: [
         ...(state.log ?? []),
