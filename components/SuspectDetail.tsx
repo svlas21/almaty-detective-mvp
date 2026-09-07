@@ -9,6 +9,11 @@ interface CollectedEvidenceItem {
   description: string | null;
 }
 
+interface TopicItem {
+  id: string;
+  label: string;
+}
+
 interface SuspectDetailProps {
   suspect: SuspectListItem;
   collectedEvidence: CollectedEvidenceItem[];
@@ -18,6 +23,10 @@ interface SuspectDetailProps {
   onPresent: (evidence: CollectedEvidenceItem) => void;
   onInterrogationComplete: (characterId: string) => void;
   onQuestionViewed: (characterId: string, questionIndex: number) => void;
+  topics: TopicItem[];
+  topicAnswer: { topicLabel: string; text: string } | null;
+  askingTopicId: string | null;
+  onAsk: (topic: TopicItem) => void;
 }
 
 export default function SuspectDetail({
@@ -29,6 +38,10 @@ export default function SuspectDetail({
   onPresent,
   onInterrogationComplete,
   onQuestionViewed,
+  topics,
+  topicAnswer,
+  askingTopicId,
+  onAsk,
 }: SuspectDetailProps) {
   return (
     <div className="dossier-page">
@@ -66,7 +79,40 @@ export default function SuspectDetail({
         onQuestionViewed={(i) => onQuestionViewed(suspect.id, i)}
       />
 
-      {(suspect.is_suspect === true || suspect.is_expert === true) &&
+      {topics.length > 0 && (
+        <div className="dossier-card">
+          <div className="dossier-section-label">Спросить про...</div>
+
+          <div className="dossier-evidence-grid">
+            {topics.map((t) => (
+              <div
+                key={t.id}
+                className={`dossier-evidence-tag${askingTopicId && askingTopicId !== t.id ? " is-busy" : ""}`}
+                onClick={() => (askingTopicId ? undefined : onAsk(t))}
+              >
+                {t.label}
+              </div>
+            ))}
+          </div>
+
+          {topicAnswer && (
+            <div className="dossier-reaction">
+              <div className="dossier-reaction-label">{topicAnswer.topicLabel}</div>
+              <p>{topicAnswer.text}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Раньше секция была доступна только is_suspect/is_expert — свидетели
+          (Валентина и т.п.) с реально заполненными reactions её не видели,
+          хотя предъявление улики им нужно для reaction-chain механик и
+          экрана "Обвинение" (см. present/route.ts, required_reaction_evidence_id).
+          has_reactions добавлен как отдельное условие, is_suspect/is_expert
+          не убраны — иначе фигуранты с пока пустым reactions (шаблонная
+          заглушка-реакция всё равно значима, см. present/route.ts) потеряли бы
+          секцию. */}
+      {(suspect.is_suspect === true || suspect.is_expert === true || suspect.has_reactions === true) &&
         (suspect.fixed_questions?.length ?? 0) > 0 && (
         <div className="dossier-card">
           <div className="dossier-section-label">

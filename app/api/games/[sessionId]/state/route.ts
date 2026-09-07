@@ -56,7 +56,7 @@ export async function GET(
   const { data: caseSuspects } = await db
     .from("characters")
     .select(
-      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions"
+      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions"
     )
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .eq("is_expert", false);
@@ -64,11 +64,19 @@ export async function GET(
   // Эксперты-консультанты (ГУВД технически, но в игре живут отдельно от
   // "Подозреваемых и свидетелей") — доступны всей карточкой с начала игры,
   // без discovered/mentioned-механики: см. вкладку "Экспертиза".
+  // Аскар Бейсенов (id 56dd82a2-a097-4bc3-beb2-0372ff083b81) отключён по
+  // решению сценариста — карточка/контент остаются в БД (is_case_subject
+  // не трогаем, он реально фигурант дела), но на вкладке "Экспертиза" не
+  // показывается. Явное исключение по id, а не is_case_subject=false: этот
+  // флаг зарезервирован под "нарративный персонаж vs реальный фигурант"
+  // (см. 005_case_subject_flag.sql, Азамат Нурланович) — Аскар под это
+  // определение не подходит, просто выключен из вкладки.
   const { data: caseExperts } = await db
     .from("characters")
     .select("id, name, role, specialization, intro_text, fixed_questions, portrait_url")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .eq("is_expert", true);
+    .eq("is_expert", true)
+    .neq("id", "56dd82a2-a097-4bc3-beb2-0372ff083b81");
 
   const experts = (caseExperts ?? []).map((expert) => ({
     ...expert,
@@ -193,6 +201,32 @@ export async function GET(
   const aliyaStage2 =
     motherUnlocked && !!valentinaCharacter && viewedCharacters.includes(valentinaCharacter.id);
 
+  // "Спросить про..." (Дело №9704): темы, открытые по улике — доступны для
+  // вопроса любому обнаруженному персонажу (см. ask/route.ts), не привязаны
+  // к конкретной карточке в отличие от fixed_questions/reactions.
+  const { data: caseTopics } = await db
+    .from("topics")
+    .select(
+      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id"
+    )
+    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
+    .order("order_index", { ascending: true });
+
+  // Условия открытия темы (см. supabase/008_topic_unlock_conditions.sql) —
+  // та же проверка, что в ask/route.ts, здесь только для формирования списка
+  // доступных тем (реальный гейт — там).
+  const topics = (caseTopics ?? [])
+    .filter(
+      (t) =>
+        (!t.unlock_evidence_id || state.collected_evidence.includes(t.unlock_evidence_id)) &&
+        (!t.unlock_character_id || viewedCharacters.includes(t.unlock_character_id)) &&
+        (!t.unlock_location_id || discoveredLocationIds.has(t.unlock_location_id)) &&
+        (!t.unlock_reaction_character_id ||
+          !t.unlock_reaction_evidence_id ||
+          viewedReactions.includes(`${t.unlock_reaction_character_id}:${t.unlock_reaction_evidence_id}`))
+    )
+    .map((t) => ({ id: t.id, label: t.label }));
+
   const ALIYA_FOLLOWUP_QUESTION = {
     q: "Дом на Кок Тобе — вы правда не расстроились, что он остался Игорю?",
     a: '(после паузы, тише) «Расстроилась, чего уж там. Обидно было — мы вместе о нём мечтали, а вышло, что достраивал он его уже один, для новой жизни. Но это было три года назад». (пожимает плечами) «Сейчас у меня всё хорошо, слава богу — в деньгах не нуждаюсь. Обижаться давно не на что, да и поздно уже».',
@@ -209,7 +243,13 @@ export async function GET(
   }
 
   const allSuspects = (caseSuspects ?? []).map((suspectRow) => {
-    const { mentions: _mentions, ...suspect } = suspectRow;
+    // reactions не спредим в ответ клиенту как есть — это спойлер (текст
+    // реакции на конкретную улику до того, как игрок её предъявил, см.
+    // present/route.ts). Наружу отдаём только has_reactions: непустой ли
+    // объект, признак того, что для этого персонажа есть настоящий контент
+    // "Предъявить улику" — не только is_suspect=true (см. Валентина/007).
+    const { mentions: _mentions, reactions, ...suspect } = suspectRow;
+    const hasReactions = Object.keys(reactions ?? {}).length > 0;
     const isValentina = suspect.id === valentinaCharacter?.id;
 
     // Валентину показывает/скрывает ТОЛЬКО motherUnlocked — mentions-механика
@@ -256,6 +296,7 @@ export async function GET(
       // решают уже потребители поля, не этот флаг.
       viewed: viewedCharacters.includes(suspect.id),
       wanted,
+      has_reactions: hasReactions,
     };
   });
 
@@ -294,6 +335,7 @@ export async function GET(
     motherUnlocked,
     accusationUnlocked,
     pendingCall,
+    topics,
     mapImageUrl: caseRecord?.map_image_url ?? null,
     collectedEvidenceCount: state.collected_evidence.length,
     collectedEvidence: collectedEvidenceDetails ?? [],

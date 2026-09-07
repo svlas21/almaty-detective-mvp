@@ -55,26 +55,50 @@ export async function POST(
 
   // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
   // и не допросом, а после того как игрок увидел конкретную реакцию конкретного
-  // персонажа на другую улику. Пока один такой переход:
+  // персонажа на другую улику. Переходы:
   // Ежедневник → реакция Виктора ИЛИ Данияра → "Звонок Марата".
+  // Нож (с отпечатками Олжаса) ИЛИ Тело потерпевшего → реакция Олжаса →
+  // "Показания Олжаса" (Акт IV, Сцена 4 — см. обсуждение находки в подвале).
+  // Записка от Игоря → реакция Сеитовой → "Частичный отпечаток на записке —
+  // совпадение с Фархадом Мамаджановым" (открывает тему "Фархад Мамаджанов").
+  // Звонок Марата → реакция Рината → "Адрес квартиры на Сейфулина".
   let collectedEvidence = state.collected_evidence;
   let discoveredEvidence = state.discovered_evidence ?? [];
+
+  const grantChainedEvidence = async (grantedEvidenceName: string) => {
+    const { data: granted } = await db
+      .from("evidence")
+      .select("id")
+      .eq("case_id", character.case_id)
+      .eq("name", grantedEvidenceName)
+      .maybeSingle();
+
+    if (granted && !collectedEvidence.includes(granted.id)) {
+      collectedEvidence = [...collectedEvidence, granted.id];
+      discoveredEvidence = Array.from(new Set([...discoveredEvidence, granted.id]));
+    }
+  };
 
   if (
     evidence?.name === "Ежедневник на столе" &&
     (character.name === "Виктор Гринько" || character.name === "Данияр Ахметов")
   ) {
-    const { data: zvonokMarata } = await db
-      .from("evidence")
-      .select("id")
-      .eq("case_id", character.case_id)
-      .eq("name", "Звонок Марата")
-      .maybeSingle();
+    await grantChainedEvidence("Звонок Марата");
+  }
 
-    if (zvonokMarata && !collectedEvidence.includes(zvonokMarata.id)) {
-      collectedEvidence = [...collectedEvidence, zvonokMarata.id];
-      discoveredEvidence = Array.from(new Set([...discoveredEvidence, zvonokMarata.id]));
-    }
+  if (
+    (evidence?.name === "Нож (с отпечатками Олжаса)" || evidence?.name === "Тело потерпевшего") &&
+    character.name === "Олжас Бекенов"
+  ) {
+    await grantChainedEvidence("Показания Олжаса");
+  }
+
+  if (evidence?.name === "Записка от Игоря" && character.name === "Гульнара Ержановна Сеитова") {
+    await grantChainedEvidence("Частичный отпечаток на записке — совпадение с Фархадом Мамаджановым");
+  }
+
+  if (evidence?.name === "Звонок Марата" && character.name === "Ринат Абишев") {
+    await grantChainedEvidence("Адрес квартиры на Сейфулина");
   }
 
   // Открытие локации "Съёмная квартира «Марата»" теперь идёт только через

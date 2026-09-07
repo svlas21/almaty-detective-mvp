@@ -51,6 +51,11 @@ interface CollectedEvidenceItem {
   generic_category?: string | null;
 }
 
+interface TopicItem {
+  id: string;
+  label: string;
+}
+
 interface StateResponse {
   session: { elapsed_minutes: number; status: string; intro_seen: boolean };
   location: {
@@ -66,6 +71,7 @@ interface StateResponse {
   motherUnlocked: boolean;
   accusationUnlocked: boolean;
   pendingCall: PendingCall | null;
+  topics: TopicItem[];
   mapImageUrl: string | null;
   collectedEvidence: CollectedEvidenceItem[];
   log: LogEntry[];
@@ -98,6 +104,8 @@ export default function GameScreen() {
   const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string } | null>(null);
   const [suspectConfession, setSuspectConfession] = useState<string | null>(null);
   const [presentingEvidenceId, setPresentingEvidenceId] = useState<string | null>(null);
+  const [topicAnswer, setTopicAnswer] = useState<{ topicLabel: string; text: string } | null>(null);
+  const [askingTopicId, setAskingTopicId] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
 
   async function loadState(options?: { silent?: boolean }) {
@@ -192,6 +200,7 @@ export default function GameScreen() {
     try {
       setSuspectReaction(null);
       setSuspectConfession(null);
+      setTopicAnswer(null);
       await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
       await loadState({ silent: true });
       setSelectedSuspect(person);
@@ -229,6 +238,22 @@ export default function GameScreen() {
       await loadState({ silent: true });
     }
     setPresentingEvidenceId(null);
+  }
+
+  async function askTopic(topic: TopicItem) {
+    if (!selectedSuspect) return;
+    setAskingTopicId(topic.id);
+    const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topicId: topic.id }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTopicAnswer({ topicLabel: topic.label, text: data.text });
+      await loadState({ silent: true });
+    }
+    setAskingTopicId(null);
   }
 
   async function answerCall(callId: string) {
@@ -319,6 +344,10 @@ export default function GameScreen() {
               onPresent={presentEvidenceToSuspect}
               onInterrogationComplete={completeInterrogation}
               onQuestionViewed={questionViewed}
+              topics={state.topics}
+              topicAnswer={topicAnswer}
+              askingTopicId={askingTopicId}
+              onAsk={askTopic}
             />
           </>
         ) : (

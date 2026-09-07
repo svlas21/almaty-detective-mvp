@@ -18,6 +18,7 @@ export interface SuspectListItem {
   specialization?: string | null;
   viewed?: boolean;
   wanted?: boolean;
+  has_reactions?: boolean;
 }
 
 interface SuspectsListProps {
