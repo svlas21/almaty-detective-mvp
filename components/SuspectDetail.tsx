@@ -12,6 +12,7 @@ interface CollectedEvidenceItem {
 interface TopicItem {
   id: string;
   label: string;
+  subject_character_id: string | null;
 }
 
 interface SuspectDetailProps {
@@ -43,6 +44,11 @@ export default function SuspectDetail({
   askingTopicId,
   onAsk,
 }: SuspectDetailProps) {
+  // Тема не должна предлагать спросить у персонажа про самого себя
+  // (см. supabase/009_topic_subject_character.sql) — сравнение по id,
+  // а не по label/name, чтобы не зависеть от текстовых совпадений.
+  const visibleTopics = topics.filter((t) => t.subject_character_id !== suspect.id);
+
   return (
     <div className="dossier-page">
       <div className="dossier-tab-row">
@@ -79,12 +85,12 @@ export default function SuspectDetail({
         onQuestionViewed={(i) => onQuestionViewed(suspect.id, i)}
       />
 
-      {topics.length > 0 && (
+      {visibleTopics.length > 0 && (
         <div className="dossier-card">
           <div className="dossier-section-label">Спросить про...</div>
 
           <div className="dossier-evidence-grid">
-            {topics.map((t) => (
+            {visibleTopics.map((t) => (
               <div
                 key={t.id}
                 className={`dossier-evidence-tag${askingTopicId && askingTopicId !== t.id ? " is-busy" : ""}`}

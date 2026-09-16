@@ -207,14 +207,17 @@ export async function GET(
   const { data: caseTopics } = await db
     .from("topics")
     .select(
-      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id"
+      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, subject_character_id"
     )
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .order("order_index", { ascending: true });
 
   // Условия открытия темы (см. supabase/008_topic_unlock_conditions.sql) —
   // та же проверка, что в ask/route.ts, здесь только для формирования списка
-  // доступных тем (реальный гейт — там).
+  // доступных тем (реальный гейт — там). subject_character_id (см.
+  // 009_topic_subject_character.sql) сюда прокидывается как есть — список
+  // общий для всех персонажей, а исключение "тема про самого себя"
+  // применяется на фронтенде, где известно, чья карточка открыта.
   const topics = (caseTopics ?? [])
     .filter(
       (t) =>
@@ -225,7 +228,7 @@ export async function GET(
           !t.unlock_reaction_evidence_id ||
           viewedReactions.includes(`${t.unlock_reaction_character_id}:${t.unlock_reaction_evidence_id}`))
     )
-    .map((t) => ({ id: t.id, label: t.label }));
+    .map((t) => ({ id: t.id, label: t.label, subject_character_id: t.subject_character_id }));
 
   const ALIYA_FOLLOWUP_QUESTION = {
     q: "Дом на Кок Тобе — вы правда не расстроились, что он остался Игорю?",

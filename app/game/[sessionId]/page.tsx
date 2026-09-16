@@ -54,6 +54,7 @@ interface CollectedEvidenceItem {
 interface TopicItem {
   id: string;
   label: string;
+  subject_character_id: string | null;
 }
 
 interface StateResponse {
