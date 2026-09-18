@@ -9,8 +9,15 @@ export const dynamic = "force-dynamic";
  *
  * Этап 2 экрана "Обвинение": по каждому сообщнику из case_accusation.accomplices
  * игрок выбирает один вариант ответа. Верно, если для КАЖДОГО сообщника выбранный
- * option.correct === true. Ответ — только { correct }, а ending_text отдаётся
- * ТОЛЬКО при полном успехе (иначе спойлерит развязку раньше времени).
+ * option.correct === true И игрок реально видел нужную реакцию
+ * (viewed_reactions содержит "characterId:required_reaction_evidence_id") —
+ * без этого угадать правильную формулировку из 2-3 вариантов вслепую было бы
+ * возможно. Раньше это было отдельным гейтом входа (403 до просмотра всех
+ * реакций); теперь это часть самой проверки правильности ответа, потому что
+ * экран "Обвинение" должен быть доступен в любой момент партии — угадавший
+ * без улик просто получит { correct: false }, как обычная неверная попытка.
+ * Ответ — только { correct }, а ending_text отдаётся ТОЛЬКО при полном успехе
+ * (иначе спойлерит развязку раньше времени).
  * При успехе партия помечается завершённой — дальше геймплея нет.
  */
 export async function POST(
@@ -35,7 +42,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("collected_evidence, viewed_reactions")
+    .select("viewed_reactions")
     .eq("session_id", sessionId)
     .single();
 
@@ -51,7 +58,7 @@ export async function POST(
 
   const { data: accusation } = await db
     .from("case_accusation")
-    .select("required_evidence_ids, accomplices, ending_text")
+    .select("accomplices, ending_text")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
@@ -65,17 +72,6 @@ export async function POST(
     options: { label: string; correct: boolean }[];
     required_reaction_evidence_id: string;
   }[] = accusation.accomplices ?? [];
-  const requiredEvidenceIds: string[] = accusation.required_evidence_ids ?? [];
-
-  const unlocked =
-    requiredEvidenceIds.every((id) => state.collected_evidence.includes(id)) &&
-    accomplices.every((acc) =>
-      viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
-    );
-
-  if (!unlocked) {
-    return NextResponse.json({ error: "Обвинение пока недоступно" }, { status: 403 });
-  }
 
   const submittedAnswers = answers ?? [];
   const correct =
@@ -83,7 +79,11 @@ export async function POST(
     accomplices.every((acc) => {
       const answer = submittedAnswers.find((a) => a.characterId === acc.character_id);
       if (!answer) return false;
-      return acc.options[answer.optionIndex]?.correct === true;
+      const optionCorrect = acc.options[answer.optionIndex]?.correct === true;
+      const reactionSeen = viewedReactions.includes(
+        `${acc.character_id}:${acc.required_reaction_evidence_id}`
+      );
+      return optionCorrect && reactionSeen;
     });
 
   if (!correct) {

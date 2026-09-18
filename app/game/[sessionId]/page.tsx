@@ -317,7 +317,7 @@ export default function GameScreen() {
         />
       )}
 
-      <Sidebar active={tab} onChange={setTab} accusationUnlocked={state.accusationUnlocked} />
+      <Sidebar active={tab} onChange={setTab} />
 
       <div className="game-main">
         <div className="timer-badge">
@@ -483,6 +483,18 @@ export default function GameScreen() {
                     )}
 
                     <div className="people-sheet-actions">
+                      {/* Дополнительный, заметный вход на "Обвинение" именно
+                          на ГУВД — доступен сразу, без каких-либо условий
+                          (unlocked-гейт снят с самих /accusation-роутов —
+                          честная игра проверяется там, не на уровне доступа
+                          к экрану). Сайдбар-вкладка "⚖" ведёт туда же и тоже
+                          без disabled-состояния — эта кнопка не единственный
+                          путь, просто более заметный на этой локации. */}
+                      {state.location?.name === "ГУВД города Алматы" && (
+                        <button className="people-sheet-accuse-btn" onClick={() => setTab("accuse")}>
+                          ⚖️ Раскрыть дело
+                        </button>
+                      )}
                       {state.location?.is_searchable && (
                         <button className="people-sheet-search-btn" onClick={startSearch}>
                           🔍 Обыскать место
@@ -514,9 +526,14 @@ export default function GameScreen() {
 
         {tab === "map" && mapView === "location" && locationPhase === "searching" && (
           <>
-            <button className="map-return-btn" style={{ marginBottom: 16 }} onClick={() => setMapView("map")}>
-              🗺 Карта Алматы
-            </button>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <button className="map-return-btn" onClick={() => setLocationPhase("timeout")}>
+                ✅ Закончить осмотр
+              </button>
+              <button className="map-return-btn" onClick={() => setMapView("map")}>
+                🗺 Карта Алматы
+              </button>
+            </div>
 
             <div className="timer-badge" style={{ position: "static", marginBottom: 12, display: "inline-block" }}>
               <div className="value">{panoramaReady ? `${secondsLeft}с` : "…"}</div>
@@ -550,6 +567,9 @@ export default function GameScreen() {
             <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
               <button className="people-sheet-search-btn" onClick={startSearch}>
                 🔍 Осмотреть снова
+              </button>
+              <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
+                ✅ Закончить осмотр
               </button>
               <button className="map-return-btn" onClick={() => setMapView("map")}>
                 🗺 Карта Алматы
@@ -597,7 +617,7 @@ export default function GameScreen() {
           </>
         )}
 
-        {tab === "accuse" && state.accusationUnlocked && (
+        {tab === "accuse" && (
           <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} />
         )}
 

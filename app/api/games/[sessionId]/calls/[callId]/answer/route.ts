@@ -29,7 +29,7 @@ export async function POST(
 
   const { data: call, error: callError } = await db
     .from("phone_calls")
-    .select("unlocks_location_id, grants_evidence_id, characters(name)")
+    .select("dialogue_text, unlocks_location_id, grants_evidence_id, characters(name)")
     .eq("id", callId)
     .single();
 
@@ -56,6 +56,29 @@ export async function POST(
 
   const callerName = (call.characters as { name: string } | null)?.name ?? "Неизвестный";
 
+  // Журнал расследования (Дело №9704): если звонок выдаёт улику, это тоже
+  // отдельная "evidence"-запись — по тому же принципу, что и в present/ask/
+  // question-viewed.
+  const grantedEvidenceLogEntries: { type: "evidence"; outcome: "found"; evidenceName: string; source: string; at: string }[] = [];
+
+  if (call.grants_evidence_id) {
+    const { data: grantedEvidence } = await db
+      .from("evidence")
+      .select("name")
+      .eq("id", call.grants_evidence_id)
+      .maybeSingle();
+
+    if (grantedEvidence) {
+      grantedEvidenceLogEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: grantedEvidence.name,
+        source: callerName,
+        at: new Date().toISOString(),
+      });
+    }
+  }
+
   const { error: updateError } = await db
     .from("session_state")
     .update({
@@ -67,9 +90,11 @@ export async function POST(
         ...(state.log ?? []),
         {
           type: "call",
-          text: `Входящий звонок: ${callerName}`,
+          callerName,
+          dialogueText: call.dialogue_text,
           at: new Date().toISOString(),
         },
+        ...grantedEvidenceLogEntries,
       ],
     })
     .eq("session_id", sessionId);

@@ -43,9 +43,13 @@ export async function POST(
     .eq("session_id", sessionId)
     .single();
 
-  const appendLog = (text: string) => [
+  // Журнал расследования (Дело №9704): явный outcome вместо готового текста —
+  // "found" (реальная находка) отличается от "miss" (декой/неверная догадка),
+  // раньше оба варианта писались под одним type:"evidence" и различались
+  // только текстом, что не позволяло надёжно отфильтровать промахи в журнале.
+  const appendLog = (entry: { outcome: "found" | "miss"; evidenceName?: string }) => [
     ...(stateForLog?.log ?? []),
-    { type: "evidence", text, at: new Date().toISOString() },
+    { type: "evidence" as const, at: new Date().toISOString(), ...entry },
   ];
 
   // evidenceId может быть обманкой из case_decoy_categories — категорией
@@ -54,7 +58,7 @@ export async function POST(
   if (!evidence) {
     await db
       .from("session_state")
-      .update({ log: appendLog("Проверили — не относится к делу") })
+      .update({ log: appendLog({ outcome: "miss" }) })
       .eq("session_id", sessionId);
 
     return NextResponse.json({
@@ -69,7 +73,7 @@ export async function POST(
   if (!isCorrectGuess) {
     await db
       .from("session_state")
-      .update({ log: appendLog(`Проверили «${evidence.name}» — не относится к делу`) })
+      .update({ log: appendLog({ outcome: "miss", evidenceName: evidence.name }) })
       .eq("session_id", sessionId);
 
     return NextResponse.json({
@@ -87,7 +91,7 @@ export async function POST(
     .update({
       discovered_evidence: merge(stateForLog?.discovered_evidence ?? [], evidenceId),
       collected_evidence: merge(stateForLog?.collected_evidence ?? [], evidenceId),
-      log: appendLog(`Нашли улику: «${evidence.name}»`),
+      log: appendLog({ outcome: "found", evidenceName: evidence.name }),
       updated_at: new Date().toISOString(),
     })
     .eq("session_id", sessionId);

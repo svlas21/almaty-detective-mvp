@@ -12,8 +12,11 @@ export const dynamic = "force-dynamic";
  * ответ не палился в devtools/Network до победы. required_evidence_ids и
  * correct_organizer_character_id сюда не попадают вовсе — сверка на POST.
  *
- * Гейтится тем же условием, что и accusationUnlocked в .../state — если игрок
- * ещё не готов, эндпоинт 403, без объяснения деталей.
+ * Доступен в любой момент партии, без гейта по собранным уликам (кнопка
+ * "Раскрыть дело" на ГУВД должна работать сразу) — честная игра
+ * обеспечивается тем, что выбор улик на клиенте ограничен collectedEvidence,
+ * а правильность ответа проверяется на POST по реальному инвентарю/
+ * просмотренным реакциям, а не по факту вызова этого GET.
  */
 export async function GET(
   _req: NextRequest,
@@ -32,16 +35,6 @@ export async function GET(
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select("collected_evidence, viewed_reactions")
-    .eq("session_id", sessionId)
-    .single();
-
-  if (stateError || !state) {
-    return NextResponse.json({ error: "Состояние партии не найдено" }, { status: 404 });
-  }
-
   const { data: purchase } = await db
     .from("purchases")
     .select("case_id")
@@ -58,25 +51,12 @@ export async function GET(
     return NextResponse.json({ error: "Финал для этого дела не настроен" }, { status: 404 });
   }
 
-  const viewedReactions: string[] = state.viewed_reactions ?? [];
   const accomplices: {
     character_id: string;
     question: string;
     options: { label: string; correct: boolean }[];
     required_reaction_evidence_id: string;
   }[] = accusation.accomplices ?? [];
-
-  const unlocked =
-    (accusation.required_evidence_ids ?? []).every((id: string) =>
-      state.collected_evidence.includes(id)
-    ) &&
-    accomplices.every((acc) =>
-      viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
-    );
-
-  if (!unlocked) {
-    return NextResponse.json({ error: "Обвинение пока недоступно" }, { status: 403 });
-  }
 
   return NextResponse.json({
     organizerOptions: accusation.organizer_options ?? [],

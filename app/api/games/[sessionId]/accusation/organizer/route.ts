@@ -12,6 +12,12 @@ export const dynamic = "force-dynamic";
  * названный персонаж совпадает с correct_organizer_character_id И среди
  * отмеченных улик есть все required_evidence_ids. Ответ — только { correct },
  * без деталей, что именно не так (см. ТЗ: без спойлеров при неверной попытке).
+ *
+ * Без гейта по "готовности" — кнопка "Раскрыть дело" должна работать в любой
+ * момент партии. Честная игра всё равно соблюдена: submittedEvidenceIds
+ * сверяются с реальным collected_evidence, так что подставить улику, которой
+ * нет в инвентаре, невозможно, а без всех required_evidence_ids ответ просто
+ * не наберёт correct.
  */
 export async function POST(
   req: NextRequest,
@@ -36,7 +42,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("collected_evidence, viewed_reactions")
+    .select("collected_evidence")
     .eq("session_id", sessionId)
     .single();
 
@@ -52,7 +58,7 @@ export async function POST(
 
   const { data: accusation } = await db
     .from("case_accusation")
-    .select("required_evidence_ids, correct_organizer_character_id, accomplices")
+    .select("required_evidence_ids, correct_organizer_character_id")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
@@ -60,20 +66,7 @@ export async function POST(
     return NextResponse.json({ error: "Финал для этого дела не настроен" }, { status: 404 });
   }
 
-  const viewedReactions: string[] = state.viewed_reactions ?? [];
-  const accomplices: { character_id: string; required_reaction_evidence_id: string }[] =
-    accusation.accomplices ?? [];
   const requiredEvidenceIds: string[] = accusation.required_evidence_ids ?? [];
-
-  const unlocked =
-    requiredEvidenceIds.every((id) => state.collected_evidence.includes(id)) &&
-    accomplices.every((acc) =>
-      viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
-    );
-
-  if (!unlocked) {
-    return NextResponse.json({ error: "Обвинение пока недоступно" }, { status: 403 });
-  }
 
   const submittedEvidenceIds = evidenceIds ?? [];
   const allSubmittedActuallyCollected = submittedEvidenceIds.every((id) =>

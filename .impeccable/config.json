@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-07-30T12:34:08.998Z",
+        "reason": "Намеренная стилизация под досье 90-х (border-left accent на .dossier-reaction/.people-slip) — подтверждено пользователем, не баг"
+      }
+    ]
+  }
+}

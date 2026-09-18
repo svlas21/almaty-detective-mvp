@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
       viewed_characters: [],
       viewed_reactions: [],
       viewed_calls: [],
+      viewed_questions: [],
       log: [],
     })
     .eq("session_id", sessionId);

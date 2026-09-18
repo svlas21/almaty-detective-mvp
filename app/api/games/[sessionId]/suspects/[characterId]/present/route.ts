@@ -64,6 +64,10 @@ export async function POST(
   // Звонок Марата → реакция Рината → "Адрес квартиры на Сейфулина".
   let collectedEvidence = state.collected_evidence;
   let discoveredEvidence = state.discovered_evidence ?? [];
+  // Журнал расследования (Дело №9704): каждая улика, выданная реакцией на
+  // предъявление, получает свою запись в log — иначе в журнале появляется
+  // только "предъявили X персонажу Y" без следа новой найденной улики.
+  const grantedEvidenceLogEntries: { type: "evidence"; outcome: "found"; evidenceName: string; source: string; at: string }[] = [];
 
   const grantChainedEvidence = async (grantedEvidenceName: string) => {
     const { data: granted } = await db
@@ -76,6 +80,13 @@ export async function POST(
     if (granted && !collectedEvidence.includes(granted.id)) {
       collectedEvidence = [...collectedEvidence, granted.id];
       discoveredEvidence = Array.from(new Set([...discoveredEvidence, granted.id]));
+      grantedEvidenceLogEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: grantedEvidenceName,
+        source: character.name,
+        at: new Date().toISOString(),
+      });
     }
   };
 
@@ -123,9 +134,12 @@ export async function POST(
         ...(state.log ?? []),
         {
           type: "present",
-          text: `Предъявили улику «${evidence?.name ?? ""}» персонажу ${character.name}`,
+          characterName: character.name,
+          evidenceName: evidence?.name ?? "",
+          reactionText: reaction,
           at: new Date().toISOString(),
         },
+        ...grantedEvidenceLogEntries,
       ],
     })
     .eq("session_id", sessionId);

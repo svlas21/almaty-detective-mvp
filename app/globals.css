@@ -477,6 +477,24 @@ body {
   line-height: 1.4;
 }
 
+/* Карточка "в розыске" (Дело №9704) — заменяет протокол допроса/"Спросить
+   про..."/"Предъявить улику" целиком у персонажей типа «Марат»: псевдоним/
+   поддельный документ, лично не допрашивается, физически недостижим. Тот
+   же акцентный цвет, что у бейджа "В РОЗЫСКЕ" на карточке в списке
+   (.stamp-wanted) — визуально одна и та же история статуса. */
+.dossier-wanted-notice {
+  border: 1.5px solid var(--stamp);
+  border-radius: 6px;
+  padding: 16px;
+  color: var(--stamp);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: 13px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
 .dossier-evidence-empty-icon {
   position: relative;
   flex-shrink: 0;
@@ -851,6 +869,31 @@ body {
 .people-sheet-map-btn:hover {
   background: var(--ink-soft);
   color: var(--paper);
+}
+
+/* Кнопка "Раскрыть дело" — единственный вход на экран обвинения вне
+   сайдбара, только на локации ГУВД. Крупнее и заметнее остальных кнопок
+   этого блока — главное действие, а не рядовая навигация. */
+.people-sheet-accuse-btn {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 15px;
+  border-radius: 4px;
+  padding: 16px 28px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+  background: var(--amber);
+  color: var(--void);
+  border: none;
+  width: 100%;
+  order: -1;
+}
+
+.people-sheet-accuse-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 420px) {

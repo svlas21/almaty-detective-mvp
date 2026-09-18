@@ -37,7 +37,7 @@ export async function POST(
   const { data: state, error: stateError } = await db
     .from("session_state")
     .select(
-      "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, log"
+      "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, viewed_questions, log"
     )
     .eq("session_id", sessionId)
     .single();
@@ -63,7 +63,7 @@ export async function POST(
   const { data: topic, error: topicError } = await db
     .from("topics")
     .select(
-      "label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, expert_redirect_name"
+      "label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, unlock_question_character_id, unlock_question_index, expert_redirect_name"
     )
     .eq("id", topicId)
     .single();
@@ -78,6 +78,7 @@ export async function POST(
   const viewedCharacters = state.viewed_characters ?? [];
   const discoveredLocations = state.discovered_locations ?? [];
   const viewedReactions = state.viewed_reactions ?? [];
+  const viewedQuestions = state.viewed_questions ?? [];
 
   const topicLocked =
     (topic.unlock_evidence_id && !state.collected_evidence.includes(topic.unlock_evidence_id)) ||
@@ -85,7 +86,10 @@ export async function POST(
     (topic.unlock_location_id && !discoveredLocations.includes(topic.unlock_location_id)) ||
     (topic.unlock_reaction_character_id &&
       topic.unlock_reaction_evidence_id &&
-      !viewedReactions.includes(`${topic.unlock_reaction_character_id}:${topic.unlock_reaction_evidence_id}`));
+      !viewedReactions.includes(`${topic.unlock_reaction_character_id}:${topic.unlock_reaction_evidence_id}`)) ||
+    (topic.unlock_question_character_id &&
+      topic.unlock_question_index !== null &&
+      !viewedQuestions.includes(`${topic.unlock_question_character_id}:${topic.unlock_question_index}`));
 
   if (topicLocked) {
     return NextResponse.json({ error: "Эта тема ещё не открыта" }, { status: 403 });
@@ -113,10 +117,30 @@ export async function POST(
 
   let collectedEvidence = state.collected_evidence;
   let discoveredEvidence = state.discovered_evidence ?? [];
+  // Журнал расследования (Дело №9704): отдельная "evidence"-запись для
+  // улики, выданной этим ответом — без неё в журнале не видно, что вопрос
+  // принёс новую улику, только сам факт разговора (см. present/route.ts).
+  const grantedEvidenceLogEntries: { type: "evidence"; outcome: "found"; evidenceName: string; source: string; at: string }[] = [];
 
   if (grantsEvidenceId && !collectedEvidence.includes(grantsEvidenceId)) {
     collectedEvidence = [...collectedEvidence, grantsEvidenceId];
     discoveredEvidence = Array.from(new Set([...discoveredEvidence, grantsEvidenceId]));
+
+    const { data: grantedEvidence } = await db
+      .from("evidence")
+      .select("name")
+      .eq("id", grantsEvidenceId)
+      .maybeSingle();
+
+    if (grantedEvidence) {
+      grantedEvidenceLogEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: grantedEvidence.name,
+        source: character.name,
+        at: new Date().toISOString(),
+      });
+    }
   }
 
   await db
@@ -128,9 +152,12 @@ export async function POST(
         ...(state.log ?? []),
         {
           type: "ask",
-          text: `Спросили ${character.name} про «${topic.label}»`,
+          characterName: character.name,
+          topicLabel: topic.label,
+          answerText: text,
           at: new Date().toISOString(),
         },
+        ...grantedEvidenceLogEntries,
       ],
     })
     .eq("session_id", sessionId);

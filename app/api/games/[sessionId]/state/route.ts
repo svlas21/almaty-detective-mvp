@@ -64,19 +64,16 @@ export async function GET(
   // Эксперты-консультанты (ГУВД технически, но в игре живут отдельно от
   // "Подозреваемых и свидетелей") — доступны всей карточкой с начала игры,
   // без discovered/mentioned-механики: см. вкладку "Экспертиза".
-  // Аскар Бейсенов (id 56dd82a2-a097-4bc3-beb2-0372ff083b81) отключён по
-  // решению сценариста — карточка/контент остаются в БД (is_case_subject
-  // не трогаем, он реально фигурант дела), но на вкладке "Экспертиза" не
-  // показывается. Явное исключение по id, а не is_case_subject=false: этот
-  // флаг зарезервирован под "нарративный персонаж vs реальный фигурант"
-  // (см. 005_case_subject_flag.sql, Азамат Нурланович) — Аскар под это
-  // определение не подходит, просто выключен из вкладки.
+  // Аскар Бейсенов (id 56dd82a2-a097-4bc3-beb2-0372ff083b81) раньше был
+  // явно исключён отсюда по решению сценариста — его реакции на "Содержимое
+  // мусорного ведра"/"Опрос соседки" (намёк на роль Ерлана-наводчика) при
+  // этом оставались в БД, но были физически недостижимы игроком. Решение
+  // пересмотрено — он снова в списке.
   const { data: caseExperts } = await db
     .from("characters")
     .select("id, name, role, specialization, intro_text, fixed_questions, portrait_url")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .eq("is_expert", true)
-    .neq("id", "56dd82a2-a097-4bc3-beb2-0372ff083b81");
+    .eq("is_expert", true);
 
   const experts = (caseExperts ?? []).map((expert) => ({
     ...expert,
@@ -207,17 +204,20 @@ export async function GET(
   const { data: caseTopics } = await db
     .from("topics")
     .select(
-      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, subject_character_id"
+      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, unlock_question_character_id, unlock_question_index, subject_character_id"
     )
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .order("order_index", { ascending: true });
 
-  // Условия открытия темы (см. supabase/008_topic_unlock_conditions.sql) —
-  // та же проверка, что в ask/route.ts, здесь только для формирования списка
-  // доступных тем (реальный гейт — там). subject_character_id (см.
-  // 009_topic_subject_character.sql) сюда прокидывается как есть — список
-  // общий для всех персонажей, а исключение "тема про самого себя"
-  // применяется на фронтенде, где известно, чья карточка открыта.
+  // Условия открытия темы (см. supabase/008_topic_unlock_conditions.sql,
+  // 010_viewed_questions.sql) — та же проверка, что в ask/route.ts, здесь
+  // только для формирования списка доступных тем (реальный гейт — там).
+  // subject_character_id (см. 009_topic_subject_character.sql) сюда
+  // прокидывается как есть — список общий для всех персонажей, а
+  // исключение "тема про самого себя" применяется на фронтенде, где
+  // известно, чья карточка открыта.
+  const viewedQuestions: string[] = state.viewed_questions ?? [];
+
   const topics = (caseTopics ?? [])
     .filter(
       (t) =>
@@ -226,7 +226,10 @@ export async function GET(
         (!t.unlock_location_id || discoveredLocationIds.has(t.unlock_location_id)) &&
         (!t.unlock_reaction_character_id ||
           !t.unlock_reaction_evidence_id ||
-          viewedReactions.includes(`${t.unlock_reaction_character_id}:${t.unlock_reaction_evidence_id}`))
+          viewedReactions.includes(`${t.unlock_reaction_character_id}:${t.unlock_reaction_evidence_id}`)) &&
+        (!t.unlock_question_character_id ||
+          t.unlock_question_index === null ||
+          viewedQuestions.includes(`${t.unlock_question_character_id}:${t.unlock_question_index}`))
     )
     .map((t) => ({ id: t.id, label: t.label, subject_character_id: t.subject_character_id }));
 
