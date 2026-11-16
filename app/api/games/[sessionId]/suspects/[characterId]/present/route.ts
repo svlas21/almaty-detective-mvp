@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveReactionRules, type ReactionRule } from "@/lib/graphRules";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function POST(
 
   const { data: character, error: characterError } = await db
     .from("characters")
-    .select("case_id, name, reactions, confession_text, confession_requires_evidence, is_expert")
+    .select("case_id, name, reactions, reaction_rules, confession_text, confession_requires_evidence, is_expert")
     .eq("id", characterId)
     .single();
 
@@ -47,7 +48,18 @@ export async function POST(
     .eq("id", evidenceId)
     .single();
 
+  // Правила из данных (supabase/011_graph_rules.sql): реплика зависит от уже
+  // собранных улик и может выдать новые. Если правил на эту улику нет —
+  // прежняя логика (reactions-словарь + хардкод-цепочки ниже).
+  const ruleResult = resolveReactionRules(
+    character.reaction_rules as ReactionRule[] | null,
+    evidenceId,
+    state.collected_evidence,
+    !!character.is_expert
+  );
+
   const reaction =
+    ruleResult?.text ??
     character.reactions?.[evidenceId] ??
     (character.is_expert
       ? "По этому материалу заключения пока нет."
@@ -89,6 +101,26 @@ export async function POST(
       });
     }
   };
+
+  for (const grantedId of ruleResult?.grants ?? []) {
+    const { data: granted } = await db
+      .from("evidence")
+      .select("id, name")
+      .eq("case_id", character.case_id)
+      .eq("id", grantedId)
+      .maybeSingle();
+    if (granted && !collectedEvidence.includes(granted.id)) {
+      collectedEvidence = [...collectedEvidence, granted.id];
+      discoveredEvidence = Array.from(new Set([...discoveredEvidence, granted.id]));
+      grantedEvidenceLogEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: granted.name,
+        source: character.name,
+        at: new Date().toISOString(),
+      });
+    }
+  }
 
   if (
     evidence?.name === "Ежедневник на столе" &&

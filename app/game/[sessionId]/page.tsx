@@ -297,7 +297,10 @@ export default function GameScreen() {
 
     const introCharacter = state.allSuspects.find(
       (s) => s.unlocked && s.name === "Азамат Нурланович"
-    );
+    ) ??
+      // Другие дела: персонаж вводной сцены — не фигурант дела (is_case_subject=false)
+      // в стартовой локации, см. supabase/005_case_subject_flag.sql.
+      state.allSuspects.find((s) => s.unlocked && s.is_case_subject === false);
     return (
       <div className="container">
         {introCharacter && (

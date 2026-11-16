@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { anyCollected, requiresAnySatisfied } from "@/lib/graphRules";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +51,13 @@ export async function GET(
 
   const { data: caseLocations } = await db
     .from("locations")
-    .select("id, name, image_url, map_pos_x, map_pos_y, preview_image_url, short_description, is_searchable")
+    .select("id, name, image_url, map_pos_x, map_pos_y, preview_image_url, short_description, is_searchable, unlock_evidence_ids")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000");
 
   const { data: caseSuspects } = await db
     .from("characters")
     .select(
-      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions"
+      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions, unlock_evidence_ids"
     )
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .eq("is_expert", false);
@@ -75,8 +76,52 @@ export async function GET(
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .eq("is_expert", true);
 
+  // Автовыдача улик (supabase/011_graph_rules.sql): улика с auto_grant
+  // попадает в инвентарь сама, как только выполнен её requires_any (например,
+  // санкция прокурора после двух независимых улик). Считается на каждый запрос,
+  // персистится только новое.
+  const { data: autoGrantEvidence } = await db
+    .from("evidence")
+    .select("id, name, requires_any")
+    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
+    .eq("auto_grant", true);
+
+  const autoGranted = (autoGrantEvidence ?? []).filter(
+    (e) => !state.collected_evidence.includes(e.id) && requiresAnySatisfied(e.requires_any, state.collected_evidence)
+  );
+  if (autoGranted.length > 0) {
+    const now = new Date().toISOString();
+    state.collected_evidence = [...state.collected_evidence, ...autoGranted.map((e) => e.id)];
+    state.discovered_evidence = Array.from(
+      new Set([...(state.discovered_evidence ?? []), ...autoGranted.map((e) => e.id)])
+    );
+    state.log = [
+      ...(state.log ?? []),
+      ...autoGranted.map((e) => ({ type: "evidence", outcome: "found", evidenceName: e.name, source: "ГУВД", at: now })),
+    ];
+    await db
+      .from("session_state")
+      .update({
+        collected_evidence: state.collected_evidence,
+        discovered_evidence: state.discovered_evidence,
+        log: state.log,
+      })
+      .eq("session_id", sessionId);
+  }
+
+  // Вопросы протокола с условием (поле requires у элемента fixed_questions):
+  // показываются, только когда все указанные улики собраны.
+  const visibleQuestions = (questions: unknown) =>
+    Array.isArray(questions)
+      ? questions.filter(
+          (q: { requires?: string[] }) =>
+            !q?.requires || q.requires.every((id) => state.collected_evidence.includes(id))
+        )
+      : questions;
+
   const experts = (caseExperts ?? []).map((expert) => ({
     ...expert,
+    fixed_questions: visibleQuestions(expert.fixed_questions),
     is_expert: true,
     is_suspect: false,
     unlocked: true,
@@ -171,6 +216,15 @@ export async function GET(
     viewedReactions.includes(`${rinatCharacter.id}:${avtomobilEvidence.id}`);
   if (parkingLocation && parkingUnlockCondition) discoveredLocationIds.add(parkingLocation.id);
 
+  // Открытие локаций по уликам из данных (locations.unlock_evidence_ids,
+  // supabase/011_graph_rules.sql): достаточно любой из перечисленных улик.
+  for (const loc of caseLocations ?? []) {
+    const ids = (loc as { unlock_evidence_ids?: string[] | null }).unlock_evidence_ids;
+    if (ids && ids.length > 0 && anyCollected(ids, state.collected_evidence)) {
+      discoveredLocationIds.add(loc.id);
+    }
+  }
+
   const newlyDiscoveredLocationIds = [...discoveredLocationIds].filter(
     (id) => !state.discovered_locations.includes(id)
   );
@@ -184,7 +238,8 @@ export async function GET(
   const allLocations = (caseLocations ?? []).map((loc) => {
     const unlocked = discoveredLocationIds.has(loc.id);
     if (unlocked) {
-      return { ...loc, unlocked: true };
+      const { unlock_evidence_ids: _unlockIds, ...publicLoc } = loc as typeof loc & { unlock_evidence_ids?: unknown };
+      return { ...publicLoc, unlocked: true };
     }
     return { id: loc.id, map_pos_x: loc.map_pos_x, map_pos_y: loc.map_pos_y, unlocked: false };
   });
@@ -254,16 +309,21 @@ export async function GET(
     // present/route.ts). Наружу отдаём только has_reactions: непустой ли
     // объект, признак того, что для этого персонажа есть настоящий контент
     // "Предъявить улику" — не только is_suspect=true (см. Валентина/007).
-    const { mentions: _mentions, reactions, ...suspect } = suspectRow;
+    const { mentions: _mentions, reactions, unlock_evidence_ids: unlockEvidenceIds, ...suspect } = suspectRow;
+    // Персонаж с unlock_evidence_ids (supabase/011_graph_rules.sql) остаётся
+    // скрытым, пока не собрана любая из этих улик, даже если игрок уже был в его локации.
+    const unlockedByEvidence = anyCollected(unlockEvidenceIds, state.collected_evidence);
     const hasReactions = Object.keys(reactions ?? {}).length > 0;
     const isValentina = suspect.id === valentinaCharacter?.id;
 
     // Валентину показывает/скрывает ТОЛЬКО motherUnlocked — mentions-механика
     // её не касается ни в какую сторону (см. п.4 ТЗ), поэтому для неё mentions
     // не проверяется вовсе, что бы ни было в session_state.
-    const discovered = isValentina
-      ? state.discovered_characters.includes(suspect.id) && motherUnlocked
-      : state.discovered_characters.includes(suspect.id);
+    const discovered =
+      unlockedByEvidence &&
+      (isValentina
+        ? state.discovered_characters.includes(suspect.id) && motherUnlocked
+        : state.discovered_characters.includes(suspect.id));
     const mentioned = !isValentina && !discovered && mentionedIds.has(suspect.id);
 
     if (!discovered && !mentioned) {
@@ -285,7 +345,7 @@ export async function GET(
     const fixedQuestions =
       isAliya && aliyaStage2
         ? [...(suspect.fixed_questions ?? []), ALIYA_FOLLOWUP_QUESTION]
-        : suspect.fixed_questions;
+        : visibleQuestions(suspect.fixed_questions);
     // "В розыске" берётся из текста role (например «В РОЗЫСКЕ — личность не
     // установлена» у «Марата») — отдельного поля-статуса в схеме нет.
     const wanted = (suspect.role ?? "").toUpperCase().includes("РОЗЫСК");

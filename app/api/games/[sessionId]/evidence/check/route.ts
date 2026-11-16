@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { TIME_COSTS } from "@/lib/scoring";
+import { requiresAnySatisfied } from "@/lib/graphRules";
 
 export async function POST(
   req: NextRequest,
@@ -68,7 +69,11 @@ export async function POST(
     });
   }
 
-  const isCorrectGuess = evidence.is_relevant && evidence.location_id === session.current_location_id;
+  const isCorrectGuess =
+    evidence.is_relevant &&
+    evidence.location_id === session.current_location_id &&
+    !evidence.auto_grant &&
+    requiresAnySatisfied(evidence.requires_any, stateForLog?.collected_evidence ?? []);
 
   if (!isCorrectGuess) {
     await db

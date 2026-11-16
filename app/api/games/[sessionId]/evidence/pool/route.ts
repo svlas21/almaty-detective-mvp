@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requiresAnySatisfied } from "@/lib/graphRules";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,23 @@ export async function GET(
 
   const { data: pool, error: poolError } = await db
     .from("evidence")
-    .select("id, name, generic_category")
+    .select("id, name, generic_category, requires_any, auto_grant")
     .eq("case_id", purchase.case_id)
     .eq("location_id", session.current_location_id)
     .is("granted_by_character_id", null)
     .order("name");
+
+  // Улики с условием (supabase/011_graph_rules.sql) не показываются в обыске,
+  // пока условие не выполнено; auto_grant-улики в обыск не попадают вовсе.
+  const { data: poolState } = await db
+    .from("session_state")
+    .select("collected_evidence")
+    .eq("session_id", sessionId)
+    .single();
+  const collectedForPool: string[] = poolState?.collected_evidence ?? [];
+  const availablePool = (pool ?? []).filter(
+    (item) => !item.auto_grant && requiresAnySatisfied(item.requires_any, collectedForPool)
+  );
 
   if (poolError) {
     return NextResponse.json({ error: "Не удалось загрузить список улик" }, { status: 500 });
@@ -55,7 +68,7 @@ export async function GET(
   // generic_category (маскирующую категорию вроде "Книги и блокноты").
   // Фолбэк на name — только для случая, если у какой-то локационной улики
   // категория не заполнена (не должно случаться в норме).
-  const realItems = (pool ?? []).map((item) => ({
+  const realItems = availablePool.map((item) => ({
     id: item.id,
     name: item.generic_category ?? item.name,
   }));
