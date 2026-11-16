@@ -180,6 +180,10 @@ export default function GameScreen() {
 
   async function guessEvidence(evidenceId: string) {
     const guessedItem = pool.find((p) => p.id === evidenceId);
+    // Мгновенный отклик: карточка гаснет и сразу видно, что идёт проверка,
+    // не дожидаясь ответа сервера.
+    setTriedIds((prev) => new Set(prev).add(evidenceId));
+    setLastResult({ name: guessedItem?.name ?? "", text: "Проверяем…", relevant: false });
     const res = await fetch(`/api/games/${sessionId}/evidence/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -192,8 +196,15 @@ export default function GameScreen() {
         text: data.relevant ? data.description : data.message,
         relevant: data.relevant,
       });
-      setTriedIds((prev) => new Set(prev).add(evidenceId));
       loadState({ silent: true });
+    } else {
+      // Сервер не ответил — возвращаем карточку, чтобы можно было нажать ещё раз.
+      setTriedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(evidenceId);
+        return next;
+      });
+      setLastResult({ name: guessedItem?.name ?? "", text: "Не удалось проверить. Попробуйте ещё раз.", relevant: false });
     }
   }
 

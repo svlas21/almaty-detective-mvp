@@ -11,43 +11,47 @@ export async function POST(
   const db = supabaseAdmin();
   const { sessionId } = params;
 
-  const { data: session, error: sessionError } = await db
-    .from("game_sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .single();
+  // Все чтения — параллельно. Раньше было 5 последовательных запросов к
+  // Supabase (каждый — полный сетевой круг), и клик по улике ждал 1–2 с.
+  // Теперь: один круг на чтение + один круг на две параллельные записи.
+  const [sessionRes, evidenceRes, stateRes] = await Promise.all([
+    db.from("game_sessions").select("*").eq("id", sessionId).single(),
+    db.from("evidence").select("*").eq("id", evidenceId).maybeSingle(),
+    db
+      .from("session_state")
+      .select("discovered_evidence, collected_evidence, log")
+      .eq("session_id", sessionId)
+      .single(),
+  ]);
 
-  if (sessionError || !session) {
+  const session = sessionRes.data;
+  if (sessionRes.error || !session) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
-
-  const { data: evidence, error: evidenceError } = await db
-    .from("evidence")
-    .select("*")
-    .eq("id", evidenceId)
-    .maybeSingle();
-
-  if (evidenceError) {
+  if (evidenceRes.error) {
     return NextResponse.json({ error: "Не удалось проверить улику" }, { status: 500 });
   }
+  const evidence = evidenceRes.data;
+  const stateForLog = stateRes.data;
 
-  const { data: updatedSession } = await db
-    .from("game_sessions")
-    .update({ elapsed_minutes: session.elapsed_minutes + TIME_COSTS.INTERROGATE_OR_INSPECT })
-    .eq("id", sessionId)
-    .select()
-    .single();
+  const updatedSession = {
+    ...session,
+    elapsed_minutes: session.elapsed_minutes + TIME_COSTS.INTERROGATE_OR_INSPECT,
+  };
 
-  const { data: stateForLog } = await db
-    .from("session_state")
-    .select("discovered_evidence, collected_evidence, log")
-    .eq("session_id", sessionId)
-    .single();
+  // Время партии и session_state пишутся одновременно.
+  const finish = async (stateUpdate: Record<string, unknown>) => {
+    await Promise.all([
+      db
+        .from("game_sessions")
+        .update({ elapsed_minutes: updatedSession.elapsed_minutes })
+        .eq("id", sessionId),
+      db.from("session_state").update(stateUpdate).eq("session_id", sessionId),
+    ]);
+  };
 
   // Журнал расследования (Дело №9704): явный outcome вместо готового текста —
-  // "found" (реальная находка) отличается от "miss" (декой/неверная догадка),
-  // раньше оба варианта писались под одним type:"evidence" и различались
-  // только текстом, что не позволяло надёжно отфильтровать промахи в журнале.
+  // "found" (реальная находка) отличается от "miss" (декой/неверная догадка).
   const appendLog = (entry: { outcome: "found" | "miss"; evidenceName?: string }) => [
     ...(stateForLog?.log ?? []),
     { type: "evidence" as const, at: new Date().toISOString(), ...entry },
@@ -57,11 +61,7 @@ export async function POST(
   // облака осмотра без реальной улики за ней. Ведём себя как при обычном
   // неверном варианте, без намёка, что это была заведомая пустышка.
   if (!evidence) {
-    await db
-      .from("session_state")
-      .update({ log: appendLog({ outcome: "miss" }) })
-      .eq("session_id", sessionId);
-
+    await finish({ log: appendLog({ outcome: "miss" }) });
     return NextResponse.json({
       relevant: false,
       message: "Здесь такого не нашли.",
@@ -76,11 +76,7 @@ export async function POST(
     requiresAnySatisfied(evidence.requires_any, stateForLog?.collected_evidence ?? []);
 
   if (!isCorrectGuess) {
-    await db
-      .from("session_state")
-      .update({ log: appendLog({ outcome: "miss", evidenceName: evidence.name }) })
-      .eq("session_id", sessionId);
-
+    await finish({ log: appendLog({ outcome: "miss", evidenceName: evidence.name }) });
     return NextResponse.json({
       relevant: false,
       message: evidence.reject_text ?? "Здесь такого не нашли.",
@@ -88,18 +84,14 @@ export async function POST(
     });
   }
 
-  const merge = (arr: string[], id: string) =>
-    arr.includes(id) ? arr : [...arr, id];
+  const merge = (arr: string[], id: string) => (arr.includes(id) ? arr : [...arr, id]);
 
-  await db
-    .from("session_state")
-    .update({
-      discovered_evidence: merge(stateForLog?.discovered_evidence ?? [], evidenceId),
-      collected_evidence: merge(stateForLog?.collected_evidence ?? [], evidenceId),
-      log: appendLog({ outcome: "found", evidenceName: evidence.name }),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("session_id", sessionId);
+  await finish({
+    discovered_evidence: merge(stateForLog?.discovered_evidence ?? [], evidenceId),
+    collected_evidence: merge(stateForLog?.collected_evidence ?? [], evidenceId),
+    log: appendLog({ outcome: "found", evidenceName: evidence.name }),
+    updated_at: new Date().toISOString(),
+  });
 
   return NextResponse.json({
     relevant: true,
