@@ -1,6 +1,6 @@
 "use client";
 
-import RichText from "@/components/RichText";
+import RichText, { tp } from "@/components/RichText";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 
@@ -70,10 +70,10 @@ export default function SuspectDetail({
           </div>
         </div>
 
-        <h2 className="dossier-name">{suspect.name}</h2>
+        <h2 className="dossier-name">{tp(suspect.name)}</h2>
         {suspect.role && (
           <div className="dossier-role-row">
-            <span className="dossier-role">{suspect.role}</span>
+            <span className="dossier-role">{tp(suspect.role)}</span>
           </div>
         )}
 
@@ -118,14 +118,14 @@ export default function SuspectDetail({
                     className={`dossier-evidence-tag${askingTopicId && askingTopicId !== t.id ? " is-busy" : ""}`}
                     onClick={() => (askingTopicId ? undefined : onAsk(t))}
                   >
-                    {t.label}
+                    {tp(t.label)}
                   </div>
                 ))}
               </div>
 
               {topicAnswer && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{topicAnswer.topicLabel}</div>
+                  <div className="dossier-reaction-label">{tp(topicAnswer.topicLabel)}</div>
                   <RichText text={topicAnswer.text} className="dossier-reaction-text" />
                 </div>
               )}
@@ -160,7 +160,7 @@ export default function SuspectDetail({
                       className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}`}
                       onClick={() => (presentingId ? undefined : onPresent(e))}
                     >
-                      {e.name}
+                      {tp(e.name)}
                     </div>
                   ))}
                 </div>
@@ -168,7 +168,7 @@ export default function SuspectDetail({
 
               {reaction && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{reaction.evidenceName}</div>
+                  <div className="dossier-reaction-label">{tp(reaction.evidenceName)}</div>
                   <RichText text={reaction.text} className="dossier-reaction-text" />
                 </div>
               )}

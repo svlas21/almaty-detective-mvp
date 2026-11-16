@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import RichText, { tp } from "@/components/RichText";
 import type { CaseRecord } from "@/types/game";
 
 // Каталог дел рендерится на сервере. is_published фильтрует черновики.
@@ -28,8 +29,8 @@ console.log("ОШИБКА БАЗЫ:", error);
 
       {cases?.map((c) => (
         <div className="card" key={c.id}>
-          <h2>{c.title}</h2>
-          <p className="muted">{c.intro_text}</p>
+          <h2>{tp(c.title)}</h2>
+          <RichText text={c.intro_text} className="muted" />
           <p>{c.price.toLocaleString("ru-RU")} ₸</p>
           <button className="btn">Купить доступ</button>
         </div>

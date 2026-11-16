@@ -1,5 +1,6 @@
 "use client";
 
+import { tp } from "@/components/RichText";
 import { useState } from "react";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
@@ -51,7 +52,7 @@ export default function EvidenceSearch({ pool, onGuess, triedIds }: EvidenceSear
               onClick={() => onGuess(item.id)}
             >
               <Icon className="evidence-tag-icon" strokeWidth={1.75} aria-hidden />
-              {item.name}
+              {tp(item.name)}
             </span>
           );
         })}

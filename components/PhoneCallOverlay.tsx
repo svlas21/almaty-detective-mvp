@@ -1,5 +1,6 @@
 "use client";
 
+import RichText, { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface PendingCall {
@@ -65,7 +66,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
                 ВЫЗОВ
               </div>
               <div className="phone-call-caller-name">{call.callerName}</div>
-              {call.callerRole && <div className="phone-call-caller-role">{call.callerRole}</div>}
+              {call.callerRole && <div className="phone-call-caller-role">{tp(call.callerRole)}</div>}
               <div className="phone-call-softkeys">
                 <span>Ответ</span>
                 <span>Меню</span>
@@ -76,7 +77,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
               <div className="phone-call-caller-name" style={{ marginBottom: 10 }}>
                 {call.callerName}
               </div>
-              <p className="phone-call-dialogue">{call.dialogueText}</p>
+              <RichText text={call.dialogueText} className="phone-call-dialogue" />
               <div className="phone-call-softkeys">
                 <span>Сброс</span>
                 <span>Меню</span>

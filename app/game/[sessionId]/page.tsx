@@ -1,6 +1,6 @@
 "use client";
 
-import RichText from "@/components/RichText";
+import RichText, { tp } from "@/components/RichText";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import PanoramaViewer from "@/components/PanoramaViewer";
@@ -394,14 +394,14 @@ export default function GameScreen() {
         {tab === "map" && mapView === "location" && locationPhase === "hub" && (
           <>
             <div className="card">
-              <h2>{state.location?.name}</h2>
+              <h2>{tp(state.location?.name)}</h2>
               {state.location?.short_description && (
                 <RichText text={state.location.short_description} className="rt-location muted" />
               )}
             </div>
 
             <div className="people-sheet-tab-row">
-              <span className="people-sheet-tab">Место · {state.location?.name}</span>
+              <span className="people-sheet-tab">Место · {tp(state.location?.name)}</span>
             </div>
             <div className="people-sheet-card">
               {(() => {
@@ -436,7 +436,7 @@ export default function GameScreen() {
                             return (
                               <div key={person.id} className="people-slip people-slip-locked">
                                 <div className="people-slip-info">
-                                  <p className="people-slip-name">{person.name}</p>
+                                  <p className="people-slip-name">{tp(person.name)}</p>
                                   <p className="people-slip-role">
                                     Вернитесь после разговора с Алией Сартаковой
                                   </p>
@@ -474,8 +474,8 @@ export default function GameScreen() {
                               </div>
 
                               <div className="people-slip-info">
-                                <p className="people-slip-name">{person.name}</p>
-                                {person.role && <p className="people-slip-role">{person.role}</p>}
+                                <p className="people-slip-name">{tp(person.name)}</p>
+                                {person.role && <p className="people-slip-role">{tp(person.role)}</p>}
                               </div>
 
                               <div className="people-slip-side">
@@ -556,7 +556,7 @@ export default function GameScreen() {
             </div>
 
             <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-              <h3>Осмотр места «{state.location?.name}»</h3>
+              <h3>Осмотр места «{tp(state.location?.name)}»</h3>
               <PanoramaViewer
                 imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
                 onReady={() => setPanoramaReady(true)}
@@ -574,7 +574,7 @@ export default function GameScreen() {
 
             {lastResult && (
               <div className={`evidence-result${lastResult.relevant ? " is-relevant" : ""}`}>
-                <div className="evidence-result-label">{lastResult.name}</div>
+                <div className="evidence-result-label">{tp(lastResult.name)}</div>
                 <RichText text={lastResult.text} className="evidence-result-text" />
               </div>
             )}
@@ -620,7 +620,7 @@ export default function GameScreen() {
                       <div className="evidence-doc-body">
                         <h3 className="evidence-doc-name">
                           <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
-                          {e.name}
+                          {tp(e.name)}
                         </h3>
                         <RichText text={e.description} className="evidence-doc-description" />
                       </div>
@@ -645,7 +645,7 @@ export default function GameScreen() {
                 <div className="time">
                   {new Date(entry.at).toLocaleTimeString("ru-RU")}
                 </div>
-                {entry.text}
+                {tp(entry.text)}
               </div>
             ))}
           </div>

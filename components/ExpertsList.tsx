@@ -1,5 +1,6 @@
 "use client";
 
+import { tp } from "@/components/RichText";
 import type { SuspectListItem } from "@/components/SuspectsList";
 
 interface ExpertsListProps {
@@ -49,7 +50,7 @@ export default function ExpertsList({ experts, onSelect }: ExpertsListProps) {
                 </div>
 
                 <div className="people-slip-info">
-                  <p className="people-slip-name">{expert.name}</p>
+                  <p className="people-slip-name">{tp(expert.name)}</p>
                   {expert.specialization && (
                     <p className="people-slip-role">{expert.specialization}</p>
                   )}

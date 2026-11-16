@@ -1,5 +1,6 @@
 "use client";
 
+import { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface MapPoint {
@@ -108,11 +109,11 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
                     Место
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 600, marginBottom: 8, lineHeight: 1.25 }}>
-                    {selected.name}
+                    {tp(selected.name)}
                   </div>
                   {selected.shortDescription && (
                     <p style={{ fontSize: 13.5, lineHeight: 1.5, color: "#9ca3af", marginBottom: 16 }}>
-                      {selected.shortDescription}
+                      {tp(selected.shortDescription)}
                     </p>
                   )}
                   <button

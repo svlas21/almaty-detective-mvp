@@ -1,6 +1,6 @@
 "use client";
 
-import RichText from "@/components/RichText";
+import RichText, { tp } from "@/components/RichText";
 import { useEffect, useState } from "react";
 
 interface CollectedEvidenceItem {
@@ -152,7 +152,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
 
         {accomplices.map((acc) => (
           <div key={acc.characterId} style={{ marginTop: 20 }}>
-            <strong>{acc.question}</strong>
+            <strong>{tp(acc.question)}</strong>
             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
               {acc.options.map((option, i) => (
                 <label key={i} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
@@ -164,7 +164,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
                       setAccompliceAnswers((prev) => ({ ...prev, [acc.characterId]: i }))
                     }
                   />
-                  {option.label}
+                  {tp(option.label)}
                 </label>
               ))}
             </div>
@@ -205,7 +205,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
               checked={selectedOrganizerId === option.character_id}
               onChange={() => setSelectedOrganizerId(option.character_id)}
             />
-            {option.label}
+            {tp(option.label)}
           </label>
         ))}
       </div>
@@ -221,7 +221,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
             style={selectedEvidenceIds.has(e.id) ? { opacity: 1, borderColor: "#b5451b" } : { opacity: 0.55 }}
             onClick={() => toggleEvidence(e.id)}
           >
-            {e.name}
+            {tp(e.name)}
           </span>
         ))}
       </div>

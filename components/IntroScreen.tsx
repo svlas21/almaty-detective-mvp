@@ -2,7 +2,7 @@
 
 import { SuspectAvatar } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
-import RichText from "@/components/RichText";
+import RichText, { tp } from "@/components/RichText";
 
 interface IntroCharacter {
   id: string;
@@ -39,10 +39,10 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
           </div>
         </div>
 
-        <h2 className="dossier-name">{character.name}</h2>
+        <h2 className="dossier-name">{tp(character.name)}</h2>
         {character.role && (
           <div className="dossier-role-row">
-            <span className="dossier-role">{character.role}</span>
+            <span className="dossier-role">{tp(character.role)}</span>
           </div>
         )}
 

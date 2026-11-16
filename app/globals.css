@@ -1836,3 +1836,8 @@ body {
   line-height: 1.65;
   max-width: none;
 }
+
+/* Абзацы обычного текста (улика, документ) — чуть больше воздуха */
+.rt--plain p.rt-line + p.rt-line {
+  margin-top: 0.5em !important;
+}

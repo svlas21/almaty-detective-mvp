@@ -1,5 +1,6 @@
 "use client";
 
+import { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface SuspectListItem {
@@ -132,8 +133,8 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                   )}
                   {s.wanted && <span className="stamp stamp-wanted">В РОЗЫСКЕ</span>}
                 </div>
-                <strong className="polaroid-name">{s.name}</strong>
-                {s.role && <p className="polaroid-role">{s.role}</p>}
+                <strong className="polaroid-name">{tp(s.name)}</strong>
+                {s.role && <p className="polaroid-role">{tp(s.role)}</p>}
               </div>
             );
           }
@@ -146,8 +147,8 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                   <div className="unknown-silhouette" />
                   <span className="stamp stamp-unmet">НЕ ОПРОШЕН</span>
                 </div>
-                <strong className="polaroid-name">{s.name}</strong>
-                {s.role && <p className="polaroid-role">{s.role}</p>}
+                <strong className="polaroid-name">{tp(s.name)}</strong>
+                {s.role && <p className="polaroid-role">{tp(s.role)}</p>}
               </div>
             );
           }

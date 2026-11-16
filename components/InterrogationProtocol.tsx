@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import RichText from "@/components/RichText";
+import RichText, { tp } from "@/components/RichText";
 
 export interface InterrogationQuestion {
   q: string;
@@ -54,7 +54,7 @@ export default function InterrogationProtocol({
           className={`dossier-question-interactive${viewed.has(i) ? " is-viewed" : ""}`}
           onClick={() => viewQuestion(i)}
         >
-          <p className="dossier-question-q">{qa.q}</p>
+          <p className="dossier-question-q">{tp(qa.q)}</p>
           {viewed.has(i) && <RichText text={qa.a} className="dossier-answer" />}
         </div>
       ))}

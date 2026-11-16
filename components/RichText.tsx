@@ -37,6 +37,11 @@ export function typograf(s: string): string {
   return t;
 }
 
+/** Типографика для коротких строк (имена, роли, заголовки, вопросы, кнопки). */
+export function tp(s: string | null | undefined): string {
+  return s ? typograf(s) : "";
+}
+
 type Line = { kind: "speech" | "cont" | "narr"; text: string };
 type Block = Line[];
 
