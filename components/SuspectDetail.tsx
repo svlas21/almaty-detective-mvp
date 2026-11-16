@@ -1,5 +1,6 @@
 "use client";
 
+import RichText from "@/components/RichText";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 
@@ -76,7 +77,7 @@ export default function SuspectDetail({
           </div>
         )}
 
-        {suspect.intro_text && <p className="dossier-quote">{suspect.intro_text}</p>}
+        <RichText text={suspect.intro_text} className="dossier-quote" />
       </div>
 
       {/* «В розыске» (Дело №9704) — псевдоним/поддельный документ, лично не
@@ -125,7 +126,7 @@ export default function SuspectDetail({
               {topicAnswer && (
                 <div className="dossier-reaction">
                   <div className="dossier-reaction-label">{topicAnswer.topicLabel}</div>
-                  <p>{topicAnswer.text}</p>
+                  <RichText text={topicAnswer.text} className="dossier-reaction-text" />
                 </div>
               )}
             </div>
@@ -168,14 +169,14 @@ export default function SuspectDetail({
               {reaction && (
                 <div className="dossier-reaction">
                   <div className="dossier-reaction-label">{reaction.evidenceName}</div>
-                  <p>{reaction.text}</p>
+                  <RichText text={reaction.text} className="dossier-reaction-text" />
                 </div>
               )}
 
               {confession && (
                 <div className="dossier-confession">
                   <span className="dossier-confession-label">Признание</span>
-                  <p>{confession}</p>
+                  <RichText text={confession} className="dossier-confession-text" />
                 </div>
               )}
             </div>

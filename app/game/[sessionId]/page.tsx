@@ -1,5 +1,6 @@
 "use client";
 
+import RichText from "@/components/RichText";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import PanoramaViewer from "@/components/PanoramaViewer";
@@ -384,7 +385,7 @@ export default function GameScreen() {
             <div className="card">
               <h2>{state.location?.name}</h2>
               {state.location?.short_description && (
-                <p className="muted">{state.location.short_description}</p>
+                <RichText text={state.location.short_description} className="rt-location muted" />
               )}
             </div>
 
@@ -563,7 +564,7 @@ export default function GameScreen() {
             {lastResult && (
               <div className={`evidence-result${lastResult.relevant ? " is-relevant" : ""}`}>
                 <div className="evidence-result-label">{lastResult.name}</div>
-                <p>{lastResult.text}</p>
+                <RichText text={lastResult.text} className="evidence-result-text" />
               </div>
             )}
 
@@ -610,7 +611,7 @@ export default function GameScreen() {
                           <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
                           {e.name}
                         </h3>
-                        <p className="evidence-doc-description">{e.description}</p>
+                        <RichText text={e.description} className="evidence-doc-description" />
                       </div>
                     </div>
                   );

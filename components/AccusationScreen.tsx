@@ -1,5 +1,6 @@
 "use client";
 
+import RichText from "@/components/RichText";
 import { useEffect, useState } from "react";
 
 interface CollectedEvidenceItem {
@@ -138,7 +139,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
     return (
       <div className="card" style={{ textAlign: "center" }}>
         <h2>Дело закрыто</h2>
-        <p style={{ marginTop: 16, lineHeight: 1.6, textAlign: "left" }}>{endingText}</p>
+        <RichText text={endingText} className="rt-ending" />
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { SuspectAvatar } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
+import RichText from "@/components/RichText";
 
 interface IntroCharacter {
   id: string;
@@ -45,7 +46,7 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
           </div>
         )}
 
-        {character.intro_text && <p className="dossier-quote">{character.intro_text}</p>}
+        <RichText text={character.intro_text} className="dossier-quote" />
       </div>
 
       <InterrogationProtocol

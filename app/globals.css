@@ -377,12 +377,12 @@ body {
 .dossier-quote {
   position: relative;
   font-family: var(--font-pt-serif), serif;
-  font-style: italic;
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--ink);
   padding-left: 30px;
-  margin: 0;
+  margin: 4px 0 0;
+  text-align: left;
 }
 
 .dossier-quote::before {
@@ -433,7 +433,7 @@ body {
 }
 
 .dossier-answer {
-  margin: 8px 0 0 21px;
+  margin: 10px 0 0 21px;
   padding-left: 12px;
   border-left: 2px solid var(--paper-shadow);
   font-family: var(--font-pt-serif), serif;
@@ -588,7 +588,6 @@ body {
 
 .dossier-confession p {
   font-family: var(--font-pt-serif), serif;
-  font-style: italic;
   color: var(--ink);
   margin: 8px 0 0;
 }
@@ -1747,4 +1746,93 @@ body {
 
 .phone-call-hangup-btn:active {
   box-shadow: 0 2px 0 #7e2f11;
+}
+
+/* ───────── RichText: типографика сценарных текстов ───────── */
+.rt {
+  font-family: var(--font-pt-serif), serif;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
+  max-width: 62ch;
+}
+
+.rt .rt-block + .rt-block {
+  margin-top: 0.9em;
+}
+
+/* !important перебивает старые правила вида .dossier-reaction p / .evidence-result p */
+.rt p.rt-line {
+  margin: 0 !important;
+  text-wrap: pretty;
+}
+
+.rt p.rt-line + p.rt-line {
+  margin-top: 0.3em !important;
+}
+
+/* Реплика: висячее тире, текст ровной колонкой */
+.rt .rt-speech,
+.rt .rt-cont {
+  padding-left: 1.15em;
+}
+
+.rt .rt-speech {
+  text-indent: -1.15em;
+}
+
+.rt .rt-speech + .rt-speech {
+  margin-top: 0.55em !important;
+}
+
+.rt .rt-dash {
+  color: var(--stamp);
+  opacity: 0.75;
+}
+
+/* Ремарка автора внутри сцены с диалогом */
+.rt--dialogue .rt-narr {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.94em;
+}
+
+.dossier-quote.rt--dialogue .rt-block:first-child .rt-narr:first-child {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 1em;
+}
+
+.dossier-reaction .rt,
+.evidence-result .rt {
+  margin-top: 8px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.dossier-confession .rt {
+  margin-top: 10px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.dossier-answer.rt {
+  max-width: none;
+}
+
+.evidence-doc-description.rt .rt-line:first-child {
+  color: var(--ink);
+}
+
+.rt-location {
+  line-height: 1.55;
+}
+
+.rt-ending {
+  margin-top: 16px;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: none;
 }
