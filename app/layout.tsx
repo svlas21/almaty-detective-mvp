@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PT_Serif, JetBrains_Mono, Caveat } from "next/font/google";
+import { PT_Serif, JetBrains_Mono, PT_Mono } from "next/font/google";
 import "./globals.css";
 
 const ptSerif = PT_Serif({
@@ -17,11 +17,11 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-// Рукописный шрифт для записей следователя (блокнот с уликами)
-const caveat = Caveat({
+// Запасной моноширинный шрифт с кириллицей для «машинописи» (основной — Courier New)
+const ptMono = PT_Mono({
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600"],
-  variable: "--font-caveat",
+  weight: ["400"],
+  variable: "--font-pt-mono",
   display: "swap",
 });
 
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${caveat.variable}`}>
+    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${ptMono.variable}`}>
       <body>{children}</body>
     </html>
   );

@@ -1950,55 +1950,43 @@ body {
   .ev-photo { animation: none; }
 }
 
-/* ───────── Запись в блокноте следователя (текст найденной улики) ───────── */
-.rt.notebook {
-  --nb-line: 34px;
-  position: relative;
+/* ───────── Машинопись (текст найденной улики) ───────── */
+.rt.typed {
   max-width: none;
-  padding: 10px 22px calc(var(--nb-line) / 2) 58px;
-  font-family: var(--font-caveat), "Comic Sans MS", cursive;
-  font-size: 25px;
-  font-weight: 500;
-  line-height: var(--nb-line);
-  color: #233a73;                     /* шариковая ручка */
+  margin-top: 10px;
+  padding: 26px 30px 24px;
+  font-family: "Courier New", Courier, var(--font-pt-mono), monospace;
+  font-size: 16.5px;
+  line-height: 1.95;                  /* машинописный «полуторный» интервал */
+  letter-spacing: 0.01em;
+  color: #262320;
+  text-shadow: 0 0 0.6px rgba(38, 35, 32, 0.55), 0.3px 0 0 rgba(38, 35, 32, 0.25); /* краска чуть растеклась */
   hyphens: manual;
   -webkit-hyphens: manual;
-  background-color: #fbf8ee;
-  background-image:
-    linear-gradient(to right, transparent 42px, rgba(196, 64, 54, 0.55) 42px, rgba(196, 64, 54, 0.55) 44px, transparent 44px),
-    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--nb-line) - 1px), rgba(74, 112, 170, 0.28) calc(var(--nb-line) - 1px), rgba(74, 112, 170, 0.28) var(--nb-line));
-  background-origin: padding-box, content-box;
-  background-clip: padding-box, content-box;
-  border: 1px solid rgba(90, 81, 64, 0.18);
-  border-radius: 2px;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse at 85% 90%, rgba(160, 110, 70, 0.10), transparent 55%),
+    #ecd9c4;                           /* старая писчая бумага */
+  border: 1px solid rgba(120, 90, 60, 0.18);
+  border-radius: 1px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-  margin-top: 10px;
 }
-/* всё в сетке строк: никаких дробных отступов */
-.rt.notebook p.rt-line,
-.rt.notebook p.rt-line + p.rt-line,
-.rt.notebook .rt-speech + .rt-speech { margin: 0 !important; }
-.rt.notebook .rt-block + .rt-block { margin-top: var(--nb-line); }
-.rt.notebook .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
-.rt.notebook .rt-dash { color: inherit; opacity: 1; }
-/* первая строка — как заголовок записи, с нажимом */
-.rt.notebook .rt-block:first-child .rt-line:first-child { font-weight: 600; }
-/* последний абзац-вывод («Почему не в машине?») — подчёркнут от руки */
-.rt.notebook .rt-block:last-child .rt-line:last-child {
-  text-decoration: underline;
-  text-decoration-color: rgba(196, 64, 54, 0.6);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
-}
-.evidence-result .rt.notebook,
-.evidence-doc .rt.notebook { color: #233a73; }
-@media (max-width: 760px) {
-  .rt.notebook { font-size: 22px; padding-left: 50px; }
-}
-/* старые правила вида .evidence-result p задают шрифт абзацам напрямую — перебиваем */
-.rt.notebook p.rt-line {
+.rt.typed p.rt-line {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
   color: inherit;
+  margin: 0 !important;
+}
+.rt.typed .rt-block + .rt-block { margin-top: 0.95em; }
+.rt.typed .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
+.rt.typed .rt-dash { color: inherit; opacity: 1; }
+/* первая строка — как заголовок машинописного листа */
+.rt.typed .rt-block:first-child .rt-line:first-child {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5em !important;
+}
+@media (max-width: 760px) {
+  .rt.typed { font-size: 15px; padding: 20px 18px; }
 }
