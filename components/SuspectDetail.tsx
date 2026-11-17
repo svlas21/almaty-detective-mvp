@@ -185,13 +185,24 @@ export default function SuspectDetail({
                     <div
                       key={e.id}
                       className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}${
-                        presentedIds?.has(e.id) ? " is-presented" : ""
+                        presentedIds?.has(e.id) ? (suspect.is_expert ? " is-submitted" : " is-presented") : ""
                       }${reaction?.evidenceName === e.name ? " is-active" : ""}`}
                       onClick={() => (presentingId ? undefined : onPresent(e))}
-                      title={presentedIds?.has(e.id) ? "Уже предъявляли — нажмите, чтобы перечитать ответ" : undefined}
+                      title={
+                        presentedIds?.has(e.id)
+                          ? suspect.is_expert
+                            ? "Уже передавали на экспертизу — нажмите, чтобы перечитать ответ"
+                            : "Уже предъявляли — нажмите, чтобы перечитать ответ"
+                          : undefined
+                      }
                     >
                       {tp(e.name)}
-                      {presentedIds?.has(e.id) && <span className="dossier-presented-mark">Предъявлено</span>}
+                      {presentedIds?.has(e.id) &&
+                        (suspect.is_expert ? (
+                          <span className="dossier-submitted-status">Передано на экспертизу</span>
+                        ) : (
+                          <span className="dossier-presented-mark">Предъявлено</span>
+                        ))}
                     </div>
                   ))}
                 </div>
