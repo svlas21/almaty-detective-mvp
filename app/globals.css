@@ -1924,10 +1924,10 @@ body {
   .evidence-tag-stamp, .evidence-stamp, .evidence-result.is-found { animation: none; }
 }
 
-/* ───────── Снимок улики в рамке «фототаблицы» ───────── */
+/* ───────── Снимок улики (лист фототаблицы) ───────── */
 .evidence-result-body.has-photo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 36%);
   gap: 28px;
   align-items: start;
 }
@@ -1935,80 +1935,17 @@ body {
   .evidence-result-body.has-photo { grid-template-columns: 1fr; }
 }
 .ev-photo {
-  position: relative;
-  margin: 6px 0 0;
-  padding: 22px 18px 14px;
-  background:
-    repeating-linear-gradient(to bottom, transparent 0 25px, rgba(90, 81, 64, 0.08) 25px 26px),
-    #f3ecd9;
-  border: 1px solid var(--paper-shadow);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
-  transform: rotate(1.2deg);
+  margin: 4px 0 0;
+  transform: rotate(1.4deg);
   animation: result-in 0.35s ease-out;
 }
-.ev-photo-print {
-  position: relative;
-  background: #fbf8f0;
-  padding: 8px 8px 22px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
-  transform: rotate(-2deg);
-}
-.ev-photo-print img {
+.ev-photo img {
   display: block;
   width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  filter: grayscale(1) sepia(0.32) contrast(1.12) brightness(0.96);
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28), 0 2px 4px rgba(0, 0, 0, 0.18);
 }
-.ev-photo-print::after {           /* лёгкое зерно и виньетка поверх снимка */
-  content: "";
-  position: absolute;
-  inset: 8px 8px 22px;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at center, transparent 55%, rgba(30, 20, 10, 0.35) 100%);
-  mix-blend-mode: multiply;
+@media (prefers-reduced-motion: reduce) {
+  .ev-photo { animation: none; }
 }
-.ev-photo-glue {
-  position: absolute;
-  width: 26px;
-  height: 14px;
-  background: rgba(214, 190, 130, 0.55);
-  z-index: 1;
-}
-.ev-photo-glue.is-tl { top: -5px; left: -8px; transform: rotate(-35deg); }
-.ev-photo-glue.is-tr { top: -5px; right: -8px; transform: rotate(35deg); }
-.ev-photo-glue.is-bl { bottom: -4px; left: -8px; transform: rotate(35deg); }
-.ev-photo-glue.is-br { bottom: -4px; right: -8px; transform: rotate(-35deg); }
-.ev-photo-clip {                    /* скрепка */
-  position: absolute;
-  top: -12px;
-  left: 28px;
-  width: 16px;
-  height: 46px;
-  border: 2.5px solid #8a8a86;
-  border-radius: 9px;
-  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
-  z-index: 2;
-  transform: rotate(-6deg);
-}
-.ev-photo-clip::after {
-  content: "";
-  position: absolute;
-  inset: 5px 3px 8px;
-  border: 2px solid #8a8a86;
-  border-radius: 6px;
-  border-bottom-color: transparent;
-}
-.ev-photo figcaption {
-  margin-top: 12px;
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.ev-photo figcaption strong { color: var(--ink); }
