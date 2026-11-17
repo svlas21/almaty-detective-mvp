@@ -350,6 +350,8 @@ insert into evidence (id, case_id, name, description, location_id, is_relevant, 
 Из протокола дополнительного допроса свидетеля Сартаковой В. П.: в воскресенье 24.11.96 вечером Мамаджанов Ф. принёс конверт с деньгами «на похороны». На левой кисти у него были свежие царапины; на её вопрос ответил: «Собака на базаре». Уходя, в прихожей, наедине сказал ей: «Бандиты сейчас такие, Валентина-апа. Береги Дашу, никому ни слова». Тогда она приняла это за заботу.', null, true, null, null, false, 'testimony');
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager2.jpg' where id = '1ac01ab0-e8f1-5009-9640-d18dfa4f5e44';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sledy2.jpg' where id = 'b4e6a60f-b233-543e-b3b1-ae0a1427b6a1';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-aon.jpg' where id = 'e4e94374-000e-52e3-bb26-9bec42b1c55b';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-konvert.jpg' where id = '5cdb3307-fe10-53c5-a365-6998256b7d7a';
 
 -- 4. Персонажи
 insert into characters (id, case_id, location_id, name, role, intro_text, fixed_questions, is_expert, is_suspect, is_case_subject, portrait_url) values ('57949d2d-0b2d-5c04-812c-5849e9441857', '029e23c3-01e0-5d19-a0e7-3e0c2446ebab', '006a31f4-baeb-5b53-9a87-6a397ba18362', 'Начальник следственного отдела', 'ГУВД г. Алматы', 'Несчастный случай. Так решил Медеуский РОВД.
