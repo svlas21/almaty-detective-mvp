@@ -1950,26 +1950,43 @@ body {
   .ev-photo { animation: none; }
 }
 
-/* ───────── Машинопись (текст найденной улики) ───────── */
+/* ───────── Машинопись (текст найденной улики) ─────────
+   Правила машинописного документа: шрифт один, выделения — двойной удар
+   (жирное), разрядка, подчёркивание и красная строка. Курсива нет. */
 .rt.typed {
+  --ink: #23201c;
   max-width: none;
   margin-top: 10px;
-  padding: 26px 30px 24px;
+  padding: 22px 34px 26px;
   font-family: "Courier New", Courier, var(--font-pt-mono), monospace;
-  font-size: 16.5px;
-  line-height: 1.95;                  /* машинописный «полуторный» интервал */
-  letter-spacing: 0.01em;
-  color: #262320;
-  text-shadow: 0 0 0.6px rgba(38, 35, 32, 0.55), 0.3px 0 0 rgba(38, 35, 32, 0.25); /* краска чуть растеклась */
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+  text-shadow: 0 0 0.6px rgba(35, 32, 28, 0.5);   /* краска чуть растеклась */
   hyphens: manual;
   -webkit-hyphens: manual;
+  font-variant-ligatures: none;
   background:
-    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
-    radial-gradient(ellipse at 85% 90%, rgba(160, 110, 70, 0.10), transparent 55%),
-    #ecd9c4;                           /* старая писчая бумага */
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse at 88% 92%, rgba(150, 100, 60, 0.12), transparent 55%),
+    #ecd9c4;
   border: 1px solid rgba(120, 90, 60, 0.18);
   border-radius: 1px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+/* шапка листа: разрядкой, отбита пунктиром «из дефисов» */
+.rt.typed::before {
+  content: "ПРОТОКОЛ ОСМОТРА";
+  display: block;
+  text-align: center;
+  font-size: 0.82em;
+  letter-spacing: 0.42em;
+  padding-bottom: 0.55em;
+  margin: 0 0 1.1em;
+  border-bottom: 1.5px dashed rgba(35, 32, 28, 0.45);
+  text-shadow: 0.5px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
 }
 .rt.typed p.rt-line {
   font-family: inherit;
@@ -1978,9 +1995,30 @@ body {
   color: inherit;
   margin: 0 !important;
 }
+/* красная строка у повествования (у реплик — висячее тире, как было) */
+.rt.typed p.rt-narr { text-indent: 2.2em; }
 .rt.typed .rt-block + .rt-block { margin-top: 0.95em; }
 .rt.typed .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
 .rt.typed .rt-dash { color: inherit; opacity: 1; }
+
+/* первая строка — описание предмета: двойной удар (машинописное «жирное») */
+.rt.typed .rt-block:first-child .rt-line:first-child {
+  text-indent: 0;
+  text-shadow: 0.55px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
+}
+/* подписи «Первые:», «Справка:» — разрядкой */
+.rt.typed .rt-label {
+  letter-spacing: 0.22em;
+  text-shadow: 0.45px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
+}
+/* последняя строка — вывод следователя: подчёркнута, как подбивали на машинке */
+.rt.typed .rt-block:last-child .rt-line:last-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  text-decoration-color: rgba(35, 32, 28, 0.75);
+}
 @media (max-width: 760px) {
-  .rt.typed { font-size: 15px; padding: 20px 18px; }
+  .rt.typed { font-size: 15px; padding: 18px 18px 20px; }
+  .rt.typed p.rt-narr { text-indent: 1.4em; }
 }

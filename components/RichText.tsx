@@ -70,6 +70,24 @@ function parse(text: string): { blocks: Block[]; hasSpeech: boolean } {
   return { blocks, hasSpeech };
 }
 
+// «Первые: …», «Справка: …», «Заключение эксперта: …» — короткая подпись перед
+// двоеточием в начале строки. В машинописи её выделяют разрядкой (.rt-label).
+const LABEL_RE = /^([^:—«»"\n]{2,32}?):\s+(.*)$/;
+
+function renderLine(line: Line) {
+  if (line.kind !== "speech") {
+    const m = line.text.match(LABEL_RE);
+    if (m && m[1].trim().split(/\s+/).length <= 4) {
+      return (
+        <>
+          <span className="rt-label">{typograf(m[1])}:</span> {typograf(m[2])}
+        </>
+      );
+    }
+  }
+  return typograf(line.text);
+}
+
 interface RichTextProps {
   text: string | null | undefined;
   className?: string;
@@ -87,7 +105,7 @@ export default function RichText({ text, className, as: Tag = "div" }: RichTextP
           {block.map((line, li) => (
             <p className={`rt-line rt-${line.kind}`} key={li}>
               {line.kind === "speech" && <span className="rt-dash">—{NBSP}</span>}
-              {typograf(line.text)}
+              {renderLine(line)}
             </p>
           ))}
         </div>
