@@ -12,13 +12,25 @@ export async function POST(
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select(
-      "discovered_characters, discovered_evidence, collected_evidence, discovered_locations, viewed_reactions, log"
-    )
-    .eq("session_id", sessionId)
-    .single();
+  // Состояние, персонаж и улика читаются одновременно (раньше — по очереди)
+  const [stateRes, characterRes, evidenceRes] = await Promise.all([
+    db
+      .from("session_state")
+      .select(
+        "discovered_characters, discovered_evidence, collected_evidence, discovered_locations, viewed_reactions, log"
+      )
+      .eq("session_id", sessionId)
+      .single(),
+    db
+      .from("characters")
+      .select("case_id, name, reactions, reaction_rules, confession_text, confession_requires_evidence, is_expert")
+      .eq("id", characterId)
+      .single(),
+    db.from("evidence").select("name").eq("id", evidenceId).single(),
+  ]);
+  const { data: state, error: stateError } = stateRes;
+  const { data: character, error: characterError } = characterRes;
+  const evidence = evidenceRes.data;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
@@ -32,21 +44,9 @@ export async function POST(
     return NextResponse.json({ error: "Сначала найдите эту улику" }, { status: 400 });
   }
 
-  const { data: character, error: characterError } = await db
-    .from("characters")
-    .select("case_id, name, reactions, reaction_rules, confession_text, confession_requires_evidence, is_expert")
-    .eq("id", characterId)
-    .single();
-
   if (characterError || !character) {
     return NextResponse.json({ error: "Подозреваемый не найден" }, { status: 404 });
   }
-
-  const { data: evidence } = await db
-    .from("evidence")
-    .select("name")
-    .eq("id", evidenceId)
-    .single();
 
   // Правила из данных (supabase/011_graph_rules.sql): реплика зависит от уже
   // собранных улик и может выдать новые. Если правил на эту улику нет —

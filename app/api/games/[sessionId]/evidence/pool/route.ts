@@ -20,42 +20,46 @@ export async function GET(
   const db = supabaseAdmin();
   const { sessionId } = params;
 
-  const { data: session, error: sessionError } = await db
-    .from("game_sessions")
-    .select("purchase_id, current_location_id")
-    .eq("id", sessionId)
-    .single();
-
-  if (sessionError || !session) {
+  // Круг 1: партия + собранные улики (параллельно)
+  const [sessionRes, poolStateRes] = await Promise.all([
+    db.from("game_sessions").select("purchase_id, current_location_id").eq("id", sessionId).single(),
+    db.from("session_state").select("collected_evidence").eq("session_id", sessionId).single(),
+  ]);
+  const session = sessionRes.data;
+  if (sessionRes.error || !session) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
 
-  const { data: purchase } = await db
-    .from("purchases")
-    .select("case_id")
-    .eq("id", session.purchase_id)
-    .single();
-
+  // Круг 2: дело
+  const { data: purchase } = await db.from("purchases").select("case_id").eq("id", session.purchase_id).single();
   if (!purchase) {
     return NextResponse.json({ error: "Дело не найдено" }, { status: 404 });
   }
 
-  const { data: pool, error: poolError } = await db
-    .from("evidence")
-    .select("id, name, generic_category, requires_any, auto_grant")
-    .eq("case_id", purchase.case_id)
-    .eq("location_id", session.current_location_id)
-    .is("granted_by_character_id", null)
-    .order("name");
+  // Круг 3: улики локации и обманки — одновременно.
+  // Обманки двух видов: общие на всё дело (location_id = null, «здесь такого
+  // нет») и привязанные к локации — предметы, которые реально видны на
+  // панораме, но к делу не относятся (у них есть found_text).
+  const [poolRes, decoyRes] = await Promise.all([
+    db
+      .from("evidence")
+      .select("id, name, generic_category, requires_any, auto_grant")
+      .eq("case_id", purchase.case_id)
+      .eq("location_id", session.current_location_id)
+      .is("granted_by_character_id", null)
+      .order("name"),
+    db
+      .from("case_decoy_categories")
+      .select("id, label, location_id")
+      .eq("case_id", purchase.case_id)
+      .or(`location_id.is.null,location_id.eq.${session.current_location_id}`),
+  ]);
+  const { data: pool, error: poolError } = poolRes;
+  const decoyCategories = decoyRes.data;
 
   // Улики с условием (supabase/011_graph_rules.sql) не показываются в обыске,
   // пока условие не выполнено; auto_grant-улики в обыск не попадают вовсе.
-  const { data: poolState } = await db
-    .from("session_state")
-    .select("collected_evidence")
-    .eq("session_id", sessionId)
-    .single();
-  const collectedForPool: string[] = poolState?.collected_evidence ?? [];
+  const collectedForPool: string[] = poolStateRes.data?.collected_evidence ?? [];
   const availablePool = (pool ?? []).filter(
     (item) => !item.auto_grant && requiresAnySatisfied(item.requires_any, collectedForPool)
   );
@@ -80,14 +84,6 @@ export async function GET(
   // (см. .../evidence/check). Показываем ВСЕ доступные обманки (их ~30 на
   // дело) — крупное облако само по себе усложняет угадывание.
   const realLabels = new Set(realItems.map((item) => item.name));
-  // Обманки двух видов: общие на всё дело (location_id = null, «здесь такого
-  // нет») и привязанные к локации — предметы, которые реально видны на
-  // панораме, но к делу не относятся (у них есть found_text).
-  const { data: decoyCategories } = await db
-    .from("case_decoy_categories")
-    .select("id, label, location_id")
-    .eq("case_id", purchase.case_id)
-    .or(`location_id.is.null,location_id.eq.${session.current_location_id}`);
 
   const localLabels = new Set(
     (decoyCategories ?? []).filter((d) => d.location_id).map((d) => d.label)
