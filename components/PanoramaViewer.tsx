@@ -28,6 +28,10 @@ export default function PanoramaViewer({ imageUrl, onReady }: PanoramaViewerProp
       autoLoad: true,
       compass: false,
       showControls: true,
+      // У сгенерированных панорам низ (надир) и верх (зенит) почти всегда
+      // смазаны: не даём смотреть прямо под ноги и прямо в небо.
+      minPitch: -45,
+      maxPitch: 60,
     });
     viewerRef.current.on("load", () => onReady?.());
   }
