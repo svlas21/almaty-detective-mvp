@@ -1977,7 +1977,7 @@ body {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
 /* шапка листа: разрядкой, отбита пунктиром «из дефисов» */
-.rt.typed::before {
+.rt.typed[data-doc]::before {
   content: attr(data-doc);
   display: block;
   text-align: center;
@@ -2092,4 +2092,144 @@ body {
   background:
     radial-gradient(ellipse at 80% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
     #e9e3cf;
+}
+
+
+/* ───────── Бланк документа (протокол / заключение / справка) ─────────
+   Печатная часть — PT Serif, «вписанное» — машинопись. */
+.ev-form {
+  position: relative;
+  margin-top: 10px;
+  padding: 18px 30px 22px;
+  background:
+    radial-gradient(ellipse at 15% 5%, rgba(255, 255, 255, 0.45), transparent 60%),
+    radial-gradient(ellipse at 90% 95%, rgba(150, 110, 70, 0.10), transparent 55%),
+    #f3ecdc;
+  border: 1px solid rgba(120, 90, 60, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  font-family: var(--font-pt-serif), serif;
+  color: #26221c;
+}
+.ev-form.is-testimony { background-color: #ebe7dc; }
+.ev-form.is-expertise { background-color: #f6f2e6; }
+.ev-form.is-document  { background-color: #ece5cf; }
+
+.ev-form-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8a8070;
+  letter-spacing: 0.02em;
+}
+.ev-form-top u { text-decoration-thickness: 1px; text-underline-offset: 3px; padding: 0 6px; }
+
+.ev-form-title {
+  margin: 10px 0 14px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+}
+.ev-form-title small {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.ev-form-fill {
+  font-family: "Courier New", Courier, var(--font-pt-mono), monospace;
+  font-size: 15.5px;
+  text-shadow: 0 0 0.6px rgba(35, 32, 28, 0.5);
+  border-bottom: 1px solid #3a342b;
+  padding: 0 6px 1px;
+}
+.ev-form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.ev-form-date .ev-form-fill { padding: 0 4px 1px; }
+
+.ev-form-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.ev-form-label { white-space: nowrap; }
+.ev-form-line {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ev-form-line .ev-form-fill { display: block; }
+.ev-form-line em,
+.ev-form-sign-line em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: #8a8070;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* текст на бланке — машинопись без собственной «бумаги» */
+.rt.typed.ev-form-body {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.ev-form.is-thing .rt.typed.ev-form-body,
+.ev-form .rt.typed.ev-form-body { font-size: 16px; }
+
+.ev-form-signs {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 36px;
+  margin-top: 22px;
+  font-size: 14px;
+}
+.ev-form-sign { display: flex; align-items: baseline; gap: 10px; }
+.ev-form-sign-line {
+  display: flex;
+  flex-direction: column;
+  width: 150px;
+  border-top: 1px solid #3a342b;
+  margin-top: 14px;
+}
+.ev-form-sign-line em { margin-top: 2px; }
+
+.ev-form-stamp {
+  position: absolute;
+  right: 26px;
+  bottom: 18px;
+  width: 78px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(64, 86, 160, 0.55);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px #f6f2e6, inset 0 0 0 6px rgba(64, 86, 160, 0.45);
+  color: rgba(64, 86, 160, 0.75);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .ev-form { padding: 14px 16px 18px; }
+  .ev-form-row { flex-direction: column; gap: 6px; }
+  .ev-form-signs { justify-content: flex-start; }
 }

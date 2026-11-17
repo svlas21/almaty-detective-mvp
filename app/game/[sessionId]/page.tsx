@@ -2,6 +2,7 @@
 
 import RichText, { tp } from "@/components/RichText";
 import EvidencePhoto from "@/components/EvidencePhoto";
+import EvidenceForm from "@/components/EvidenceForm";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import PanoramaViewer from "@/components/PanoramaViewer";
@@ -610,11 +611,11 @@ export default function GameScreen() {
                   {lastResult.kind === "miss" && <span className="evidence-badge is-muted">Не найдено</span>}
                 </div>
                 <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
-                  <RichText
-                    text={lastResult.text}
-                    className={lastResult.kind === "found" ? "evidence-result-text typed typed-thing" : "evidence-result-text"}
-                    docTitle={lastResult.kind === "found" ? "ПРОТОКОЛ ОСМОТРА" : undefined}
-                  />
+                  {lastResult.kind === "found" ? (
+                    <EvidenceForm kind="thing" name={lastResult.name} text={lastResult.text} place={state.location?.name} />
+                  ) : (
+                    <RichText text={lastResult.text} className="evidence-result-text" />
+                  )}
                   {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
                 </div>
               </div>
@@ -674,10 +675,11 @@ export default function GameScreen() {
                                   {tp(e.name)}
                                 </h3>
                                 <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
-                                  <RichText
+                                  <EvidenceForm
+                                    kind={sec.kind}
+                                    name={e.name}
                                     text={e.description}
-                                    className={`evidence-doc-description typed typed-${sec.kind}`}
-                                    docTitle={sec.doc}
+                                    sheet={state.collectedEvidence.findIndex((x) => x.id === e.id) + 1}
                                   />
                                   {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
                                 </div>
