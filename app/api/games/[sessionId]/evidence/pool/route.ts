@@ -80,13 +80,21 @@ export async function GET(
   // (см. .../evidence/check). Показываем ВСЕ доступные обманки (их ~30 на
   // дело) — крупное облако само по себе усложняет угадывание.
   const realLabels = new Set(realItems.map((item) => item.name));
+  // Обманки двух видов: общие на всё дело (location_id = null, «здесь такого
+  // нет») и привязанные к локации — предметы, которые реально видны на
+  // панораме, но к делу не относятся (у них есть found_text).
   const { data: decoyCategories } = await db
     .from("case_decoy_categories")
-    .select("id, label")
-    .eq("case_id", purchase.case_id);
+    .select("id, label, location_id")
+    .eq("case_id", purchase.case_id)
+    .or(`location_id.is.null,location_id.eq.${session.current_location_id}`);
 
+  const localLabels = new Set(
+    (decoyCategories ?? []).filter((d) => d.location_id).map((d) => d.label)
+  );
   const decoyItems = (decoyCategories ?? [])
     .filter((decoy) => !realLabels.has(decoy.label))
+    .filter((decoy) => decoy.location_id || !localLabels.has(decoy.label))
     .map((decoy) => ({ id: decoy.id, name: decoy.label }));
 
   return NextResponse.json({ pool: shuffle([...realItems, ...decoyItems]) });

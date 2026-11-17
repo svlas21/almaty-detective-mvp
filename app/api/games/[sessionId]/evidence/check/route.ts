@@ -61,6 +61,22 @@ export async function POST(
   // облака осмотра без реальной улики за ней. Ведём себя как при обычном
   // неверном варианте, без намёка, что это была заведомая пустышка.
   if (!evidence) {
+    // Предмет реально есть на панораме этой локации, но к делу не относится:
+    // отвечаем описанием предмета, а не «здесь такого не нашли».
+    const { data: decoy } = await db
+      .from("case_decoy_categories")
+      .select("label, location_id, found_text")
+      .eq("id", evidenceId)
+      .maybeSingle();
+    if (decoy?.found_text && decoy.location_id === session.current_location_id) {
+      await finish({ log: appendLog({ outcome: "miss", evidenceName: decoy.label }) });
+      return NextResponse.json({
+        relevant: false,
+        present: true,
+        message: decoy.found_text,
+        session: updatedSession,
+      });
+    }
     await finish({ log: appendLog({ outcome: "miss" }) });
     return NextResponse.json({
       relevant: false,
