@@ -78,6 +78,7 @@ interface StateResponse {
     image_url: string | null;
     short_description: string | null;
     is_searchable: boolean;
+    pano_haov?: number | null;
   } | null;
   allLocations: MapLocation[];
   allSuspects: SuspectListItem[];
@@ -654,6 +655,7 @@ export default function GameScreen() {
               <h3>Осмотр места «{tp(state.location?.name)}»</h3>
               <PanoramaViewer
                 imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
+                haov={state.location?.pano_haov}
                 onReady={() => setPanoramaReady(true)}
               />
             </div>

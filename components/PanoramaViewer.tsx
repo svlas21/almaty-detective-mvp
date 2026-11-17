@@ -12,9 +12,13 @@ declare global {
 interface PanoramaViewerProps {
   imageUrl: string;
   onReady?: () => void;
+  /** Горизонтальный охват картинки в градусах. null/360 — полная панорама.
+   *  Для широких кадров из Nano Banana (~160°) — частичная панорама без
+   *  растяжения на 360°: масштаб естественный, поворот в пределах кадра. */
+  haov?: number | null;
 }
 
-export default function PanoramaViewer({ imageUrl, onReady }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, onReady, haov }: PanoramaViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
 
@@ -22,17 +26,55 @@ export default function PanoramaViewer({ imageUrl, onReady }: PanoramaViewerProp
     if (!containerRef.current || !window.pannellum) return;
     if (viewerRef.current) viewerRef.current.destroy();
 
-    viewerRef.current = window.pannellum.viewer(containerRef.current, {
+    const partial = !!haov && haov < 360;
+    const base = {
       type: "equirectangular",
       panorama: imageUrl,
       autoLoad: true,
       compass: false,
       showControls: true,
-      // У сгенерированных панорам низ (надир) и верх (зенит) почти всегда
-      // смазаны: не даём смотреть прямо под ноги и прямо в небо.
-      minPitch: -45,
-      maxPitch: 60,
-    });
+    };
+    const create = (vaov?: number) =>
+      window.pannellum.viewer(
+        containerRef.current,
+        partial && vaov
+          ? {
+              ...base,
+              // частичная панорама: охват по горизонтали haov, по вертикали —
+              // по пропорциям картинки; смотреть можно только в пределах кадра
+              haov,
+              vaov,
+              vOffset: 0,
+              minYaw: -haov! / 2,
+              maxYaw: haov! / 2,
+              minPitch: -vaov / 2,
+              maxPitch: vaov / 2,
+              hfov: Math.min(100, haov! * 0.6),
+              yaw: 0,
+              pitch: 0,
+            }
+          : {
+              ...base,
+              // У сгенерированных панорам низ (надир) и верх (зенит) почти всегда
+              // смазаны: не даём смотреть прямо под ноги и прямо в небо.
+              minPitch: -45,
+              maxPitch: 60,
+            }
+      );
+
+    if (partial) {
+      // вертикальный охват считаем из пропорций картинки
+      const img = new Image();
+      img.onload = () => {
+        if (viewerRef.current) viewerRef.current.destroy();
+        const vaov = (haov! * img.naturalHeight) / img.naturalWidth;
+        viewerRef.current = create(vaov);
+        viewerRef.current.on("load", () => onReady?.());
+      };
+      img.src = imageUrl;
+      return;
+    }
+    viewerRef.current = create();
     viewerRef.current.on("load", () => onReady?.());
   }
 
@@ -44,7 +86,7 @@ export default function PanoramaViewer({ imageUrl, onReady }: PanoramaViewerProp
     // Поэтому здесь дополнительно проверяем window.pannellum напрямую.
     if (window.pannellum) initViewer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageUrl]);
+  }, [imageUrl, haov]);
 
   return (
     <>
