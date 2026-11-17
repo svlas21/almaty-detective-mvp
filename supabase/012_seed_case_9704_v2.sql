@@ -348,7 +348,7 @@ insert into evidence (id, case_id, name, description, location_id, is_relevant, 
 insert into evidence (id, case_id, name, description, location_id, is_relevant, generic_category, requires_any, auto_grant) values ('e4f03eb4-b50d-54c1-9edd-8e3fc38dad1c', '029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Валентина: расцарапанная рука Фархада', 'Валентина о Фархаде: конверт, расцарапанная рука, «Береги Дашу».
 
 Из протокола дополнительного допроса свидетеля Сартаковой В. П.: в воскресенье 24.11.96 вечером Мамаджанов Ф. принёс конверт с деньгами «на похороны». На левой кисти у него были свежие царапины; на её вопрос ответил: «Собака на базаре». Уходя, в прихожей, наедине сказал ей: «Бандиты сейчас такие, Валентина-апа. Береги Дашу, никому ни слова». Тогда она приняла это за заботу.', null, true, null, null, false);
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager.jpg' where id = '1ac01ab0-e8f1-5009-9640-d18dfa4f5e44';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager2.jpg' where id = '1ac01ab0-e8f1-5009-9640-d18dfa4f5e44';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sledy.jpg' where id = 'b4e6a60f-b233-543e-b3b1-ae0a1427b6a1';
 
 -- 4. Персонажи
