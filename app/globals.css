@@ -2233,3 +2233,11 @@ body {
   .ev-form-row { flex-direction: column; gap: 6px; }
   .ev-form-signs { justify-content: flex-start; }
 }
+
+
+/* Повторное открытие: найденные и осмотренные карточки кликабельны */
+.evidence-tag-label.is-found,
+.evidence-tag-label.is-present { pointer-events: auto; cursor: pointer; }
+.evidence-tag-label.is-present:hover { opacity: 0.85; }
+.evidence-tag-label.is-found:hover { box-shadow: 0 0 0 4px rgba(156, 43, 31, 0.2); }
+.evidence-tag-label.is-active { outline: 2px solid var(--ink); outline-offset: 3px; }

@@ -110,8 +110,12 @@ export default function GameScreen() {
   // kind: found — настоящая улика; present — предмет есть, но не улика;
   // miss — такого здесь нет; pending — ждём ответ сервера.
   type ResultKind = "found" | "present" | "miss" | "pending";
-  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
+  const [lastResult, setLastResult] = useState<{ id?: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
   const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
+  // Кэш показанных результатов: повторный клик по найденной улике / осмотренному
+  // предмету снова открывает его карточку без запроса и без траты времени.
+  type ShownResult = { id: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null };
+  const [resultCache, setResultCache] = useState<Record<string, ShownResult>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<SidebarTab>("map");
   const [mapView, setMapView] = useState<"map" | "location">("map");
@@ -176,6 +180,7 @@ export default function GameScreen() {
       }
       setTriedIds(new Set());
       setResultById({});
+      setResultCache({});
       setLastResult(null);
       // Данные новой локации грузятся ДО переключения экрана — иначе hub
       // на миг рендерится с state.location от предыдущей локации (race
@@ -197,6 +202,27 @@ export default function GameScreen() {
 
   async function guessEvidence(evidenceId: string) {
     const guessedItem = pool.find((p) => p.id === evidenceId);
+    // Уже открывали в этом осмотре — просто показываем снова
+    const cached = resultCache[evidenceId];
+    if (cached) {
+      setLastResult(cached);
+      return;
+    }
+    // Улика уже в папке (найдена раньше) — берём текст и фото из папки
+    const inFolder = state?.collectedEvidence.find((e) => e.id === evidenceId);
+    if (inFolder) {
+      const shown: ShownResult = {
+        id: evidenceId,
+        name: guessedItem?.name ?? inFolder.name,
+        text: inFolder.description ?? "",
+        relevant: true,
+        kind: "found",
+        image: inFolder.image_url ?? null,
+      };
+      setResultCache((prev) => ({ ...prev, [evidenceId]: shown }));
+      setLastResult(shown);
+      return;
+    }
     // Мгновенный отклик: карточка гаснет и сразу видно, что идёт проверка,
     // не дожидаясь ответа сервера.
     setTriedIds((prev) => new Set(prev).add(evidenceId));
@@ -209,13 +235,16 @@ export default function GameScreen() {
     if (res.ok) {
       const data = await res.json();
       const kind: ResultKind = data.relevant ? "found" : data.present ? "present" : "miss";
-      setLastResult({
+      const shown: ShownResult = {
+        id: evidenceId,
         name: guessedItem?.name ?? "",
         text: data.relevant ? data.description : data.message,
         relevant: data.relevant,
         kind,
         image: data.relevant ? data.image_url ?? null : null,
-      });
+      };
+      setLastResult(shown);
+      if (kind !== "miss") setResultCache((prev) => ({ ...prev, [evidenceId]: shown }));
       setResultById((prev) => ({ ...prev, [evidenceId]: kind }));
       loadState({ silent: true });
     } else {
@@ -596,6 +625,7 @@ export default function GameScreen() {
               onGuess={guessEvidence}
               triedIds={triedIds}
               resultById={resultById}
+              activeId={lastResult?.id}
               foundIds={new Set(state.collectedEvidence.map((e) => e.id))}
             />
 
