@@ -52,7 +52,16 @@ interface CollectedEvidenceItem {
   description: string | null;
   generic_category?: string | null;
   image_url?: string | null;
+  kind?: "thing" | "testimony" | "expertise" | "document" | null;
 }
+
+// Разделы папки дела и шапки машинописных листов
+const EVIDENCE_SECTIONS: { kind: NonNullable<CollectedEvidenceItem["kind"]>; title: string; doc: string }[] = [
+  { kind: "thing", title: "Вещественные доказательства", doc: "ПРОТОКОЛ ОСМОТРА" },
+  { kind: "testimony", title: "Показания", doc: "ИЗ ПРОТОКОЛА ДОПРОСА" },
+  { kind: "expertise", title: "Заключения экспертов", doc: "ЗАКЛЮЧЕНИЕ ЭКСПЕРТА" },
+  { kind: "document", title: "Справки и документы", doc: "СПРАВКА" },
+];
 
 interface TopicItem {
   id: string;
@@ -603,7 +612,8 @@ export default function GameScreen() {
                 <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
                   <RichText
                     text={lastResult.text}
-                    className={lastResult.kind === "found" ? "evidence-result-text typed" : "evidence-result-text"}
+                    className={lastResult.kind === "found" ? "evidence-result-text typed typed-thing" : "evidence-result-text"}
+                    docTitle={lastResult.kind === "found" ? "ПРОТОКОЛ ОСМОТРА" : undefined}
                   />
                   {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
                 </div>
@@ -643,22 +653,40 @@ export default function GameScreen() {
                 <span>Пока ничего не найдено — осмотрите локации.</span>
               </div>
             ) : (
-              <div className="evidence-doc-list">
-                {state.collectedEvidence.map((e) => {
-                  const Icon = getEvidenceIcon(e);
+              <div className="evidence-sections">
+                {EVIDENCE_SECTIONS.map((sec) => {
+                  const items = state.collectedEvidence.filter((e) => (e.kind ?? "thing") === sec.kind);
+                  if (items.length === 0) return null;
                   return (
-                    <div key={e.id} className="evidence-doc">
-                      <div className="evidence-doc-body">
-                        <h3 className="evidence-doc-name">
-                          <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
-                          {tp(e.name)}
-                        </h3>
-                        <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
-                          <RichText text={e.description} className="evidence-doc-description typed" />
-                          {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
-                        </div>
+                    <section key={sec.kind} className={`evidence-section is-${sec.kind}`}>
+                      <h2 className="evidence-section-title">
+                        <span>{sec.title}</span>
+                        <span className="evidence-section-count">{items.length}</span>
+                      </h2>
+                      <div className="evidence-doc-list">
+                        {items.map((e) => {
+                          const Icon = getEvidenceIcon(e);
+                          return (
+                            <div key={e.id} className={`evidence-doc is-${sec.kind}`}>
+                              <div className="evidence-doc-body">
+                                <h3 className="evidence-doc-name">
+                                  <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
+                                  {tp(e.name)}
+                                </h3>
+                                <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
+                                  <RichText
+                                    text={e.description}
+                                    className={`evidence-doc-description typed typed-${sec.kind}`}
+                                    docTitle={sec.doc}
+                                  />
+                                  {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
+                    </section>
                   );
                 })}
               </div>

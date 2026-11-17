@@ -1978,7 +1978,7 @@ body {
 }
 /* шапка листа: разрядкой, отбита пунктиром «из дефисов» */
 .rt.typed::before {
-  content: "ПРОТОКОЛ ОСМОТРА";
+  content: attr(data-doc);
   display: block;
   text-align: center;
   font-size: 0.82em;
@@ -2021,4 +2021,75 @@ body {
 @media (max-width: 760px) {
   .rt.typed { font-size: 15px; padding: 18px 18px 20px; }
   .rt.typed p.rt-narr { text-indent: 1.4em; }
+}
+
+
+/* ───────── Папка дела: разделы и виды листов ───────── */
+.evidence-sections { display: flex; flex-direction: column; gap: 30px; }
+.evidence-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.evidence-section-title::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px dashed rgba(233, 224, 201, 0.35);
+}
+.evidence-section-count {
+  order: 2;
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid rgba(233, 224, 201, 0.4);
+  border-radius: 10px;
+  color: var(--amber);
+}
+.evidence-section-title::after { order: 1; }
+
+/* Показания — серо-голубоватый бланк протокола допроса, слева «поля» с отметкой */
+.rt.typed.typed-testimony {
+  background:
+    linear-gradient(to right, transparent 0, transparent 18px, rgba(69, 79, 120, 0.35) 18px, rgba(69, 79, 120, 0.35) 19px, transparent 19px),
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.4), transparent 60%),
+    #e6e2d8;
+  padding-left: 46px;
+}
+/* Заключения экспертов — белее, с круглой печатью ЭКО */
+.rt.typed.typed-expertise {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.5), transparent 60%),
+    #f1ebdd;
+}
+.rt.typed.typed-expertise::after {
+  content: "ЭКО ГУВД";
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(64, 86, 160, 0.55);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(241, 235, 221, 1), inset 0 0 0 5px rgba(64, 86, 160, 0.45);
+  color: rgba(64, 86, 160, 0.7);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-shadow: none;
+  transform: rotate(-12deg);
+}
+/* Справки — канцелярская бумага, шапка мельче */
+.rt.typed.typed-document {
+  background:
+    radial-gradient(ellipse at 80% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
+    #e9e3cf;
 }

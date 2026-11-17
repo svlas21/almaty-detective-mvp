@@ -140,15 +140,17 @@ function renderLine(line: Line) {
 interface RichTextProps {
   text: string | null | undefined;
   className?: string;
+  /** Шапка машинописного листа (.rt.typed): «ПРОТОКОЛ ОСМОТРА», «ЗАКЛЮЧЕНИЕ ЭКСПЕРТА»… */
+  docTitle?: string;
   as?: ElementType;
 }
 
-export default function RichText({ text, className, as: Tag = "div" }: RichTextProps) {
+export default function RichText({ text, className, as: Tag = "div", docTitle }: RichTextProps) {
   if (!text) return null;
   const { blocks, hasSpeech } = parse(text);
   const mode = hasSpeech ? "rt--dialogue" : "rt--plain";
   return (
-    <Tag className={`rt ${mode}${className ? " " + className : ""}`} lang="ru">
+    <Tag className={`rt ${mode}${className ? " " + className : ""}`} lang="ru" data-doc={docTitle}>
       {blocks.map((block, bi) => (
         <div className="rt-block" key={bi}>
           {block.map((line, li) => (
