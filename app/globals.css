@@ -1981,12 +1981,6 @@ body {
 .rt.typed .rt-block + .rt-block { margin-top: 0.95em; }
 .rt.typed .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
 .rt.typed .rt-dash { color: inherit; opacity: 1; }
-/* первая строка — как заголовок машинописного листа */
-.rt.typed .rt-block:first-child .rt-line:first-child {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.5em !important;
-}
 @media (max-width: 760px) {
   .rt.typed { font-size: 15px; padding: 20px 18px; }
 }
