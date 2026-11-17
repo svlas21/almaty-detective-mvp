@@ -112,6 +112,7 @@ export async function POST(
   return NextResponse.json({
     relevant: true,
     description: evidence.description,
+    image_url: evidence.image_url ?? null,
     session: updatedSession,
   });
 }

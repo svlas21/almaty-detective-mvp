@@ -1,6 +1,7 @@
 "use client";
 
 import RichText, { tp } from "@/components/RichText";
+import EvidencePhoto from "@/components/EvidencePhoto";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import PanoramaViewer from "@/components/PanoramaViewer";
@@ -98,7 +99,7 @@ export default function GameScreen() {
   // kind: found — настоящая улика; present — предмет есть, но не улика;
   // miss — такого здесь нет; pending — ждём ответ сервера.
   type ResultKind = "found" | "present" | "miss" | "pending";
-  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean; kind: ResultKind } | null>(null);
+  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
   const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<SidebarTab>("map");
@@ -202,6 +203,7 @@ export default function GameScreen() {
         text: data.relevant ? data.description : data.message,
         relevant: data.relevant,
         kind,
+        image: data.relevant ? data.image_url ?? null : null,
       });
       setResultById((prev) => ({ ...prev, [evidenceId]: kind }));
       loadState({ silent: true });
@@ -597,7 +599,10 @@ export default function GameScreen() {
                   {lastResult.kind === "present" && <span className="evidence-badge">К делу не относится</span>}
                   {lastResult.kind === "miss" && <span className="evidence-badge is-muted">Не найдено</span>}
                 </div>
-                <RichText text={lastResult.text} className="evidence-result-text" />
+                <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
+                  <RichText text={lastResult.text} className="evidence-result-text" />
+                  {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
+                </div>
               </div>
             )}
 
