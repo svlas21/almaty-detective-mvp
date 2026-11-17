@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PT_Serif, JetBrains_Mono } from "next/font/google";
+import { PT_Serif, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 
 const ptSerif = PT_Serif({
@@ -17,6 +17,14 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Рукописный шрифт для записей следователя (блокнот с уликами)
+const caveat = Caveat({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600"],
+  variable: "--font-caveat",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Детектив Алматы",
   description: "Онлайн детективная игра про Алматы (MVP-скелет)",
@@ -28,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );

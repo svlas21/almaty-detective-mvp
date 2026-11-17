@@ -601,7 +601,10 @@ export default function GameScreen() {
                   {lastResult.kind === "miss" && <span className="evidence-badge is-muted">Не найдено</span>}
                 </div>
                 <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
-                  <RichText text={lastResult.text} className="evidence-result-text" />
+                  <RichText
+                    text={lastResult.text}
+                    className={lastResult.kind === "found" ? "evidence-result-text notebook" : "evidence-result-text"}
+                  />
                   {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
                 </div>
               </div>
@@ -651,7 +654,7 @@ export default function GameScreen() {
                           {tp(e.name)}
                         </h3>
                         <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
-                          <RichText text={e.description} className="evidence-doc-description" />
+                          <RichText text={e.description} className="evidence-doc-description notebook" />
                           {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
                         </div>
                       </div>

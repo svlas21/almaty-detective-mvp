@@ -1949,3 +1949,49 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ev-photo { animation: none; }
 }
+
+/* ───────── Запись в блокноте следователя (текст найденной улики) ───────── */
+.rt.notebook {
+  --nb-line: 34px;
+  position: relative;
+  max-width: none;
+  padding: 10px 22px calc(var(--nb-line) / 2) 58px;
+  font-family: var(--font-caveat), "Comic Sans MS", cursive;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: var(--nb-line);
+  color: #233a73;                     /* шариковая ручка */
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  background-color: #fbf8ee;
+  background-image:
+    linear-gradient(to right, transparent 42px, rgba(196, 64, 54, 0.55) 42px, rgba(196, 64, 54, 0.55) 44px, transparent 44px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--nb-line) - 1px), rgba(74, 112, 170, 0.28) calc(var(--nb-line) - 1px), rgba(74, 112, 170, 0.28) var(--nb-line));
+  background-origin: padding-box, content-box;
+  background-clip: padding-box, content-box;
+  border: 1px solid rgba(90, 81, 64, 0.18);
+  border-radius: 2px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  margin-top: 10px;
+}
+/* всё в сетке строк: никаких дробных отступов */
+.rt.notebook p.rt-line,
+.rt.notebook p.rt-line + p.rt-line,
+.rt.notebook .rt-speech + .rt-speech { margin: 0 !important; }
+.rt.notebook .rt-block + .rt-block { margin-top: var(--nb-line); }
+.rt.notebook .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
+.rt.notebook .rt-dash { color: inherit; opacity: 1; }
+/* первая строка — как заголовок записи, с нажимом */
+.rt.notebook .rt-block:first-child .rt-line:first-child { font-weight: 600; }
+/* последний абзац-вывод («Почему не в машине?») — подчёркнут от руки */
+.rt.notebook .rt-block:last-child .rt-line:last-child {
+  text-decoration: underline;
+  text-decoration-color: rgba(196, 64, 54, 0.6);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.evidence-result .rt.notebook,
+.evidence-doc .rt.notebook { color: #233a73; }
+@media (max-width: 760px) {
+  .rt.notebook { font-size: 22px; padding-left: 50px; }
+}
