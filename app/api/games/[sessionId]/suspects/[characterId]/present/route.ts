@@ -4,6 +4,28 @@ import { resolveReactionRules, type ReactionRule } from "@/lib/graphRules";
 
 export const dynamic = "force-dynamic";
 
+// Если своей реакции на улику нет — короткая живая фраза вместо одной и той же
+// заглушки. Выбор детерминированный: тот же персонаж на ту же улику отвечает одинаково.
+const PERSON_FALLBACK = [
+  "«Не понимаю, к чему вы клоните» — пожимает плечами.",
+  "Смотрит, возвращает.\n— Это вы не ко мне. Я тут ничего не скажу.",
+  "— Первый раз вижу. Честно.",
+  "Долго молчит.\n— Не знаю. Спросите кого-нибудь другого.",
+  "— И что мне с этим делать? Я не в курсе.",
+  "Отодвигает обратно по столу.\n— Нет. Это мимо.",
+];
+const EXPERT_FALLBACK = [
+  "— По этому материалу заключения пока нет.",
+  "— Это не по моей части. Отнесите тому, кто этим занимается.",
+  "Пролистывает, качает головой.\n— Тут мне зацепиться не за что.",
+];
+function fallbackReaction(characterId: string, evidenceId: string, isExpert: boolean) {
+  const pool = isExpert ? EXPERT_FALLBACK : PERSON_FALLBACK;
+  let h = 0;
+  for (const ch of characterId + evidenceId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return pool[h % pool.length];
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { sessionId: string; characterId: string } }
@@ -58,12 +80,7 @@ export async function POST(
     !!character.is_expert
   );
 
-  const reaction =
-    ruleResult?.text ??
-    character.reactions?.[evidenceId] ??
-    (character.is_expert
-      ? "По этому материалу заключения пока нет."
-      : "«Не понимаю, к чему вы клоните» — пожимает плечами.");
+  const reaction = ruleResult?.text ?? character.reactions?.[evidenceId] ?? fallbackReaction(characterId, evidenceId, !!character.is_expert);
 
   // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
   // и не допросом, а после того как игрок увидел конкретную реакцию конкретного

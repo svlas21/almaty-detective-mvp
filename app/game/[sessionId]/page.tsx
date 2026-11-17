@@ -259,17 +259,14 @@ export default function GameScreen() {
   }
 
   async function openSuspect(person: SuspectListItem) {
-    setNavigating(true);
-    try {
-      setSuspectReaction(null);
-      setSuspectConfession(null);
-      setTopicAnswer(null);
-      await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
-      await loadState({ silent: true });
-      setSelectedSuspect(person);
-    } finally {
-      setNavigating(false);
-    }
+    // карточку открываем сразу; отметку «просмотрен» и обновление состояния — фоном
+    setSuspectReaction(null);
+    setSuspectConfession(null);
+    setTopicAnswer(null);
+    setSelectedSuspect(person);
+    fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" }).then(() =>
+      loadState({ silent: true })
+    );
   }
 
   async function completeInterrogation(characterId: string) {
@@ -289,6 +286,8 @@ export default function GameScreen() {
   async function presentEvidenceToSuspect(evidence: CollectedEvidenceItem) {
     if (!selectedSuspect) return;
     setPresentingEvidenceId(evidence.id);
+    setSuspectConfession(null);
+    setSuspectReaction({ evidenceName: evidence.name, text: "…" });
     const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/present`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -298,14 +297,16 @@ export default function GameScreen() {
       const data = await res.json();
       setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
       if (data.confession) setSuspectConfession(data.confession);
-      await loadState({ silent: true });
     }
+    // реакцию показываем сразу, состояние партии обновляем фоном
     setPresentingEvidenceId(null);
+    if (res.ok) loadState({ silent: true });
   }
 
   async function askTopic(topic: TopicItem) {
     if (!selectedSuspect) return;
     setAskingTopicId(topic.id);
+    setTopicAnswer({ topicLabel: topic.label, text: "…" });
     const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -314,9 +315,9 @@ export default function GameScreen() {
     if (res.ok) {
       const data = await res.json();
       setTopicAnswer({ topicLabel: topic.label, text: data.text });
-      await loadState({ silent: true });
     }
     setAskingTopicId(null);
+    if (res.ok) loadState({ silent: true });
   }
 
   async function answerCall(callId: string) {
