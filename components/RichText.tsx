@@ -45,6 +45,51 @@ export function tp(s: string | null | undefined): string {
 type Line = { kind: "speech" | "cont" | "narr"; text: string };
 type Block = Line[];
 
+// Сокращения, после точки которых предложение НЕ кончается: «г. Алматы», «т. е.», «Ф. Мамаджанов».
+const ABBR = new Set(["г", "гг", "ул", "пр", "д", "кв", "т", "е", "им", "тыс", "руб", "ст", "см", "л", "р", "с", "п", "п-т", "мкр"]);
+
+/** Делит текст на предложения, не ломая сокращения и инициалы. */
+function splitSentences(text: string): string[] {
+  const out: string[] = [];
+  let start = 0;
+  const re = /([.!?…])(["»”)]*)\s+(?=[—–«"А-ЯЁA-Z0-9])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const end = m.index + m[1].length + m[2].length;
+    const before = text.slice(start, m.index);
+    const lastWord = (before.match(/([А-ЯЁа-яёA-Za-z-]+)$/) || [""])[0];
+    // «Ф.» (инициал) или «г.» (сокращение) — не конец предложения
+    if (m[1] === "." && (lastWord.length === 1 || ABBR.has(lastWord.toLowerCase()))) continue;
+    out.push(text.slice(start, end).trim());
+    start = re.lastIndex;
+  }
+  const tail = text.slice(start).trim();
+  if (tail) out.push(tail);
+  return out;
+}
+
+/**
+ * Длинный абзац (сплошная реплика или описание) режем на короткие куски
+ * по 1–2 предложения: так читается легче, в духе рубленой речи сценария.
+ */
+const LONG = 170;
+const CHUNK = 120;
+function chunk(text: string): string[] {
+  if (text.length <= LONG) return [text];
+  const parts: string[] = [];
+  let cur = "";
+  for (const s of splitSentences(text)) {
+    if (cur && (cur + " " + s).length > CHUNK) {
+      parts.push(cur);
+      cur = s;
+    } else {
+      cur = cur ? cur + " " + s : s;
+    }
+  }
+  if (cur) parts.push(cur);
+  return parts;
+}
+
 function parse(text: string): { blocks: Block[]; hasSpeech: boolean } {
   const blocks: Block[] = [];
   let hasSpeech = false;
@@ -60,9 +105,12 @@ function parse(text: string): { blocks: Block[]; hasSpeech: boolean } {
       if (/^[—–-]\s/.test(l)) {
         inSpeech = true;
         hasSpeech = true;
-        block.push({ kind: "speech", text: l.replace(/^[—–-]\s+/, "") });
+        chunk(l.replace(/^[—–-]\s+/, "")).forEach((t, i) =>
+          block.push({ kind: i === 0 ? "speech" : "cont", text: t })
+        );
       } else {
-        block.push({ kind: inSpeech ? "cont" : "narr", text: l });
+        const kind = inSpeech ? "cont" : "narr";
+        chunk(l).forEach((t) => block.push({ kind, text: t }));
       }
     }
     blocks.push(block);
@@ -77,7 +125,8 @@ const LABEL_RE = /^([^:—«»"\n]{2,32}?):\s+(.*)$/;
 function renderLine(line: Line) {
   if (line.kind !== "speech") {
     const m = line.text.match(LABEL_RE);
-    if (m && m[1].trim().split(/\s+/).length <= 4) {
+    // подпись — 1–2 слова с заглавной: «Первые:», «Справка:», «Заключение эксперта:»
+    if (m && m[1].trim().split(/\s+/).length <= 2 && /^[А-ЯЁA-Z]/.test(m[1].trim())) {
       return (
         <>
           <span className="rt-label">{typograf(m[1])}:</span> {typograf(m[2])}

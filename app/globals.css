@@ -1751,8 +1751,8 @@ body {
 /* ───────── RichText: типографика сценарных текстов ───────── */
 .rt {
   font-family: var(--font-pt-serif), serif;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  hyphens: manual;           /* без «дик-товали»: переносы со словами мешают читать */
+  -webkit-hyphens: manual;
   overflow-wrap: break-word;
   max-width: 62ch;
 }
@@ -1768,7 +1768,7 @@ body {
 }
 
 .rt p.rt-line + p.rt-line {
-  margin-top: 0.3em !important;
+  margin-top: 0.45em !important;
 }
 
 /* Реплика: висячее тире, текст ровной колонкой */
