@@ -22,6 +22,8 @@ interface SuspectDetailProps {
   reaction: { evidenceName: string; text: string } | null;
   confession: string | null;
   presentingId: string | null;
+  /** Улики, которые этому персонажу уже предъявляли */
+  presentedIds?: Set<string>;
   onPresent: (evidence: CollectedEvidenceItem) => void;
   onInterrogationComplete: (characterId: string) => void;
   onQuestionViewed: (characterId: string, questionIndex: number) => void;
@@ -37,6 +39,7 @@ export default function SuspectDetail({
   reaction,
   confession,
   presentingId,
+  presentedIds,
   onPresent,
   onInterrogationComplete,
   onQuestionViewed,
@@ -157,10 +160,14 @@ export default function SuspectDetail({
                   {collectedEvidence.map((e) => (
                     <div
                       key={e.id}
-                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}`}
+                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}${
+                        presentedIds?.has(e.id) ? " is-presented" : ""
+                      }${reaction?.evidenceName === e.name ? " is-active" : ""}`}
                       onClick={() => (presentingId ? undefined : onPresent(e))}
+                      title={presentedIds?.has(e.id) ? "Уже предъявляли — нажмите, чтобы перечитать ответ" : undefined}
                     >
                       {tp(e.name)}
+                      {presentedIds?.has(e.id) && <span className="dossier-presented-mark">Предъявлено</span>}
                     </div>
                   ))}
                 </div>

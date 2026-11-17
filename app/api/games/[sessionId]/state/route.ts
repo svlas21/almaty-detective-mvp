@@ -392,5 +392,7 @@ export async function GET(
     collectedEvidenceCount: state.collected_evidence.length,
     collectedEvidence: collectedEvidenceDetails ?? [],
     log: state.log ?? [],
+    // «персонаж:улика» — что игрок уже предъявлял (для пометки в «Предъявить улику»)
+    viewedReactions,
   });
 }

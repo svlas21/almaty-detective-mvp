@@ -2241,3 +2241,32 @@ body {
 .evidence-tag-label.is-present:hover { opacity: 0.85; }
 .evidence-tag-label.is-found:hover { box-shadow: 0 0 0 4px rgba(156, 43, 31, 0.2); }
 .evidence-tag-label.is-active { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+
+/* «Предъявить улику»: уже предъявлявшиеся этому персонажу */
+.dossier-evidence-tag { position: relative; }
+.dossier-evidence-tag.is-presented {
+  border-style: solid;
+  border-color: rgba(69, 79, 61, 0.55);
+  background: rgba(69, 79, 61, 0.07);
+  color: var(--ink-soft);
+}
+.dossier-evidence-tag.is-active {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.dossier-presented-mark {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3deg);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--militia);
+  border: 1.5px solid var(--militia);
+  border-radius: 3px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  opacity: 0.85;
+}

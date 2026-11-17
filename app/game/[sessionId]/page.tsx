@@ -89,6 +89,7 @@ interface StateResponse {
   mapImageUrl: string | null;
   collectedEvidence: CollectedEvidenceItem[];
   log: LogEntry[];
+  viewedReactions?: string[];
 }
 
 interface EvidencePoolItem {
@@ -111,6 +112,8 @@ export default function GameScreen() {
   // miss — такого здесь нет; pending — ждём ответ сервера.
   type ResultKind = "found" | "present" | "miss" | "pending";
   const [lastResult, setLastResult] = useState<{ id?: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
+  // предъявленные в этой сессии экрана (до того, как фоном обновится состояние)
+  const [presentedLocal, setPresentedLocal] = useState<string[]>([]);
   const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
   // Кэш показанных результатов: повторный клик по найденной улике / осмотренному
   // предмету снова открывает его карточку без запроса и без траты времени.
@@ -296,6 +299,7 @@ export default function GameScreen() {
     if (res.ok) {
       const data = await res.json();
       setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
+      setPresentedLocal((prev) => [...prev, `${selectedSuspect.id}:${evidence.id}`]);
       if (data.confession) setSuspectConfession(data.confession);
     }
     // реакцию показываем сразу, состояние партии обновляем фоном
@@ -408,6 +412,14 @@ export default function GameScreen() {
               reaction={suspectReaction}
               confession={suspectConfession}
               presentingId={presentingEvidenceId}
+              presentedIds={
+                new Set([
+                  ...(state.viewedReactions ?? [])
+                    .filter((k) => k.startsWith(`${selectedSuspect.id}:`))
+                    .map((k) => k.slice(selectedSuspect.id.length + 1)),
+                  ...presentedLocal.filter((k) => k.startsWith(`${selectedSuspect.id}:`)).map((k) => k.slice(selectedSuspect.id.length + 1)),
+                ])
+              }
               onPresent={presentEvidenceToSuspect}
               onInterrogationComplete={completeInterrogation}
               onQuestionViewed={questionViewed}
