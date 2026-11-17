@@ -51,6 +51,7 @@ interface CollectedEvidenceItem {
   name: string;
   description: string | null;
   generic_category?: string | null;
+  image_url?: string | null;
 }
 
 interface TopicItem {
@@ -649,7 +650,10 @@ export default function GameScreen() {
                           <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
                           {tp(e.name)}
                         </h3>
-                        <RichText text={e.description} className="evidence-doc-description" />
+                        <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
+                          <RichText text={e.description} className="evidence-doc-description" />
+                          {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
+                        </div>
                       </div>
                     </div>
                   );
