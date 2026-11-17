@@ -95,7 +95,11 @@ export default function GameScreen() {
   const [state, setState] = useState<StateResponse | null>(null);
   const [pool, setPool] = useState<EvidencePoolItem[]>([]);
   const [triedIds, setTriedIds] = useState<Set<string>>(new Set());
-  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean } | null>(null);
+  // kind: found — настоящая улика; present — предмет есть, но не улика;
+  // miss — такого здесь нет; pending — ждём ответ сервера.
+  type ResultKind = "found" | "present" | "miss" | "pending";
+  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean; kind: ResultKind } | null>(null);
+  const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<SidebarTab>("map");
   const [mapView, setMapView] = useState<"map" | "location">("map");
@@ -159,6 +163,7 @@ export default function GameScreen() {
         });
       }
       setTriedIds(new Set());
+      setResultById({});
       setLastResult(null);
       // Данные новой локации грузятся ДО переключения экрана — иначе hub
       // на миг рендерится с state.location от предыдущей локации (race
@@ -183,7 +188,7 @@ export default function GameScreen() {
     // Мгновенный отклик: карточка гаснет и сразу видно, что идёт проверка,
     // не дожидаясь ответа сервера.
     setTriedIds((prev) => new Set(prev).add(evidenceId));
-    setLastResult({ name: guessedItem?.name ?? "", text: "Проверяем…", relevant: false });
+    setLastResult({ name: guessedItem?.name ?? "", text: "Проверяем…", relevant: false, kind: "pending" });
     const res = await fetch(`/api/games/${sessionId}/evidence/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -191,11 +196,14 @@ export default function GameScreen() {
     });
     if (res.ok) {
       const data = await res.json();
+      const kind: ResultKind = data.relevant ? "found" : data.present ? "present" : "miss";
       setLastResult({
         name: guessedItem?.name ?? "",
         text: data.relevant ? data.description : data.message,
         relevant: data.relevant,
+        kind,
       });
+      setResultById((prev) => ({ ...prev, [evidenceId]: kind }));
       loadState({ silent: true });
     } else {
       // Сервер не ответил — возвращаем карточку, чтобы можно было нажать ещё раз.
@@ -204,7 +212,7 @@ export default function GameScreen() {
         next.delete(evidenceId);
         return next;
       });
-      setLastResult({ name: guessedItem?.name ?? "", text: "Не удалось проверить. Попробуйте ещё раз.", relevant: false });
+      setLastResult({ name: guessedItem?.name ?? "", text: "Не удалось проверить. Попробуйте ещё раз.", relevant: false, kind: "miss" });
     }
   }
 
@@ -570,11 +578,25 @@ export default function GameScreen() {
             <h2 className="evidence-timeout-title">⏱ Время осмотра истекло</h2>
             <p className="evidence-timeout-subtitle">Вы можете вернуться и осмотреть место ещё раз.</p>
 
-            <EvidenceSearch pool={pool} onGuess={guessEvidence} triedIds={triedIds} />
+            <EvidenceSearch
+              pool={pool}
+              onGuess={guessEvidence}
+              triedIds={triedIds}
+              resultById={resultById}
+              foundIds={new Set(state.collectedEvidence.map((e) => e.id))}
+            />
 
             {lastResult && (
-              <div className={`evidence-result${lastResult.relevant ? " is-relevant" : ""}`}>
-                <div className="evidence-result-label">{tp(lastResult.name)}</div>
+              <div
+                key={lastResult.name + lastResult.kind}
+                className={`evidence-result is-${lastResult.kind}${lastResult.relevant ? " is-relevant" : ""}`}
+              >
+                <div className="evidence-result-head">
+                  <div className="evidence-result-label">{tp(lastResult.name)}</div>
+                  {lastResult.kind === "found" && <span className="evidence-stamp">Улика · в папке дела</span>}
+                  {lastResult.kind === "present" && <span className="evidence-badge">К делу не относится</span>}
+                  {lastResult.kind === "miss" && <span className="evidence-badge is-muted">Не найдено</span>}
+                </div>
                 <RichText text={lastResult.text} className="evidence-result-text" />
               </div>
             )}

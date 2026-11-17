@@ -1841,3 +1841,85 @@ body {
 .rt--plain p.rt-line + p.rt-line {
   margin-top: 0.5em !important;
 }
+
+/* ───────── Осмотр: найденная улика / не улика / мимо ───────── */
+.evidence-tag-label { position: relative; }
+.evidence-tag-label.is-pending,
+.evidence-tag-label.is-miss { opacity: 0.35; pointer-events: none; }
+.evidence-tag-label.is-present { opacity: 0.6; pointer-events: none; border-style: dashed; }
+.evidence-tag-label.is-found {
+  pointer-events: none;
+  border: 2px solid var(--stamp);
+  background: #f7eee0;
+  color: var(--stamp);
+  box-shadow: 0 0 0 3px rgba(156, 43, 31, 0.12);
+}
+.evidence-tag-stamp {
+  position: absolute;
+  top: -9px;
+  right: -8px;
+  transform: rotate(8deg);
+  background: var(--stamp);
+  color: #f7eee0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  animation: stamp-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.evidence-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.evidence-result.is-found {
+  border: 2px solid var(--stamp);
+  background: rgba(156, 43, 31, 0.06);
+  animation: result-in 0.3s ease-out;
+}
+.evidence-result.is-found .evidence-result-label { color: var(--stamp); font-weight: 700; }
+.evidence-result.is-pending { opacity: 0.7; }
+.evidence-stamp {
+  display: inline-block;
+  transform: rotate(-3deg);
+  border: 2.5px solid var(--stamp);
+  color: var(--stamp);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+  animation: stamp-in 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.evidence-badge {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px dashed var(--paper-shadow);
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+.evidence-badge.is-muted { opacity: 0.7; }
+
+@keyframes stamp-in {
+  0% { transform: scale(2.2) rotate(-12deg); opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes result-in {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evidence-tag-stamp, .evidence-stamp, .evidence-result.is-found { animation: none; }
+}

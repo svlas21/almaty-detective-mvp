@@ -408,18 +408,10 @@ insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Обрывок бумаги');
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Лотерейный билет');
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Жетон для таксофона');
-insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Пустая бутылка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Бутылка из-под «Жигулёвского» под яблоней. Этикетка размокла, внутри прелые листья. Лежит тут с осени.
-
-К делу не относится.');
-insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Детская варежка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Красная вязаная варежка на штакетнике. Детская. Кто-то нашёл и надел на штакетину, чтобы хозяин заметил. С прошлой зимы висит.
-
-К делу не относится.');
-insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Сломанный зонт', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Чёрный складной зонт у крыльца. Спицы вывернуты ветром. Бросили и забыли.
-
-К делу не относится.');
-insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Детский велосипед', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Детский велосипед под клеёнкой. Цепь в ржавчине, шины спущены. С лета не трогали.
-
-К делу не относится.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Пустая бутылка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Бутылка из-под «Жигулёвского» под яблоней. Этикетка размокла, внутри прелые листья. Лежит тут с осени.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Детская варежка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Красная вязаная варежка на штакетнике. Детская. Кто-то нашёл и надел на штакетину, чтобы хозяин заметил. С прошлой зимы висит.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Сломанный зонт', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Чёрный складной зонт у крыльца. Спицы вывернуты ветром. Бросили и забыли.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Детский велосипед', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Детский велосипед под клеёнкой. Цепь в ржавчине, шины спущены. С лета не трогали.');
 insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Мешок угля', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Мешок угольных брикетов на крыльце, початый. А котёл холодный, зола старая: в эти выходные дом не топили.');
 insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Калитка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Узкая калитка рядом с воротами. Щеколда задвинута. На щеколде паутина, в ней сухие листья. Через калитку давно никто не ходил.');
 
