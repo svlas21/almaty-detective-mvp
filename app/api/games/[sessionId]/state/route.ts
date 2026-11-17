@@ -120,10 +120,14 @@ export async function GET(
   // показываются, только когда все указанные улики собраны.
   const visibleQuestions = (questions: unknown) =>
     Array.isArray(questions)
-      ? questions.filter(
-          (q: { requires?: string[] }) =>
-            !q?.requires || q.requires.every((id) => state.collected_evidence.includes(id))
-        )
+      ? questions
+          // idx — индекс в полном протоколе: после скрытия вопросов с условием
+          // позиции на клиенте съезжают, а question-viewed ищет вопрос по полному списку
+          .map((q: { requires?: string[] }, idx: number) => ({ ...q, idx }))
+          .filter(
+            (q: { requires?: string[] }) =>
+              !q?.requires || q.requires.every((id) => state.collected_evidence.includes(id))
+          )
       : questions;
 
   const experts = (caseExperts ?? []).map((expert) => ({

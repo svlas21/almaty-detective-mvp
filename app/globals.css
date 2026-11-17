@@ -2327,3 +2327,14 @@ body {
   background: #405682;
   vertical-align: 1px;
 }
+
+/* Пустой обыск: короткая запись в протокол — сама по себе подсказка */
+.evidence-search-note {
+  max-width: 640px;
+  margin: 4px auto 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent, #9a2e24);
+  background: rgba(0, 0, 0, 0.04);
+  font-style: italic;
+  text-align: left;
+}

@@ -80,6 +80,7 @@ interface StateResponse {
     short_description: string | null;
     is_searchable: boolean;
     pano_haov?: number | null;
+    search_note?: string | null;
   } | null;
   allLocations: MapLocation[];
   allSuspects: SuspectListItem[];
@@ -677,6 +678,9 @@ export default function GameScreen() {
           <div className="evidence-timeout-card">
             <h2 className="evidence-timeout-title">⏱ Время осмотра истекло</h2>
             <p className="evidence-timeout-subtitle">Вы можете вернуться и осмотреть место ещё раз.</p>
+            {state.location?.search_note && (
+              <RichText text={state.location.search_note} className="evidence-search-note" />
+            )}
 
             <EvidenceSearch
               pool={pool}

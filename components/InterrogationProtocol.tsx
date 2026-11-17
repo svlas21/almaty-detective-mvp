@@ -6,6 +6,8 @@ import RichText, { tp } from "@/components/RichText";
 export interface InterrogationQuestion {
   q: string;
   a: string;
+  /** Индекс вопроса в полном протоколе (до скрытия вопросов с условием) — по нему сервер выдаёт улики. */
+  idx?: number;
 }
 
 interface InterrogationProtocolProps {
@@ -40,7 +42,7 @@ export default function InterrogationProtocol({
   function viewQuestion(i: number) {
     setViewed((prev) => {
       if (prev.has(i)) return prev;
-      onQuestionViewed?.(i);
+      onQuestionViewed?.(questions[i]?.idx ?? i);
       return new Set(prev).add(i);
     });
   }
