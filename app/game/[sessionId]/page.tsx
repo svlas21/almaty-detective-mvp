@@ -10,6 +10,7 @@ import EvidenceSearch from "@/components/EvidenceSearch";
 import MapView from "@/components/MapView";
 import Sidebar, { SidebarTab } from "@/components/Sidebar";
 import Loader from "@/components/Loader";
+import { byGender } from "@/lib/gender";
 import SuspectsList, { SuspectListItem } from "@/components/SuspectsList";
 import ExpertsList from "@/components/ExpertsList";
 import SuspectDetail from "@/components/SuspectDetail";
@@ -115,6 +116,13 @@ export default function GameScreen() {
   const [lastResult, setLastResult] = useState<{ id?: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
   // предъявленные в этой сессии экрана (до того, как фоном обновится состояние)
   const [presentedLocal, setPresentedLocal] = useState<string[]>([]);
+  // с кем уже говорили в этой вкладке — штамп «Опрошен» ставим сразу, не дожидаясь /state
+  const [interviewedLocal, setInterviewedLocal] = useState<string[]>([]);
+  const markInterviewed = (id: string) => setInterviewedLocal((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  const isInterviewed = (p: { id: string; interviewed?: boolean }) => !!p.interviewed || interviewedLocal.includes(p.id);
+  // штамп «Опрошен / Не опрошен» — всем фигурантам дела (подозреваемым и свидетелям),
+  // кроме экспертов (наши сотрудники) и нарративных персонажей вводной
+  const stampable = (p: { is_expert?: boolean; is_case_subject?: boolean }) => !p.is_expert && p.is_case_subject !== false;
   const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
   // Кэш показанных результатов: повторный клик по найденной улике / осмотренному
   // предмету снова открывает его карточку без запроса и без траты времени.
@@ -305,6 +313,7 @@ export default function GameScreen() {
   }
 
   async function questionViewed(characterId: string, questionIndex: number) {
+    markInterviewed(characterId);
     await fetch(`/api/games/${sessionId}/suspects/${characterId}/question-viewed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -327,6 +336,7 @@ export default function GameScreen() {
       const data = await res.json();
       setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
       setPresentedLocal((prev) => [...prev, `${selectedSuspect.id}:${evidence.id}`]);
+      markInterviewed(selectedSuspect.id);
       if (data.confession) setSuspectConfession(data.confession);
     }
     // реакцию показываем сразу, состояние партии обновляем фоном
@@ -346,6 +356,7 @@ export default function GameScreen() {
     if (res.ok) {
       const data = await res.json();
       setTopicAnswer({ topicLabel: topic.label, text: data.text });
+      markInterviewed(selectedSuspect.id);
     }
     setAskingTopicId(null);
     if (res.ok) loadState({ silent: true });
@@ -575,14 +586,14 @@ export default function GameScreen() {
                               </div>
 
                               <div className="people-slip-side">
-                                {person.is_suspect && person.viewed && (
+                                {stampable(person) && isInterviewed(person) && (
                                   <span className="people-slip-stamp people-slip-stamp-interviewed">
-                                    Опрошен
+                                    {byGender(person.name, "Опрошен", "Опрошена")}
                                   </span>
                                 )}
-                                {person.is_suspect && !person.viewed && (
+                                {stampable(person) && !isInterviewed(person) && (
                                   <span className="people-slip-stamp people-slip-stamp-not-interviewed">
-                                    Не опрошен
+                                    {byGender(person.name, "Не опрошен", "Не опрошена")}
                                   </span>
                                 )}
                                 <span className="people-slip-cta">{interviewLabel}</span>
@@ -714,7 +725,7 @@ export default function GameScreen() {
 
         {tab === "suspects" && (
           <SuspectsList
-            suspects={state.allSuspects}
+            suspects={state.allSuspects.map((s) => (isInterviewed(s) ? { ...s, interviewed: true } : s))}
             onSelect={openSuspect}
             currentLocationId={state.location?.id}
             locationNames={locationNames}

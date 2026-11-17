@@ -1,5 +1,6 @@
 "use client";
 
+import { byGender } from "@/lib/gender";
 import { tp } from "@/components/RichText";
 import { useState } from "react";
 
@@ -18,6 +19,7 @@ export interface SuspectListItem {
   is_case_subject?: boolean;
   specialization?: string | null;
   viewed?: boolean;
+  interviewed?: boolean;
   wanted?: boolean;
   has_reactions?: boolean;
 }
@@ -131,8 +133,8 @@ export default function SuspectsList({ suspects, onSelect, currentLocationId, lo
                       применим, статус "опрошен" не показываем, в отличие от
                       is_suspect (которое лишь различает "подозреваемый"/
                       "свидетель" и не отражает этот случай). */}
-                  {s.viewed && s.is_case_subject !== false && (
-                    <span className="stamp stamp-militia">ОПРОШЕН</span>
+                  {s.interviewed && s.is_case_subject !== false && !s.is_expert && (
+                    <span className="stamp stamp-militia">{byGender(s.name, "ОПРОШЕН", "ОПРОШЕНА")}</span>
                   )}
                   {s.wanted && <span className="stamp stamp-wanted">В РОЗЫСКЕ</span>}
                 </div>
@@ -153,7 +155,7 @@ export default function SuspectsList({ suspects, onSelect, currentLocationId, lo
                 <div className="pin" />
                 <div className="polaroid-photo polaroid-photo-unknown">
                   <div className="unknown-silhouette" />
-                  <span className="stamp stamp-unmet">НЕ ОПРОШЕН</span>
+                  <span className="stamp stamp-unmet">{byGender(s.name, "НЕ ОПРОШЕН", "НЕ ОПРОШЕНА")}</span>
                 </div>
                 <strong className="polaroid-name">{tp(s.name)}</strong>
                 {s.role && <p className="polaroid-role">{tp(s.role)}</p>}

@@ -287,6 +287,16 @@ export async function GET(
     }
   }
 
+  // «Опрошен» = с человеком реально говорили: открыт ответ протокола,
+  // задан вопрос по теме или предъявлена улика. Просто открыть карточку — не допрос.
+  const interviewedIds = new Set<string>();
+  for (const k of [...viewedQuestions, ...viewedReactions]) interviewedIds.add(k.split(":")[0]);
+  const askedNames = new Set<string>(
+    ((state.log ?? []) as { type?: string; characterName?: string }[])
+      .filter((e) => e.type === "ask" && e.characterName)
+      .map((e) => e.characterName as string)
+  );
+
   const allSuspects = (caseSuspects ?? []).map((suspectRow) => {
     // reactions не спредим в ответ клиенту как есть — это спойлер (текст
     // реакции на конкретную улику до того, как игрок её предъявил, см.
@@ -345,6 +355,7 @@ export async function GET(
       // показывать бейдж (например, только для is_suspect на "Люди здесь")
       // решают уже потребители поля, не этот флаг.
       viewed: viewedCharacters.includes(suspect.id),
+      interviewed: interviewedIds.has(suspect.id) || askedNames.has(suspect.name),
       wanted,
       has_reactions: hasReactions,
     };
