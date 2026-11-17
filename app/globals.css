@@ -1827,7 +1827,9 @@ body {
 
 .rt-location {
   line-height: 1.55;
+  max-width: none;            /* короткая подпись локации — на всю ширину карточки */
 }
+.rt-location p.rt-line { text-wrap: pretty; }
 
 .rt-ending {
   margin-top: 16px;
