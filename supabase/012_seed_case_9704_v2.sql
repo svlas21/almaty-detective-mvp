@@ -408,6 +408,18 @@ insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Обрывок бумаги');
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Лотерейный билет');
 insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Жетон для таксофона');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Пуговица');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Спичечный коробок');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Зажигалка');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Мужская перчатка');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Аудиокассета');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Автобусный билет');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Талон на бензин');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Визитка');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Фотография');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Квитанция ломбарда');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Губная помада');
+insert into case_decoy_categories (case_id, label) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Гильза');
 insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Пустая бутылка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Бутылка из-под «Жигулёвского» под яблоней. Этикетка размокла, внутри прелые листья. Лежит тут с осени.');
 insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Детская варежка', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Красная вязаная варежка на штакетнике. Детская. Кто-то нашёл и надел на штакетину, чтобы хозяин заметил. С прошлой зимы висит.');
 insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Сломанный зонт', '29196055-161c-5b4e-a38f-352cbf3e5032', 'Чёрный складной зонт у крыльца. Спицы вывернуты ветром. Бросили и забыли.');
