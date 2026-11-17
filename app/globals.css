@@ -1995,3 +1995,10 @@ body {
 @media (max-width: 760px) {
   .rt.notebook { font-size: 22px; padding-left: 50px; }
 }
+/* старые правила вида .evidence-result p задают шрифт абзацам напрямую — перебиваем */
+.rt.notebook p.rt-line {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
