@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireOnSite } from "@/lib/onSite";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,12 @@ export async function POST(
     return NextResponse.json({ error: "questionIndex обязателен" }, { status: 400 });
   }
 
-  const { data: character, error: characterError } = await db
-    .from("characters")
-    .select("case_id, name, fixed_questions")
-    .eq("id", characterId)
-    .single();
+  const [offSite, characterRes] = await Promise.all([
+    requireOnSite(db, sessionId, characterId),
+    db.from("characters").select("case_id, name, fixed_questions").eq("id", characterId).single(),
+  ]);
+  if (offSite) return offSite;
+  const { data: character, error: characterError } = characterRes;
 
   if (characterError || !character) {
     return NextResponse.json({ error: "Подозреваемый не найден" }, { status: 404 });

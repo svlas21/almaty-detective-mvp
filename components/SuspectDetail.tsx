@@ -31,6 +31,13 @@ interface SuspectDetailProps {
   topicAnswer: { topicLabel: string; text: string } | null;
   askingTopicId: string | null;
   onAsk: (topic: TopicItem) => void;
+  /** Следователь в той же локации, что и человек (эксперты — всегда true) */
+  onSite?: boolean;
+  /** Где человек сейчас — для плашки «в другом месте» */
+  placeName?: string | null;
+  /** Поехать туда (тратит игровое время на дорогу) */
+  onTravel?: () => void;
+  traveling?: boolean;
 }
 
 export default function SuspectDetail({
@@ -47,6 +54,10 @@ export default function SuspectDetail({
   topicAnswer,
   askingTopicId,
   onAsk,
+  onSite = true,
+  placeName,
+  onTravel,
+  traveling,
 }: SuspectDetailProps) {
   // Тема не должна предлагать спросить у персонажа про самого себя
   // (см. supabase/009_topic_subject_character.sql) — сравнение по id,
@@ -89,7 +100,20 @@ export default function SuspectDetail({
           "Спросить про..." и "Предъявить улику" целиком одним статусом —
           иначе "Спросить про..." (не завязана на fixed_questions/is_suspect)
           всё равно позволила бы полноценно опросить такого персонажа. */}
-      {suspect.wanted ? (
+      {!suspect.wanted && !suspect.is_expert && !onSite ? (
+        <div className="dossier-card dossier-offsite">
+          <p className="dossier-offsite-text">
+            Сейчас находится: <strong>{tp(placeName ?? "в другом месте")}</strong>.
+            <br />
+            Допросить, задать вопрос или предъявить улику можно только на месте.
+          </p>
+          {onTravel && (
+            <button className="dossier-btn" onClick={onTravel} disabled={traveling}>
+              {traveling ? "Едем…" : `Поехать: ${placeName ?? "к нему"}`}
+            </button>
+          )}
+        </div>
+      ) : suspect.wanted ? (
         <div className="dossier-card">
           <p className="dossier-wanted-notice">
             Разыскивается. Актуальное местонахождение неизвестно.

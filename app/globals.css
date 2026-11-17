@@ -2272,3 +2272,25 @@ body {
   white-space: nowrap;
   opacity: 0.85;
 }
+
+
+/* Допрос только на месте */
+.polaroid-place {
+  margin: 4px 0 0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a7a5a;
+}
+.polaroid-place::before { content: "◦ "; }
+.polaroid-place.is-here { color: var(--militia); font-weight: 700; }
+.polaroid-place.is-here::before { content: "● "; }
+.dossier-offsite { text-align: center; }
+.dossier-offsite-text {
+  font-family: var(--font-pt-serif), serif;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0 0 16px;
+}

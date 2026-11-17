@@ -171,6 +171,32 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [locationPhase, secondsLeft, panoramaReady]);
 
+  const locationNames: Record<string, string> = Object.fromEntries(
+    (state?.allLocations ?? [])
+      .map((l) => [l.id, (l as { name?: string | null }).name ?? ""] as [string, string])
+      .filter(([, name]) => name)
+  );
+  const [traveling, setTraveling] = useState(false);
+
+  /** Переезд к человеку прямо из его карточки: экран не меняем, только локацию. */
+  async function travelTo(locationId: string) {
+    setTraveling(true);
+    try {
+      await fetch(`/api/games/${sessionId}/travel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId }),
+      });
+      setTriedIds(new Set());
+      setResultById({});
+      setResultCache({});
+      setLastResult(null);
+      await loadState({ silent: true });
+    } finally {
+      setTraveling(false);
+    }
+  }
+
   async function visitLocation(locationId: string) {
     setNavigating(true);
     try {
@@ -427,6 +453,12 @@ export default function GameScreen() {
               topicAnswer={topicAnswer}
               askingTopicId={askingTopicId}
               onAsk={askTopic}
+              onSite={!selectedSuspect.location_id || selectedSuspect.location_id === state.location?.id}
+              placeName={selectedSuspect.location_id ? locationNames[selectedSuspect.location_id] : null}
+              onTravel={
+                selectedSuspect.location_id ? () => travelTo(selectedSuspect.location_id as string) : undefined
+              }
+              traveling={traveling}
             />
           </>
         ) : (
@@ -678,7 +710,14 @@ export default function GameScreen() {
           </div>
         )}
 
-        {tab === "suspects" && <SuspectsList suspects={state.allSuspects} onSelect={openSuspect} />}
+        {tab === "suspects" && (
+          <SuspectsList
+            suspects={state.allSuspects}
+            onSelect={openSuspect}
+            currentLocationId={state.location?.id}
+            locationNames={locationNames}
+          />
+        )}
 
         {tab === "expertise" && <ExpertsList experts={state.experts} onSelect={openSuspect} />}
 

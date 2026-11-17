@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireOnSite } from "@/lib/onSite";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +35,18 @@ export async function POST(
     return NextResponse.json({ error: "topicId обязателен" }, { status: 400 });
   }
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select(
-      "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, viewed_questions, log"
-    )
-    .eq("session_id", sessionId)
-    .single();
+  const [offSite, stateRes] = await Promise.all([
+    requireOnSite(db, sessionId, characterId),
+    db
+      .from("session_state")
+      .select(
+        "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, viewed_questions, log"
+      )
+      .eq("session_id", sessionId)
+      .single(),
+  ]);
+  if (offSite) return offSite;
+  const { data: state, error: stateError } = stateRes;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });

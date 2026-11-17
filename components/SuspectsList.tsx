@@ -25,6 +25,9 @@ export interface SuspectListItem {
 interface SuspectsListProps {
   suspects: SuspectListItem[];
   onSelect: (suspect: SuspectListItem) => void;
+  /** Где сейчас следователь и названия локаций — для подписи «здесь / где» */
+  currentLocationId?: string | null;
+  locationNames?: Record<string, string>;
 }
 
 const AVATAR_COLORS = ["#b5451b", "#2f6f8f", "#5a7d3a", "#7a4a9c", "#a3792f"];
@@ -97,7 +100,7 @@ export function SuspectAvatar({
   );
 }
 
-export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) {
+export default function SuspectsList({ suspects, onSelect, currentLocationId, locationNames }: SuspectsListProps) {
   const [mentionPopup, setMentionPopup] = useState<SuspectListItem | null>(null);
   const cardCount = suspects.filter((s) => s.unlocked || s.mentioned).length;
 
@@ -135,6 +138,11 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                 </div>
                 <strong className="polaroid-name">{tp(s.name)}</strong>
                 {s.role && <p className="polaroid-role">{tp(s.role)}</p>}
+                {s.location_id && !s.wanted && locationNames?.[s.location_id] && (
+                  <p className={`polaroid-place${s.location_id === currentLocationId ? " is-here" : ""}`}>
+                    {s.location_id === currentLocationId ? "Здесь" : tp(locationNames[s.location_id])}
+                  </p>
+                )}
               </div>
             );
           }

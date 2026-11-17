@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireOnSite } from "@/lib/onSite";
 import { resolveReactionRules, type ReactionRule } from "@/lib/graphRules";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +36,10 @@ export async function POST(
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
 
-  // Состояние, персонаж и улика читаются одновременно (раньше — по очереди)
-  const [stateRes, characterRes, evidenceRes] = await Promise.all([
+  // Состояние, персонаж и улика читаются одновременно (раньше — по очереди);
+  // параллельно — проверка «следователь на месте» (lib/onSite.ts)
+  const [offSite, stateRes, characterRes, evidenceRes] = await Promise.all([
+    requireOnSite(db, sessionId, characterId),
     db
       .from("session_state")
       .select(
@@ -54,6 +57,8 @@ export async function POST(
   const { data: state, error: stateError } = stateRes;
   const { data: character, error: characterError } = characterRes;
   const evidence = evidenceRes.data;
+
+  if (offSite) return offSite;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
