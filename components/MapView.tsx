@@ -1,5 +1,7 @@
 "use client";
 
+import { img } from "@/lib/img";
+
 import { tp } from "@/components/RichText";
 import { useState } from "react";
 
@@ -26,7 +28,7 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
     <>
       <div style={{ position: "relative", width: "100%", borderRadius: 8, overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imageUrl} alt="Карта дела" style={{ width: "100%", display: "block" }} />
+        <img src={img(imageUrl, { w: 2400, q: 78 })} alt="Карта дела" decoding="async" style={{ width: "100%", display: "block" }} />
 
         {points.map((p) => (
           <button
@@ -90,7 +92,8 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
                 {selected.previewImageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={selected.previewImageUrl}
+                    src={img(selected.previewImageUrl, { w: 1000, q: 78 })}
+                    decoding="async"
                     alt={selected.name}
                     style={{ width: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }}
                   />

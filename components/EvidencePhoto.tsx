@@ -1,3 +1,5 @@
+import { img } from "@/lib/img";
+
 /**
  * Снимок улики справа от текста. Картинка уже оформлена как лист из дела
  * (фототаблица: лист, скрепка, отпечаток с белым полем) — показываем как есть,
@@ -7,7 +9,7 @@ export default function EvidencePhoto({ src, caption }: { src: string; caption?:
   return (
     <figure className="ev-photo">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={caption ? `Фототаблица: ${caption}` : "Фототаблица"} loading="lazy" />
+      <img src={img(src, { w: 900, q: 80 })} decoding="async" alt={caption ? `Фототаблица: ${caption}` : "Фототаблица"} loading="lazy" />
     </figure>
   );
 }

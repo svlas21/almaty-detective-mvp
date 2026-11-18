@@ -1,5 +1,7 @@
 "use client";
 
+import { img } from "@/lib/img";
+
 import { tp } from "@/components/RichText";
 import type { SuspectListItem } from "@/components/SuspectsList";
 
@@ -32,7 +34,9 @@ export default function ExpertsList({ experts, onSelect }: ExpertsListProps) {
                   {expert.portrait_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={expert.portrait_url}
+                      src={img(expert.portrait_url, { w: 200 })}
+                      loading="lazy"
+                      decoding="async"
                       alt={expert.name ?? ""}
                       className="people-slip-photo"
                     />

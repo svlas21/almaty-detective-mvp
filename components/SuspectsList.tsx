@@ -1,5 +1,6 @@
 "use client";
 
+import { img } from "@/lib/img";
 import { byGender } from "@/lib/gender";
 import { tp } from "@/components/RichText";
 import { useState } from "react";
@@ -67,7 +68,9 @@ export function SuspectAvatar({
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={portraitUrl}
+        src={img(portraitUrl, { w: Math.max(200, size * 2) })}
+        loading="lazy"
+        decoding="async"
         alt={name ?? ""}
         style={{
           width: size,
@@ -122,7 +125,7 @@ export default function SuspectsList({ suspects, onSelect, currentLocationId, lo
                 <div className="polaroid-photo">
                   {s.portrait_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.portrait_url} alt={s.name ?? ""} className="polaroid-photo-img" />
+                    <img src={img(s.portrait_url, { w: 400 })} alt={s.name ?? ""} className="polaroid-photo-img" loading="lazy" decoding="async" />
                   ) : (
                     <div className="polaroid-photo-fallback" style={{ background: avatarColor(s.id) }}>
                       {initials(s.name ?? "")}

@@ -1,5 +1,7 @@
 "use client";
 
+import { img, panoUrl, preloadImage } from "@/lib/img";
+
 import RichText, { tp } from "@/components/RichText";
 import EvidencePhoto from "@/components/EvidencePhoto";
 import EvidenceForm from "@/components/EvidenceForm";
@@ -164,6 +166,12 @@ export default function GameScreen() {
       setPool(data.pool);
     }
   }
+
+  // Панораму текущей локации начинаем грузить сразу, пока игрок читает
+  // описание и людей: к нажатию «Обыскать» она уже в кэше браузера.
+  useEffect(() => {
+    if (state?.location?.image_url) preloadImage(panoUrl(state.location.image_url, state.location.pano_haov));
+  }, [state?.location?.image_url, state?.location?.pano_haov]);
 
   useEffect(() => {
     if (sessionId) {
@@ -566,7 +574,9 @@ export default function GameScreen() {
                                 {person.portrait_url ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={person.portrait_url}
+                                    src={img(person.portrait_url, { w: 200 })}
+                                    loading="lazy"
+                                    decoding="async"
                                     alt={person.name ?? ""}
                                     className="people-slip-photo"
                                   />
@@ -668,7 +678,7 @@ export default function GameScreen() {
             <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
               <h3>Осмотр места «{tp(state.location?.name)}»</h3>
               <PanoramaViewer
-                imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
+                imageUrl={panoUrl(state.location?.image_url, state.location?.pano_haov) || PLACEHOLDER_PANORAMA}
                 haov={state.location?.pano_haov}
                 startYaw={state.location?.pano_yaw}
                 startPitch={state.location?.pano_pitch}

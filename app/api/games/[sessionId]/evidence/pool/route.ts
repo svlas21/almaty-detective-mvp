@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cached } from "@/lib/caseCache";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requiresAnySatisfied } from "@/lib/graphRules";
 
@@ -30,8 +31,11 @@ export async function GET(
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
 
-  // Круг 2: дело
-  const { data: purchase } = await db.from("purchases").select("case_id").eq("id", session.purchase_id).single();
+  // Круг 2: дело (кэш — не меняется)
+  const purchase = await cached(`purchase-row:${session.purchase_id}`, async () => {
+    const { data } = await db.from("purchases").select("case_id").eq("id", session.purchase_id).single();
+    return data;
+  });
   if (!purchase) {
     return NextResponse.json({ error: "Дело не найдено" }, { status: 404 });
   }
@@ -40,7 +44,7 @@ export async function GET(
   // Обманки двух видов: общие на всё дело (location_id = null, «здесь такого
   // нет») и привязанные к локации — предметы, которые реально видны на
   // панораме, но к делу не относятся (у них есть found_text).
-  const [poolRes, decoyRes] = await Promise.all([
+  const [poolRes, decoyRes] = await cached(`pool:${purchase.case_id}:${session.current_location_id}`, () => Promise.all([
     db
       .from("evidence")
       .select("id, name, generic_category, requires_any, auto_grant")
@@ -53,7 +57,7 @@ export async function GET(
       .select("id, label, location_id")
       .eq("case_id", purchase.case_id)
       .or(`location_id.is.null,location_id.eq.${session.current_location_id}`),
-  ]);
+  ]));
   const { data: pool, error: poolError } = poolRes;
   const decoyCategories = decoyRes.data;
 

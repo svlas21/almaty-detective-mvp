@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { anyCollected, requiresAnySatisfied } from "@/lib/graphRules";
+import { cached } from "@/lib/caseCache";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +30,13 @@ export async function GET(
     return NextResponse.json({ error: "Состояние партии не найдено" }, { status: 404 });
   }
 
-  // Круг 2: текущая локация и дело
-  const [locationRes, purchaseRes] = await Promise.all([
-    db.from("locations").select("*").eq("id", session.current_location_id).single(),
-    db.from("purchases").select("case_id").eq("id", session.purchase_id).single(),
-  ]);
-  const location = locationRes.data;
-  const purchase = purchaseRes.data;
-  const caseId = purchase?.case_id ?? NO_ID;
+  // Круг 2: дело по покупке (кэш — не меняется)
+  const caseId = await cached(`purchase-case:${session.purchase_id}`, async () => {
+    const { data } = await db.from("purchases").select("case_id").eq("id", session.purchase_id).single();
+    return data?.case_id ?? NO_ID;
+  });
 
-  // Круг 3: всё по делу — одновременно
+  // Круг 3: всё по делу — одновременно, из короткого кэша (данные дела, не партии)
   const [
     caseRecordRes,
     caseLocationsRes,
@@ -49,12 +47,10 @@ export async function GET(
     avtomobilRes,
     topicsRes,
     accusationRes,
-  ] = await Promise.all([
+  ] = await cached(`case-static:${caseId}`, () => Promise.all([
     db.from("cases").select("map_image_url").eq("id", caseId).single(),
-    db
-      .from("locations")
-      .select("id, name, image_url, map_pos_x, map_pos_y, preview_image_url, short_description, is_searchable, unlock_evidence_ids")
-      .eq("case_id", caseId),
+    // все поля: отсюда же берётся текущая локация (без отдельного запроса)
+    db.from("locations").select("*").eq("case_id", caseId),
     db
       .from("characters")
       .select(
@@ -84,7 +80,8 @@ export async function GET(
       .eq("case_id", caseId)
       .order("order_index", { ascending: true }),
     db.from("case_accusation").select("required_evidence_ids, accomplices").eq("case_id", caseId).maybeSingle(),
-  ]);
+  ]));
+  const location = (caseLocationsRes.data ?? []).find((l: { id: string }) => l.id === session.current_location_id) ?? null;
   const caseRecord = caseRecordRes.data;
   const caseLocations = caseLocationsRes.data;
   const caseSuspects = caseSuspectsRes.data;
