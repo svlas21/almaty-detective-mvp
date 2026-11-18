@@ -19,9 +19,11 @@ interface PanoramaViewerProps {
   /** С какого направления открывать полную панораму (градусы): на главное в кадре. */
   startYaw?: number | null;
   startPitch?: number | null;
+  /** Насколько низко можно смотреть в полной панораме (нижний край вида, градусы). По умолчанию −45. */
+  minPitch?: number | null;
 }
 
-export default function PanoramaViewer({ imageUrl, onReady, haov, startYaw, startPitch }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, onReady, haov, startYaw, startPitch, minPitch }: PanoramaViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
 
@@ -60,7 +62,7 @@ export default function PanoramaViewer({ imageUrl, onReady, haov, startYaw, star
               ...base,
               // У сгенерированных панорам низ (надир) и верх (зенит) почти всегда
               // смазаны: не даём смотреть прямо под ноги и прямо в небо.
-              minPitch: -45,
+              minPitch: minPitch ?? -45,
               maxPitch: 60,
               // 100° по умолчанию даёт заметную «кривизну» по краям — уже и прямее
               hfov: 85,
@@ -93,7 +95,7 @@ export default function PanoramaViewer({ imageUrl, onReady, haov, startYaw, star
     // Поэтому здесь дополнительно проверяем window.pannellum напрямую.
     if (window.pannellum) initViewer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageUrl, haov, startYaw, startPitch]);
+  }, [imageUrl, haov, startYaw, startPitch, minPitch]);
 
   return (
     <>

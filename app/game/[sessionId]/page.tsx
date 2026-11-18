@@ -85,6 +85,7 @@ interface StateResponse {
     search_note?: string | null;
     pano_yaw?: number | null;
     pano_pitch?: number | null;
+    pano_min_pitch?: number | null;
   } | null;
   allLocations: MapLocation[];
   allSuspects: SuspectListItem[];
@@ -682,6 +683,7 @@ export default function GameScreen() {
                 haov={state.location?.pano_haov}
                 startYaw={state.location?.pano_yaw}
                 startPitch={state.location?.pano_pitch}
+                minPitch={state.location?.pano_min_pitch}
                 onReady={() => setPanoramaReady(true)}
               />
             </div>
