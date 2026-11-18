@@ -16,9 +16,12 @@ interface PanoramaViewerProps {
    *  Для широких кадров из Nano Banana (~160°) — частичная панорама без
    *  растяжения на 360°: масштаб естественный, поворот в пределах кадра. */
   haov?: number | null;
+  /** С какого направления открывать полную панораму (градусы): на главное в кадре. */
+  startYaw?: number | null;
+  startPitch?: number | null;
 }
 
-export default function PanoramaViewer({ imageUrl, onReady, haov }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, onReady, haov, startYaw, startPitch }: PanoramaViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
 
@@ -59,6 +62,10 @@ export default function PanoramaViewer({ imageUrl, onReady, haov }: PanoramaView
               // смазаны: не даём смотреть прямо под ноги и прямо в небо.
               minPitch: -45,
               maxPitch: 60,
+              // 100° по умолчанию даёт заметную «кривизну» по краям — уже и прямее
+              hfov: 85,
+              yaw: startYaw ?? 0,
+              pitch: startPitch ?? 0,
             }
       );
 
@@ -86,7 +93,7 @@ export default function PanoramaViewer({ imageUrl, onReady, haov }: PanoramaView
     // Поэтому здесь дополнительно проверяем window.pannellum напрямую.
     if (window.pannellum) initViewer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageUrl, haov]);
+  }, [imageUrl, haov, startYaw, startPitch]);
 
   return (
     <>

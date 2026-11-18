@@ -81,6 +81,8 @@ interface StateResponse {
     is_searchable: boolean;
     pano_haov?: number | null;
     search_note?: string | null;
+    pano_yaw?: number | null;
+    pano_pitch?: number | null;
   } | null;
   allLocations: MapLocation[];
   allSuspects: SuspectListItem[];
@@ -668,6 +670,8 @@ export default function GameScreen() {
               <PanoramaViewer
                 imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
                 haov={state.location?.pano_haov}
+                startYaw={state.location?.pano_yaw}
+                startPitch={state.location?.pano_pitch}
                 onReady={() => setPanoramaReady(true)}
               />
             </div>
