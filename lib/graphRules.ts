@@ -13,6 +13,8 @@ export type ReactionRule = {
   group?: string;
   /** Реплика, если сцена группы уже прошла другим вариантом. */
   repeat_text?: string;
+  /** Резервная реплика: только если ни одна основная реакция на эту улику не готова. */
+  fallback?: boolean;
 };
 
 /** null/пусто = условия нет; иначе нужен хотя бы один полностью собранный набор. */
@@ -47,7 +49,15 @@ export function resolveReactionRules(
   const forEvidence = (rules ?? []).filter((r) => r.on === evidenceId);
   if (forEvidence.length === 0) return null;
 
-  const ready = forEvidence.filter((r) => (r.requires ?? []).every((id) => collected.includes(id)));
+  const allReady = forEvidence.filter((r) => (r.requires ?? []).every((id) => collected.includes(id)));
+  // Основные реакции важнее резервных. Резервная — одна, самая точная
+  // (с наибольшим числом выполненных условий), чтобы реплики не склеивались.
+  const main = allReady.filter((r) => !r.fallback);
+  const backup = allReady
+    .filter((r) => r.fallback)
+    .sort((a, b) => (b.requires?.length ?? 0) - (a.requires?.length ?? 0))
+    .slice(0, 1);
+  const ready = main.length > 0 ? main : backup;
   if (ready.length === 0) {
     return { text: isExpert ? RULE_NOT_READY_EXPERT : RULE_NOT_READY_PERSON, grants: [] };
   }

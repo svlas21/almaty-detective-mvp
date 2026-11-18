@@ -77,15 +77,25 @@ function fallbackReaction(
   evidenceId: string,
   isExpert: boolean,
   kind: string | null | undefined,
-  own: boolean
+  own: boolean,
+  lines?: Record<string, string | string[]> | null
 ) {
   const who = isExpert ? "expert" : "person";
   const k: EvidenceKind = (["thing", "testimony", "expertise", "document"] as const).includes(kind as EvidenceKind)
     ? (kind as EvidenceKind)
     : "thing";
   let text: string;
-  if (own) {
+  // своя манера персонажа (поле fallback_lines), если задана
+  const ownLine = lines?.[`own_${k}`] ?? (k === "testimony" ? undefined : lines?.own_expertise);
+  const personal = lines?.[k];
+  if (own && typeof ownLine === "string") {
+    text = ownLine;
+  } else if (own) {
     text = OWN[who][k];
+  } else if (Array.isArray(personal) && personal.length > 0) {
+    let h = 0;
+    for (const ch of characterId + evidenceId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    text = personal[h % personal.length];
   } else {
     const pool = FALLBACK[who][k];
     let h = 0;
@@ -118,7 +128,7 @@ export async function POST(
       .single(),
     db
       .from("characters")
-      .select("case_id, name, reactions, reaction_rules, fixed_questions, confession_text, confession_requires_evidence, is_expert")
+      .select("case_id, name, reactions, reaction_rules, fixed_questions, fallback_lines, confession_text, confession_requires_evidence, is_expert")
       .eq("id", characterId)
       .single(),
     db.from("evidence").select("name, kind").eq("id", evidenceId).single(),
@@ -164,7 +174,15 @@ export async function POST(
   const reaction =
     ruleResult?.text ??
     character.reactions?.[evidenceId] ??
-    fallbackReaction(characterId, character.name, evidenceId, !!character.is_expert, evidence?.kind, own);
+    fallbackReaction(
+      characterId,
+      character.name,
+      evidenceId,
+      !!character.is_expert,
+      evidence?.kind,
+      own,
+      character.fallback_lines as Record<string, string | string[]> | null
+    );
 
   // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
   // и не допросом, а после того как игрок увидел конкретную реакцию конкретного
