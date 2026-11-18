@@ -15,6 +15,8 @@ export type ReactionRule = {
   repeat_text?: string;
   /** Резервная реплика: только если ни одна основная реакция на эту улику не готова. */
   fallback?: boolean;
+  /** Поздний вариант: если готов, текст перечисленных реакций не показывается (их выдачи сохраняются). */
+  supersedes?: string[];
 };
 
 /** null/пусто = условия нет; иначе нужен хотя бы один полностью собранный набор. */
@@ -57,7 +59,12 @@ export function resolveReactionRules(
     .filter((r) => r.fallback)
     .sort((a, b) => (b.requires?.length ?? 0) - (a.requires?.length ?? 0))
     .slice(0, 1);
-  const ready = main.length > 0 ? main : backup;
+  let ready = main.length > 0 ? main : backup;
+  // Поздние варианты вытесняют текст прежних реплик (например, ложь до признания),
+  // но улики, которые выдавала прежняя реакция, всё равно выдаются.
+  const supersededIds = new Set(allReady.flatMap((r) => r.supersedes ?? []));
+  const inherited = allReady.filter((r) => r.id && supersededIds.has(r.id));
+  if (supersededIds.size > 0) ready = ready.filter((r) => !(r.id && supersededIds.has(r.id)));
   if (ready.length === 0) {
     return { text: isExpert ? RULE_NOT_READY_EXPERT : RULE_NOT_READY_PERSON, grants: [] };
   }
@@ -75,5 +82,6 @@ export function resolveReactionRules(
     texts.push(rule.text);
     ruleGrants.forEach((id) => grants.add(id));
   }
+  for (const r of inherited) (r.grants ?? []).forEach((id) => grants.add(id));
   return { text: texts.join("\n\n"), grants: [...grants] };
 }
