@@ -15,6 +15,9 @@ export function img(url: string | null | undefined, opts: { w?: number; q?: numb
   const params = new URLSearchParams();
   if (opts.w) params.set("width", String(Math.min(3000, Math.round(opts.w))));
   params.set("quality", String(opts.q ?? 75));
+  // Без resize=contain Supabase при одной ширине режет полосу из середины
+  // (портрет 1024×1024 → 200×1024), и в квадратной рамке видны только нос и рот.
+  params.set("resize", "contain");
   return url.replace(OBJECT, RENDER) + "?" + params.toString();
 }
 
