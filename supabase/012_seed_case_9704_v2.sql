@@ -357,6 +357,12 @@ update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storag
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-aon.jpg' where id = 'e4e94374-000e-52e3-bb26-9bec42b1c55b';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-konvert.jpg' where id = '5cdb3307-fe10-53c5-a365-6998256b7d7a';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-borozdy.jpg' where id = '34e1077a-bcc2-53ac-90e8-702d023d03c7';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-kopot.jpg' where id = 'a9b47e33-f5b4-57b9-9e16-1e41c38e7834';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-podval.jpg' where id = 'c2c5ba62-e24e-523f-93bc-d8909b28e717';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sharf.jpg' where id = '87af9a91-8540-5177-bdd6-3e156802fc75';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-telefon.jpg' where id = '552b22f9-f4c6-5469-8d1c-56bde54906aa';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
 
 -- 4. Персонажи
 insert into characters (id, case_id, location_id, name, role, intro_text, fixed_questions, is_expert, is_suspect, is_case_subject, portrait_url) values ('57949d2d-0b2d-5c04-812c-5849e9441857', '029e23c3-01e0-5d19-a0e7-3e0c2446ebab', '006a31f4-baeb-5b53-9a87-6a397ba18362', 'Начальник следственного отдела', 'ГУВД г. Алматы', 'Несчастный случай. Так решил Медеуский РОВД.
