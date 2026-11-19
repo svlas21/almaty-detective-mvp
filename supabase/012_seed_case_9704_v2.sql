@@ -361,7 +361,7 @@ update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storag
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-podval.jpg' where id = 'c2c5ba62-e24e-523f-93bc-d8909b28e717';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sharf.jpg' where id = '87af9a91-8540-5177-bdd6-3e156802fc75';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-telefon.jpg' where id = '552b22f9-f4c6-5469-8d1c-56bde54906aa';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki2.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
 
 -- 4. Персонажи
