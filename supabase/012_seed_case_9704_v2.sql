@@ -367,6 +367,7 @@ update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storag
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-vahty2.jpg' where id = 'ed68230f-dcda-56e7-a77c-ecd7a4cc05a4';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-raspiska3.jpg' where id = 'b322dfba-0cb0-52bc-9610-328a905bc004';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-kpp.jpg' where id = '4cc34317-760f-577c-b05f-e0374aee4f23';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager-erlana.jpg' where id = 'be5c249c-d25f-5239-865f-5aef2088bc61';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
 
 -- 4. Персонажи
