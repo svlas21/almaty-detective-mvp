@@ -429,7 +429,7 @@ export default function GameScreen() {
 
   return (
     <div className="game-shell">
-      {state.pendingCall && (
+      {state.pendingCall && !selectedSuspect && locationPhase !== "searching" && !navigating && (
         <PhoneCallOverlay
           call={state.pendingCall}
           onAnswer={() => answerCall(state.pendingCall!.id)}

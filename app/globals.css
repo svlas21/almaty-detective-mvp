@@ -2338,3 +2338,55 @@ body {
   font-style: italic;
   text-align: left;
 }
+
+/* Сцены начальства (supabase/039): лист из дела вместо трубки */
+.scene-call-sheet {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 28px 32px 24px;
+  border-radius: 2px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(196, 183, 144, 0.45);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.scene-call-place {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.scene-call-who {
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--paper-shadow);
+}
+
+.scene-call-text {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.scene-call-btn {
+  display: block;
+  margin: 20px 0 0 auto;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 3px;
+  padding: 10px 22px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.scene-call-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

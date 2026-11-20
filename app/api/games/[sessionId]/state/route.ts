@@ -68,7 +68,7 @@ export async function GET(
     db.from("evidence").select("id, name, requires_any").eq("case_id", caseId).eq("auto_grant", true),
     db
       .from("phone_calls")
-      .select("id, caller_role, unlock_condition_key, dialogue_text, unlocks_location_id, order_index, characters(name)")
+      .select("id, caller_role, caller_name, style, unlock_condition_key, dialogue_text, unlocks_location_id, order_index, characters(name)")
       .eq("case_id", caseId)
       .order("order_index", { ascending: true }),
     db.from("evidence").select("id").eq("case_id", caseId).eq("name", "Автомобиль потерпевшего").maybeSingle(),
@@ -169,16 +169,33 @@ export async function GET(
   };
 
 
+  // Общие ключи условий (supabase/039): «evidence:<id>[,<id>…]» — у игрока есть
+  // все перечисленные улики; «any:<id>|<id>…» — есть хотя бы одна.
+  // id — это id улик в БД. Остальные ключи — именованные условия выше.
+  const callConditionMet = (key: string): boolean => {
+    if (key.startsWith("evidence:")) {
+      const ids = key.slice("evidence:".length).split(",").map((x) => x.trim()).filter(Boolean);
+      return ids.length > 0 && ids.every((id) => state.collected_evidence.includes(id));
+    }
+    if (key.startsWith("any:")) {
+      const ids = key.slice("any:".length).split("|").map((x) => x.trim()).filter(Boolean);
+      return ids.some((id) => state.collected_evidence.includes(id));
+    }
+    return !!callUnlockConditions[key];
+  };
+
   const pendingCallRow = (casePhoneCalls ?? []).find(
-    (c) => !viewedCalls.includes(c.id) && callUnlockConditions[c.unlock_condition_key]
+    (c) => !viewedCalls.includes(c.id) && callConditionMet(c.unlock_condition_key)
   );
 
   const pendingCall = pendingCallRow
     ? {
         id: pendingCallRow.id,
-        callerName: (pendingCallRow.characters as { name: string } | null)?.name ?? "",
+        callerName:
+          (pendingCallRow.characters as { name: string } | null)?.name ?? pendingCallRow.caller_name ?? "",
         callerRole: pendingCallRow.caller_role,
         dialogueText: pendingCallRow.dialogue_text,
+        style: pendingCallRow.style ?? "mobile",
       }
     : null;
 
