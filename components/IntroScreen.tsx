@@ -3,6 +3,7 @@
 import { SuspectAvatar } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 import RichText, { tp } from "@/components/RichText";
+import VoiceButton from "@/components/VoiceButton";
 
 interface IntroCharacter {
   id: string;
@@ -10,6 +11,7 @@ interface IntroCharacter {
   role?: string | null;
   portrait_url?: string | null;
   intro_text?: string | null;
+  intro_audio_url?: string | null;
   fixed_questions?: { q: string; a: string }[];
 }
 
@@ -43,6 +45,12 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
         {character.role && (
           <div className="dossier-role-row">
             <span className="dossier-role">{tp(character.role)}</span>
+          </div>
+        )}
+
+        {character.intro_audio_url && (
+          <div className="voice-row">
+            <VoiceButton src={character.intro_audio_url} />
           </div>
         )}
 

@@ -12,6 +12,7 @@ export interface SuspectListItem {
   name?: string;
   role?: string | null;
   intro_text?: string | null;
+  intro_audio_url?: string | null;
   fixed_questions?: { q: string; a: string }[];
   location_id?: string | null;
   portrait_url?: string | null;

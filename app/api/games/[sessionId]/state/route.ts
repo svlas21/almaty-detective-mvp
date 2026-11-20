@@ -54,14 +54,14 @@ export async function GET(
     db
       .from("characters")
       .select(
-        "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions, unlock_evidence_ids"
+        "id, name, role, intro_text, intro_audio_url, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions, unlock_evidence_ids"
       )
       .eq("case_id", caseId)
       .eq("is_expert", false),
     // Эксперты-консультанты — доступны всей карточкой с начала игры (вкладка «Экспертиза»).
     db
       .from("characters")
-      .select("id, name, role, specialization, intro_text, fixed_questions, portrait_url")
+      .select("id, name, role, specialization, intro_text, intro_audio_url, fixed_questions, portrait_url")
       .eq("case_id", caseId)
       .eq("is_expert", true),
     // Автовыдача улик (supabase/011_graph_rules.sql)

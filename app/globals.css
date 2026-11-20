@@ -592,6 +592,55 @@ body {
   margin: 8px 0 0;
 }
 
+.voice-row {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0 18px;
+}
+
+.voice-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--militia);
+  background: transparent;
+  border: 1px solid var(--militia);
+  border-radius: 3px;
+  padding: 7px 14px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.voice-btn:hover,
+.voice-btn.is-playing {
+  background: var(--militia);
+  color: var(--paper, #f3ead8);
+}
+
+.voice-btn-icon {
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+}
+
+.voice-btn-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--amber);
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
+
 .dossier-btn {
   display: inline-block;
   font-family: var(--font-jetbrains-mono), monospace;

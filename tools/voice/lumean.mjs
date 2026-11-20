@@ -280,10 +280,58 @@ async function generate() {
   console.log(`\nПослушать: open ${dir}`);
 }
 
+function envVar(name) {
+  if (process.env[name]) return process.env[name].trim();
+  for (const line of readFileSync(join(process.cwd(), ".env.local"), "utf8").split(/\r?\n/)) {
+    const m = line.match(new RegExp(`^\\s*${name}\\s*=\\s*(.+?)\\s*$`));
+    if (m) return m[1].replace(/^["']|["']$/g, "");
+  }
+  fail(`В .env.local нет строки ${name}=...`);
+}
+
+// Загрузка готовых mp3 в Supabase Storage (бакет voice) и запись ссылки в базу.
+// Ссылку в базу пишет только для реплик, у которых в файле реплик есть "db": {table, id, column}.
+async function upload() {
+  const o = args();
+  const ch = o.character || fail("Укажите --character");
+  const set = o.lines || `${ch}-test`;
+  const lines = JSON.parse(readFileSync(join(HERE, "lines", `${set}.json`), "utf8"));
+  const url = envVar("NEXT_PUBLIC_SUPABASE_URL").replace(/\/$/, "");
+  const sk = envVar("SUPABASE_SERVICE_ROLE_KEY");
+  const H = { Authorization: `Bearer ${sk}`, apikey: sk };
+  const b = await fetch(`${url}/storage/v1/bucket`, {
+    method: "POST", headers: { ...H, "Content-Type": "application/json" },
+    body: JSON.stringify({ id: "voice", name: "voice", public: true }),
+  });
+  if (b.ok) console.log("✔ Создан бакет voice");
+  for (const l of lines) {
+    const file = join(OUT, ch, set, `${l.id}.mp3`);
+    if (!existsSync(file)) { console.log(`  – ${l.id}: нет файла ${file}, пропуск`); continue; }
+    const path = `${o.case || "9704"}/${ch}/${l.id}.mp3`;
+    const r = await fetch(`${url}/storage/v1/object/voice/${path}`, {
+      method: "POST", headers: { ...H, "Content-Type": "audio/mpeg", "x-upsert": "true" }, body: readFileSync(file),
+    });
+    if (!r.ok) fail(`Загрузка ${l.id}: ${r.status} ${await r.text()}`);
+    const pub = `${url}/storage/v1/object/public/voice/${path}?v=${Date.now()}`;
+    let note = "";
+    if (l.db) {
+      const u = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}`, {
+        method: "PATCH", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ [l.db.column]: pub }),
+      });
+      const rows = u.ok ? await u.json() : [];
+      if (!u.ok || !rows.length) fail(`Запись в базу ${l.id}: ${u.status} ${u.ok ? "строка не найдена" : await u.text()}`);
+      note = ` → ${l.db.table}.${l.db.column}`;
+    }
+    console.log(`  ✔ ${l.id}: загружено${note}`);
+  }
+  console.log("\nГотово. Перезагрузите игру в браузере.");
+}
+
 const cmd = process.argv[2];
-const commands = { check, voices, setup, estimate, generate };
+const commands = { check, voices, setup, estimate, generate, upload };
 if (!commands[cmd]) {
-  console.log("Команды: check, voices, setup, estimate, generate. Пример: node tools/voice/lumean.mjs check");
+  console.log("Команды: check, voices, setup, estimate, generate, upload. Пример: node tools/voice/lumean.mjs check");
   process.exit(cmd ? 1 : 0);
 }
 commands[cmd]().catch((e) => fail(e.message));
