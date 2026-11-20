@@ -659,7 +659,7 @@ body {
   gap: 7px;
 }
 .voice-btn--sm .voice-btn-icon { width: 20px; height: 20px; font-size: 9px; }
-.voiced-answer-btn { margin: 10px 0 4px; }
+.voiced-answer-btn { display: flex; justify-content: flex-end; margin: 12px 0 0; }
 
 /* Появление текста: строки проявляются по очереди */
 .rt-anim .rt-line {

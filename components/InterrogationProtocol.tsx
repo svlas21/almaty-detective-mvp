@@ -17,10 +17,10 @@ function VoicedAnswer({ text, src }: { text: string; src: string }) {
   const [spoken, setSpoken] = useState(0);
   return (
     <div className="voiced-answer">
+      <RichText text={text} className="dossier-answer" animate spoken={spoken} />
       <div className="voiced-answer-btn">
         <VoiceButton src={src} compact autoPlay label="Слушать" onProgress={setSpoken} />
       </div>
-      <RichText text={text} className="dossier-answer" animate spoken={spoken} />
     </div>
   );
 }
