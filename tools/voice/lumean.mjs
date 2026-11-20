@@ -6,9 +6,8 @@
 //
 // Команды (по шагам, каждый шаг согласуем):
 //   check                         — проверить ключ: имя, права, лимиты. Ничего не тратит.
-//   voices [--gender male|female] [--age young|middle_aged|old] [--search слово] [--provider elevenlabs]
-//                                 — русские голоса каталога со ссылками на пробные фрагменты.
-//                                   Сохраняет список в tools/voice/out/voices.json. Ничего не тратит.
+//   voices [--gender ...] [--age ...] [--search слово] [--provider elevenlabs,lumvoice]
+//                                 — русские голоса каталога: страница tools/voice/out/voices.html с пробами. Ничего не тратит.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -92,29 +91,72 @@ async function check() {
   }
 }
 
+const CAST = [
+  ["Кан, судмедэксперт", "мужчина, 61, old", "низкий, медленный, тёплый, чуть хрипловатый; говорит, как со студентом"],
+  ["Сеитова, криминалист", "женщина, 34, middle_aged", "ровный, сухой, чёткий, быстрый; без эмоций"],
+  ["Абишев, оператор ИВЦ", "мужчина, 27, young", "лёгкий, быстрый, с усталой иронией"],
+  ["Бейсенов, криминолог", "мужчина, 52, middle_aged", "поставленный лекторский голос, размеренный, с паузами"],
+  ["Фархад", "мужчина, 49, middle_aged", "низкий, спокойный, обаятельный; голос курильщика"],
+  ["Валентина Петровна", "женщина, 65, old", "учительский, ровный, сдержанный; горе под контролем"],
+  ["Олжас", "мужчина, 22, young", "тихий, сбивчивый, неуверенный"],
+  ["Данияр", "мужчина, 40, middle_aged", "сухой, деловой, нервный"],
+  ["Ерлан", "мужчина, 35, middle_aged", "грубоватый, отрывистый, бывший сержант"],
+  ["Алия", "женщина, 38, middle_aged", "усталая, резкая, после ночного дежурства"],
+  ["Виктор, водитель", "мужчина, 50, middle_aged", "простой, говорливый, тёплый"],
+  ["Тамара", "женщина, 60, old", "бойкая соседка, быстрый темп"],
+  ["Зоя Михайловна", "женщина, 70, old", "старческий, внимательный, неторопливый"],
+  ["Роза-апа, вахтёрша", "женщина, 60, old", "строгий, хозяйственный, но добрый"],
+];
+
 async function voices() {
   const o = args();
-  const provider = o.provider || "elevenlabs";
-  const all = [];
-  for (let page = 1; page <= 20; page++) {
-    const q = new URLSearchParams({ provider, language: "ru", page: String(page), per_page: provider === "elevenlabs" ? "50" : "100" });
-    if (o.gender) q.set("gender", o.gender);
-    if (o.age) q.set("age", o.age);
-    if (o.search) q.set("search", o.search);
-    const d = await api("GET", "/voices?" + q.toString());
-    all.push(...(d.items || []));
-    if (!d.has_more) break;
-  }
+  const providers = (o.provider || "elevenlabs,lumvoice").split(",");
   mkdirSync(OUT, { recursive: true });
-  const file = join(OUT, `voices-${provider}.json`);
-  writeFileSync(file, JSON.stringify(all, null, 2));
-  console.log(`Найдено русских голосов (${provider}): ${all.length}. Список: ${file}\n`);
-  all.forEach((v, i) => {
-    const meta = [v.gender, v.age, v.accent].filter(Boolean).join(", ");
-    console.log(`${String(i + 1).padStart(3)}. ${v.name}${meta ? "  [" + meta + "]" : ""}`);
-    if (v.description) console.log("     " + String(v.description).replace(/\s+/g, " ").slice(0, 140));
-    console.log("     id: " + v.voice_id + (v.preview_url ? "\n     ▶ " + v.preview_url : ""));
-  });
+  const all = [];
+  for (const provider of providers) {
+    let got = 0;
+    for (let page = 1; page <= 30; page++) {
+      const q = new URLSearchParams({ provider, language: "ru", page: String(page), per_page: provider === "elevenlabs" ? "50" : "100" });
+      if (o.gender) q.set("gender", o.gender);
+      if (o.age) q.set("age", o.age);
+      if (o.search) q.set("search", o.search);
+      let d;
+      try {
+        d = await api("GET", "/voices?" + q.toString());
+      } catch (e) {
+        console.log(`  ${provider}: ${e.message}`);
+        break;
+      }
+      for (const v of d.items || []) all.push({ provider, ...v });
+      got += (d.items || []).length;
+      if (!d.has_more) break;
+    }
+    console.log(`${provider}: русских голосов ${got}`);
+  }
+  writeFileSync(join(OUT, "voices.json"), JSON.stringify(all, null, 2));
+  const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const rows = all
+    .map(
+      (v, i) => `<tr><td>${i + 1}</td><td><b>${esc(v.name)}</b><br><small>${esc(v.provider)}</small></td>
+<td>${esc([v.gender, v.age, v.accent].filter(Boolean).join(", "))}</td>
+<td><small>${esc(String(v.description || "").slice(0, 200))}</small></td>
+<td>${v.preview_url ? `<audio controls preload="none" src="${esc(v.preview_url)}"></audio>` : "—"}</td>
+<td><code>${esc(v.voice_id)}</code></td></tr>`
+    )
+    .join("\n");
+  const cast = CAST.map(([n, m, d]) => `<tr><td><b>${esc(n)}</b></td><td>${esc(m)}</td><td>${esc(d)}</td></tr>`).join("");
+  const html = `<!doctype html><meta charset="utf-8"><title>Голоса для озвучки</title>
+<style>body{font:14px system-ui;margin:24px;background:#1b1a17;color:#eee}table{border-collapse:collapse;width:100%;margin-bottom:28px}
+td,th{border-bottom:1px solid #333;padding:6px 8px;vertical-align:top;text-align:left}code{font-size:11px;color:#aaa}
+input{width:320px;padding:6px;margin:8px 0}audio{height:32px}</style>
+<h2>Кого озвучиваем</h2><table><tr><th>Персонаж</th><th>Пол, возраст</th><th>Какой голос нужен</th></tr>${cast}</table>
+<h2>Русские голоса каталога (${all.length})</h2>
+<input id="f" placeholder="Фильтр: male, old, низкий…" oninput="for(const r of document.querySelectorAll('#v tr'))r.style.display=r.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none'">
+<table id="v">${rows}</table>
+<p><small>Пробы LumVoice живут около минуты — если не играет, перезапустите команду voices.</small></p>`;
+  const file = join(OUT, "voices.html");
+  writeFileSync(file, html);
+  console.log(`\nСтраница с голосами: ${file}\nОткройте её:  open ${file}`);
 }
 
 const cmd = process.argv[2];
