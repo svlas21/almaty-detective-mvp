@@ -183,6 +183,9 @@ const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function speak(text) {
   let t = text.replace(/\s*\([^)]*\)\s*/g, " ");
   for (const [from, to] of LEXICON) t = t.replace(new RegExp(`(^|[^\\p{L}])${esc(from)}(?=$|[^\\p{L}])`, "gu"), `$1${to}`);
+  // Тест 20.11: без знаков ударения голос ошибается реже, чем со знаками или заглавными.
+  // Знаки в файлах реплик оставляем как подсказку для людей, в озвучку они не идут (вернуть: --stress).
+  if (!args().stress) t = t.replace(/\u0301/g, "");
   return t.replace(/\s+/g, " ").replace(/\s+([.,!?…:;])/g, "$1").trim();
 }
 const loadLines = (ch) => {
