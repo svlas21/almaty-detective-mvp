@@ -61,7 +61,12 @@ async function api(method, path, body) {
 function args() {
   const a = process.argv.slice(3);
   const o = {};
-  for (let i = 0; i < a.length; i++) if (a[i].startsWith("--")) o[a[i].slice(2)] = a[i + 1], i++;
+  for (let i = 0; i < a.length; i++) {
+    if (!a[i].startsWith("--")) continue;
+    const next = a[i + 1];
+    if (next === undefined || next.startsWith("--")) o[a[i].slice(2)] = true;
+    else { o[a[i].slice(2)] = next; i++; }
+  }
   return o;
 }
 
