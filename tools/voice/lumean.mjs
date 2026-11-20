@@ -159,10 +159,110 @@ input{width:320px;padding:6px;margin:8px 0}audio{height:32px}</style>
   console.log(`\nСтраница с голосами: ${file}\nОткройте её:  open ${file}`);
 }
 
+
+// ───────────── Тест на одном персонаже ─────────────
+import { createInterface } from "node:readline/promises";
+const STATE = join(OUT, "state.json");
+const loadState = () => (existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {});
+const saveState = (s) => (mkdirSync(OUT, { recursive: true }), writeFileSync(STATE, JSON.stringify(s, null, 2)));
+const loadLines = (ch) => {
+  const f = join(HERE, "lines", `${ch}-test.json`);
+  if (!existsSync(f)) fail(`Нет файла реплик ${f}`);
+  return JSON.parse(readFileSync(f, "utf8"));
+};
+
+async function setup() {
+  const o = args();
+  const ch = o.character || fail("Укажите --character, например beisenov");
+  const want = o.voice || fail('Укажите --voice "Название голоса"');
+  const st = loadState();
+  if (st[ch]?.template_id && !o.force) {
+    console.log(`Шаблон для ${ch} уже есть: голос «${st[ch].voice_name}». Пересоздать — добавьте --force.`);
+    return;
+  }
+  let found = null;
+  for (const lang of ["ru", ""]) {
+    const q = new URLSearchParams({ provider: "elevenlabs", search: want.split(" - ")[0].split(" — ")[0], page: "1", per_page: "50" });
+    if (lang) q.set("language", lang);
+    const d = await api("GET", "/voices?" + q.toString());
+    const norm = (x) => String(x).toLowerCase().replace(/[—–-]/g, "-").replace(/\s+/g, " ").trim();
+    found = (d.items || []).find((v) => norm(v.name) === norm(want)) || (d.items || []).find((v) => norm(v.name).startsWith(norm(want)));
+    if (found) break;
+  }
+  if (!found) fail(`Голос «${want}» не найден в каталоге ElevenLabs.`);
+  console.log(`Голос: ${found.name} (${[found.gender, found.age].filter(Boolean).join(", ")})`);
+  if (found.preview_url) console.log("Проба: " + found.preview_url);
+  const tpl = await api("POST", "/templates", {
+    service_key: "elevenlabs",
+    name: `Детектив — ${ch}`,
+    config: {
+      tts_settings: {
+        mode: "mode_v1",
+        model_id: o.model || "eleven_multilingual_v2",
+        voice_id: found.voice_id,
+        advanced_voice_settings: true,
+        voice_settings: { stability: Number(o.stability ?? 0.5), similarity_boost: 0.75, use_speaker_boost: true, speed: Number(o.speed ?? 1.0) },
+      },
+    },
+  });
+  st[ch] = { template_id: tpl.id, voice_id: found.voice_id, voice_name: found.name };
+  saveState(st);
+  console.log(`✔ Шаблон создан (бесплатно). Дальше: node tools/voice/lumean.mjs estimate --character ${ch}`);
+}
+
+async function estimate() {
+  const ch = args().character || fail("Укажите --character");
+  const st = loadState()[ch] || fail(`Сначала setup для ${ch}`);
+  const lines = loadLines(ch);
+  let tokens = 0, lmc = 0, chars = 0;
+  for (const l of lines) {
+    const d = await api("POST", "/orders/chunks/preview", { template_id: st.template_id, input_text: l.text });
+    const s = d.summary || d;
+    tokens += Number(s.total_price_units || 0);
+    lmc += Number(s.cost_lmc || 0);
+    chars += l.text.length;
+    console.log(`  ${l.id.padEnd(6)} ${String(l.text.length).padStart(4)} знаков → ${s.total_price_units ?? "?"} токенов${s.cost_lmc != null ? `, ${s.cost_lmc} LMC` : ""}`);
+  }
+  console.log(`\nИтого ${lines.length} реплик, ${chars} знаков: ${tokens} токенов${lmc ? `, ≈ ${lmc.toFixed(2)} LMC` : ""}. Ничего не списано.`);
+  console.log(`Озвучить: node tools/voice/lumean.mjs generate --character ${ch}`);
+}
+
+async function generate() {
+  const ch = args().character || fail("Укажите --character");
+  const st = loadState()[ch] || fail(`Сначала setup для ${ch}`);
+  const lines = loadLines(ch);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ans = (await rl.question(`Озвучить ${lines.length} реплик голосом «${st.voice_name}»? Это спишет оплату. Напишите «да»: `)).trim().toLowerCase();
+  rl.close();
+  if (ans !== "да") return console.log("Отменено, ничего не списано.");
+  const dir = join(OUT, ch);
+  mkdirSync(dir, { recursive: true });
+  for (const l of lines) {
+    const order = await api("POST", "/orders", { template_id: st.template_id, input_text: l.text, name: `${ch}-${l.id}` });
+    let o2;
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      o2 = await api("GET", `/orders/${order.id}`);
+      if (["completed", "result_delivered", "partially_completed", "failed", "cancelled", "compensated"].includes(o2.status)) break;
+    }
+    if (!["completed", "result_delivered"].includes(o2?.status)) {
+      console.log(`  ✖ ${l.id}: заказ ${o2?.status ?? "не завершился"}`);
+      continue;
+    }
+    const path = (o2.result?.files || [])[0];
+    const link = await api("POST", "/storage/url", { path, download: true });
+    const res = await fetch(link.url);
+    const file = join(dir, `${l.id}.mp3`);
+    writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+    console.log(`  ✔ ${l.id}: ${file}${o2.price_formatted ? "  (" + o2.price_formatted + ")" : ""}`);
+  }
+  console.log(`\nПослушать: open ${dir}`);
+}
+
 const cmd = process.argv[2];
-const commands = { check, voices };
+const commands = { check, voices, setup, estimate, generate };
 if (!commands[cmd]) {
-  console.log("Команды: check, voices. Пример: node tools/voice/lumean.mjs check");
+  console.log("Команды: check, voices, setup, estimate, generate. Пример: node tools/voice/lumean.mjs check");
   process.exit(cmd ? 1 : 0);
 }
 commands[cmd]().catch((e) => fail(e.message));
