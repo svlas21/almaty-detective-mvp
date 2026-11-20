@@ -165,10 +165,24 @@ import { createInterface } from "node:readline/promises";
 const STATE = join(OUT, "state.json");
 const loadState = () => (existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {});
 const saveState = (s) => (mkdirSync(OUT, { recursive: true }), writeFileSync(STATE, JSON.stringify(s, null, 2)));
+const LEXICON = (() => {
+  const f = join(HERE, "lexicon.json");
+  if (!existsSync(f)) return [];
+  const d = JSON.parse(readFileSync(f, "utf8"));
+  // длинные ключи первыми, чтобы «Мамаджанова» не съел «Мамаджанов»
+  return Object.entries(d).filter(([k]) => !k.startsWith("_")).sort((a, b) => b[0].length - a[0].length);
+})();
+const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Подготовка текста к озвучке: словарь произношения, ремарки в скобках убираются.
+function speak(text) {
+  let t = text.replace(/\s*\([^)]*\)\s*/g, " ");
+  for (const [from, to] of LEXICON) t = t.replace(new RegExp(`(^|[^\\p{L}])${esc(from)}(?=$|[^\\p{L}])`, "gu"), `$1${to}`);
+  return t.replace(/\s+/g, " ").replace(/\s+([.,!?…:;])/g, "$1").trim();
+}
 const loadLines = (ch) => {
   const f = join(HERE, "lines", `${ch}-test.json`);
   if (!existsSync(f)) fail(`Нет файла реплик ${f}`);
-  return JSON.parse(readFileSync(f, "utf8"));
+  return JSON.parse(readFileSync(f, "utf8")).map((l) => ({ ...l, text: speak(l.text) }));
 };
 
 async function setup() {
@@ -221,7 +235,8 @@ async function estimate() {
     tokens += Number(s.total_price_units || 0);
     lmc += Number(s.cost_lmc || 0);
     chars += l.text.length;
-    console.log(`  ${l.id.padEnd(6)} ${String(l.text.length).padStart(4)} знаков → ${s.total_price_units ?? "?"} токенов${s.cost_lmc != null ? `, ${s.cost_lmc} LMC` : ""}`);
+    console.log(`  ${l.id.padEnd(6)} озвучено ${s.voiced_length ?? "?"} зн. → ${s.total_price_units ?? "?"} токенов${s.cost_lmc != null ? `, ${s.cost_lmc} LMC` : ""}${s.min_billable_chars ? ` (минимум ${s.min_billable_chars} зн.)` : ""}`);
+    if (args().show) console.log("         " + l.text);
   }
   console.log(`\nИтого ${lines.length} реплик, ${chars} знаков: ${tokens} токенов${lmc ? `, ≈ ${lmc.toFixed(2)} LMC` : ""}. Ничего не списано.`);
   console.log(`Озвучить: node tools/voice/lumean.mjs generate --character ${ch}`);
