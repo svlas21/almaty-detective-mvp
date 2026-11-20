@@ -192,7 +192,7 @@ export async function GET(
     ? {
         id: pendingCallRow.id,
         callerName:
-          (pendingCallRow.characters as { name: string } | null)?.name ?? pendingCallRow.caller_name ?? "",
+          (pendingCallRow.characters as unknown as { name: string } | null)?.name ?? pendingCallRow.caller_name ?? "",
         callerRole: pendingCallRow.caller_role,
         dialogueText: pendingCallRow.dialogue_text,
         style: pendingCallRow.style ?? "mobile",
