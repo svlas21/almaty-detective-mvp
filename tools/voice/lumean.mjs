@@ -185,7 +185,7 @@ function speak(text) {
   return t.replace(/\s+/g, " ").replace(/\s+([.,!?…:;])/g, "$1").trim();
 }
 const loadLines = (ch) => {
-  const f = join(HERE, "lines", `${ch}-test.json`);
+  const f = join(HERE, "lines", `${args().lines || `${ch}-test`}.json`);
   if (!existsSync(f)) fail(`Нет файла реплик ${f}`);
   return JSON.parse(readFileSync(f, "utf8")).map((l) => ({ ...l, text: speak(l.text) }));
 };
@@ -255,7 +255,7 @@ async function generate() {
   const ans = (await rl.question(`Озвучить ${lines.length} реплик голосом «${st.voice_name}»? Это спишет оплату. Напишите «да»: `)).trim().toLowerCase();
   rl.close();
   if (ans !== "да") return console.log("Отменено, ничего не списано.");
-  const dir = join(OUT, ch);
+  const dir = join(OUT, ch, args().lines || "test");
   mkdirSync(dir, { recursive: true });
   for (const l of lines) {
     const order = await api("POST", "/orders", { template_id: st.template_id, input_text: l.text, name: `${ch}-${l.id}` });
