@@ -315,13 +315,22 @@ async function upload() {
     const pub = `${url}/storage/v1/object/public/voice/${path}?v=${Date.now()}`;
     let note = "";
     if (l.db) {
+      let value = pub;
+      if (l.db.index != null) {
+        // ссылка внутри jsonb-массива: fixed_questions[index].audio_url
+        const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
+        const arr = (await g.json())?.[0]?.[l.db.column];
+        if (!Array.isArray(arr) || !arr[l.db.index]) fail(`В базе нет ${l.db.column}[${l.db.index}]`);
+        arr[l.db.index][l.db.key] = pub;
+        value = arr;
+      }
       const u = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}`, {
         method: "PATCH", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" },
-        body: JSON.stringify({ [l.db.column]: pub }),
+        body: JSON.stringify({ [l.db.column]: value }),
       });
       const rows = u.ok ? await u.json() : [];
       if (!u.ok || !rows.length) fail(`Запись в базу ${l.id}: ${u.status} ${u.ok ? "строка не найдена" : await u.text()}`);
-      note = ` → ${l.db.table}.${l.db.column}`;
+      note = ` → ${l.db.table}.${l.db.column}${l.db.index != null ? `[${l.db.index}].${l.db.key}` : ""}`;
     }
     console.log(`  ✔ ${l.id}: загружено${note}`);
   }

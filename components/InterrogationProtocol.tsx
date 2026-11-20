@@ -2,12 +2,27 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import RichText, { tp } from "@/components/RichText";
+import VoiceButton from "@/components/VoiceButton";
 
 export interface InterrogationQuestion {
   q: string;
   a: string;
   /** Индекс вопроса в полном протоколе (до скрытия вопросов с условием) — по нему сервер выдаёт улики. */
   idx?: number;
+  /** Озвучка ответа (Supabase Storage). */
+  audio_url?: string | null;
+}
+
+function VoicedAnswer({ text, src }: { text: string; src: string }) {
+  const [spoken, setSpoken] = useState(0);
+  return (
+    <div className="voiced-answer">
+      <div className="voiced-answer-btn">
+        <VoiceButton src={src} compact autoPlay label="Слушать" onProgress={setSpoken} />
+      </div>
+      <RichText text={text} className="dossier-answer" animate spoken={spoken} />
+    </div>
+  );
 }
 
 interface InterrogationProtocolProps {
@@ -60,7 +75,12 @@ export default function InterrogationProtocol({
           onClick={() => viewQuestion(i)}
         >
           <p className="dossier-question-q">{tp(qa.q)}</p>
-          {viewed.has(i) && <RichText text={qa.a} className="dossier-answer" />}
+          {viewed.has(i) &&
+            (qa.audio_url ? (
+              <VoicedAnswer text={qa.a} src={qa.audio_url} />
+            ) : (
+              <RichText text={qa.a} className="dossier-answer" />
+            ))}
         </div>
       ))}
       {footer?.(allViewed)}
