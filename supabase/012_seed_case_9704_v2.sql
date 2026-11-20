@@ -353,23 +353,23 @@ insert into evidence (id, case_id, name, description, location_id, is_relevant, 
 insert into evidence (id, case_id, name, description, location_id, is_relevant, generic_category, requires_any, auto_grant, kind) values ('e4f03eb4-b50d-54c1-9edd-8e3fc38dad1c', '029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Валентина: расцарапанная рука Фархада', 'Валентина о Фархаде: конверт, расцарапанная рука, «Береги Дашу».
 
 Из протокола дополнительного допроса свидетеля Сартаковой В. П.: в воскресенье 24.11.96 вечером Мамаджанов Ф. принёс конверт с деньгами «на похороны». На левой кисти у него были свежие царапины; на её вопрос ответил: «Собака на базаре». Уходя, в прихожей, наедине сказал ей: «Бандиты сейчас такие, Валентина-апа. Береги Дашу, никому ни слова». Тогда она приняла это за заботу.', null, true, null, null, false, 'testimony');
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager2.jpg' where id = '1ac01ab0-e8f1-5009-9640-d18dfa4f5e44';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sledy2.jpg' where id = 'b4e6a60f-b233-543e-b3b1-ae0a1427b6a1';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-aon.jpg' where id = 'e4e94374-000e-52e3-bb26-9bec42b1c55b';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-konvert.jpg' where id = '5cdb3307-fe10-53c5-a365-6998256b7d7a';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-borozdy.jpg' where id = '34e1077a-bcc2-53ac-90e8-702d023d03c7';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-kopot.jpg' where id = 'a9b47e33-f5b4-57b9-9e16-1e41c38e7834';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-podval.jpg' where id = 'c2c5ba62-e24e-523f-93bc-d8909b28e717';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sharf.jpg' where id = '87af9a91-8540-5177-bdd6-3e156802fc75';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-telefon.jpg' where id = '552b22f9-f4c6-5469-8d1c-56bde54906aa';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki2.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-veshi-olzhasa3.jpg' where id = '46e78eb0-d057-5e5d-8a00-81457f8f3d20';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-vahty2.jpg' where id = 'ed68230f-dcda-56e7-a77c-ecd7a4cc05a4';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-raspiska3.jpg' where id = 'b322dfba-0cb0-52bc-9610-328a905bc004';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-kpp.jpg' where id = '4cc34317-760f-577c-b05f-e0374aee4f23';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager-erlana.jpg' where id = 'be5c249c-d25f-5239-865f-5aef2088bc61';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-kserokopii.jpg' where id = '4f67be3f-f5f7-5ab5-bb69-611053df3042';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager2-c.jpg' where id = '1ac01ab0-e8f1-5009-9640-d18dfa4f5e44';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sledy2-c.jpg' where id = 'b4e6a60f-b233-543e-b3b1-ae0a1427b6a1';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-aon-c.jpg' where id = 'e4e94374-000e-52e3-bb26-9bec42b1c55b';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-konvert-c.jpg' where id = '5cdb3307-fe10-53c5-a365-6998256b7d7a';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-borozdy-c.jpg' where id = '34e1077a-bcc2-53ac-90e8-702d023d03c7';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-kopot-c.jpg' where id = 'a9b47e33-f5b4-57b9-9e16-1e41c38e7834';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-podval-c.jpg' where id = 'c2c5ba62-e24e-523f-93bc-d8909b28e717';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-sharf-c.jpg' where id = '87af9a91-8540-5177-bdd6-3e156802fc75';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-telefon-c.jpg' where id = '552b22f9-f4c6-5469-8d1c-56bde54906aa';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki2-c.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-veshi-olzhasa3-c.jpg' where id = '46e78eb0-d057-5e5d-8a00-81457f8f3d20';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-vahty2-c.jpg' where id = 'ed68230f-dcda-56e7-a77c-ecd7a4cc05a4';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-raspiska3-c.jpg' where id = 'b322dfba-0cb0-52bc-9610-328a905bc004';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-kpp-c.jpg' where id = '4cc34317-760f-577c-b05f-e0374aee4f23';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-pager-erlana-c.jpg' where id = 'be5c249c-d25f-5239-865f-5aef2088bc61';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-kserokopii-c.jpg' where id = '4f67be3f-f5f7-5ab5-bb69-611053df3042';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok-c.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
 
 -- 4. Персонажи
 insert into characters (id, case_id, location_id, name, role, intro_text, fixed_questions, is_expert, is_suspect, is_case_subject, portrait_url) values ('57949d2d-0b2d-5c04-812c-5849e9441857', '029e23c3-01e0-5d19-a0e7-3e0c2446ebab', '006a31f4-baeb-5b53-9a87-6a397ba18362', 'Начальник следственного отдела', 'ГУВД г. Алматы', 'Несчастный случай. Так решил Медеуский РОВД.
