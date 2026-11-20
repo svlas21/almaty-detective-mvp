@@ -19,7 +19,7 @@ function VoicedAnswer({ text, src }: { text: string; src: string }) {
     <div className="voiced-answer">
       <RichText text={text} className="dossier-answer" animate spoken={spoken} />
       <div className="voiced-answer-btn">
-        <VoiceButton src={src} compact autoPlay label="Слушать" onProgress={setSpoken} />
+        <VoiceButton src={src} compact label="Слушать" onProgress={setSpoken} />
       </div>
     </div>
   );
