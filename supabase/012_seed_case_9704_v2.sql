@@ -364,7 +364,7 @@ update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storag
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-telefon.jpg' where id = '552b22f9-f4c6-5469-8d1c-56bde54906aa';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-botinki2.jpg' where id = '00b31a8e-e1ee-5474-a323-177b43b153d3';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-veshi-olzhasa3.jpg' where id = '46e78eb0-d057-5e5d-8a00-81457f8f3d20';
-update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-vahty.jpg' where id = 'ed68230f-dcda-56e7-a77c-ecd7a4cc05a4';
+update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-zhurnal-vahty2.jpg' where id = 'ed68230f-dcda-56e7-a77c-ecd7a4cc05a4';
 update evidence set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-ev-meshok.jpg' where id = '2d1a03f4-be7f-5007-8fe1-71c12d498c29';
 
 -- 4. Персонажи
