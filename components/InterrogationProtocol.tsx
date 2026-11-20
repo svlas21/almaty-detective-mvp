@@ -12,6 +12,8 @@ export interface InterrogationQuestion {
 
 interface InterrogationProtocolProps {
   questions: InterrogationQuestion[];
+  /** Заголовок секции. По умолчанию «Протокол допроса»; у шефа — разговор, а не допрос. */
+  title?: string;
   /** Рендерится под списком вопросов; получает allViewed (например, кнопка "Допросить подозреваемых" в IntroScreen). */
   footer?: (allViewed: boolean) => ReactNode;
   /** Вызывается один раз за монтирование, когда раскрыты все вопросы протокола. */
@@ -22,6 +24,7 @@ interface InterrogationProtocolProps {
 
 export default function InterrogationProtocol({
   questions,
+  title = "Протокол допроса",
   footer,
   onAllViewed,
   onQuestionViewed,
@@ -49,7 +52,7 @@ export default function InterrogationProtocol({
 
   return (
     <div className="dossier-card">
-      <div className="dossier-section-label">Протокол допроса</div>
+      <div className="dossier-section-label">{title}</div>
       {questions.map((qa, i) => (
         <div
           key={i}

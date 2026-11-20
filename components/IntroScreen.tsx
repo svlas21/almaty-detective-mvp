@@ -60,6 +60,7 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
       </div>
 
       <InterrogationProtocol
+        title="Уточнить у начальника"
         questions={character.fixed_questions ?? []}
         footer={(allViewed) =>
           allViewed && (
