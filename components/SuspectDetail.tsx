@@ -1,5 +1,6 @@
 "use client";
 
+import RichText, { tp } from "@/components/RichText";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 
@@ -21,6 +22,8 @@ interface SuspectDetailProps {
   reaction: { evidenceName: string; text: string } | null;
   confession: string | null;
   presentingId: string | null;
+  /** Улики, которые этому персонажу уже предъявляли */
+  presentedIds?: Set<string>;
   onPresent: (evidence: CollectedEvidenceItem) => void;
   onInterrogationComplete: (characterId: string) => void;
   onQuestionViewed: (characterId: string, questionIndex: number) => void;
@@ -28,6 +31,13 @@ interface SuspectDetailProps {
   topicAnswer: { topicLabel: string; text: string } | null;
   askingTopicId: string | null;
   onAsk: (topic: TopicItem) => void;
+  /** Следователь в той же локации, что и человек (эксперты — всегда true) */
+  onSite?: boolean;
+  /** Где человек сейчас — для плашки «в другом месте» */
+  placeName?: string | null;
+  /** Поехать туда (тратит игровое время на дорогу) */
+  onTravel?: () => void;
+  traveling?: boolean;
 }
 
 export default function SuspectDetail({
@@ -36,6 +46,7 @@ export default function SuspectDetail({
   reaction,
   confession,
   presentingId,
+  presentedIds,
   onPresent,
   onInterrogationComplete,
   onQuestionViewed,
@@ -43,6 +54,10 @@ export default function SuspectDetail({
   topicAnswer,
   askingTopicId,
   onAsk,
+  onSite = true,
+  placeName,
+  onTravel,
+  traveling,
 }: SuspectDetailProps) {
   // Тема не должна предлагать спросить у персонажа про самого себя
   // (см. supabase/009_topic_subject_character.sql) — сравнение по id,
@@ -69,14 +84,14 @@ export default function SuspectDetail({
           </div>
         </div>
 
-        <h2 className="dossier-name">{suspect.name}</h2>
+        <h2 className="dossier-name">{tp(suspect.name)}</h2>
         {suspect.role && (
           <div className="dossier-role-row">
-            <span className="dossier-role">{suspect.role}</span>
+            <span className="dossier-role">{tp(suspect.role)}</span>
           </div>
         )}
 
-        {suspect.intro_text && <p className="dossier-quote">{suspect.intro_text}</p>}
+        <RichText text={suspect.intro_text} className="dossier-quote" />
       </div>
 
       {/* «В розыске» (Дело №9704) — псевдоним/поддельный документ, лично не
@@ -85,7 +100,20 @@ export default function SuspectDetail({
           "Спросить про..." и "Предъявить улику" целиком одним статусом —
           иначе "Спросить про..." (не завязана на fixed_questions/is_suspect)
           всё равно позволила бы полноценно опросить такого персонажа. */}
-      {suspect.wanted ? (
+      {!suspect.wanted && !suspect.is_expert && !onSite ? (
+        <div className="dossier-card dossier-offsite">
+          <p className="dossier-offsite-text">
+            Сейчас находится: <strong>{tp(placeName ?? "в другом месте")}</strong>.
+            <br />
+            Допросить, задать вопрос или предъявить улику можно только на месте.
+          </p>
+          {onTravel && (
+            <button className="dossier-btn" onClick={onTravel} disabled={traveling}>
+              {traveling ? "Едем…" : `Поехать: ${placeName ?? "к нему"}`}
+            </button>
+          )}
+        </div>
+      ) : suspect.wanted ? (
         <div className="dossier-card">
           <p className="dossier-wanted-notice">
             Разыскивается. Актуальное местонахождение неизвестно.
@@ -117,15 +145,15 @@ export default function SuspectDetail({
                     className={`dossier-evidence-tag${askingTopicId && askingTopicId !== t.id ? " is-busy" : ""}`}
                     onClick={() => (askingTopicId ? undefined : onAsk(t))}
                   >
-                    {t.label}
+                    {tp(t.label)}
                   </div>
                 ))}
               </div>
 
               {topicAnswer && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{topicAnswer.topicLabel}</div>
-                  <p>{topicAnswer.text}</p>
+                  <div className="dossier-reaction-label">{tp(topicAnswer.topicLabel)}</div>
+                  <RichText text={topicAnswer.text} className="dossier-reaction-text" />
                 </div>
               )}
             </div>
@@ -156,10 +184,25 @@ export default function SuspectDetail({
                   {collectedEvidence.map((e) => (
                     <div
                       key={e.id}
-                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}`}
+                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}${
+                        presentedIds?.has(e.id) ? (suspect.is_expert ? " is-submitted" : " is-presented") : ""
+                      }${reaction?.evidenceName === e.name ? " is-active" : ""}`}
                       onClick={() => (presentingId ? undefined : onPresent(e))}
+                      title={
+                        presentedIds?.has(e.id)
+                          ? suspect.is_expert
+                            ? "Уже передавали на экспертизу — нажмите, чтобы перечитать ответ"
+                            : "Уже предъявляли — нажмите, чтобы перечитать ответ"
+                          : undefined
+                      }
                     >
-                      {e.name}
+                      {tp(e.name)}
+                      {presentedIds?.has(e.id) &&
+                        (suspect.is_expert ? (
+                          <span className="dossier-submitted-status">Передано на экспертизу</span>
+                        ) : (
+                          <span className="dossier-presented-mark">Предъявлено</span>
+                        ))}
                     </div>
                   ))}
                 </div>
@@ -167,15 +210,15 @@ export default function SuspectDetail({
 
               {reaction && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{reaction.evidenceName}</div>
-                  <p>{reaction.text}</p>
+                  <div className="dossier-reaction-label">{tp(reaction.evidenceName)}</div>
+                  <RichText text={reaction.text} className="dossier-reaction-text" />
                 </div>
               )}
 
               {confession && (
                 <div className="dossier-confession">
                   <span className="dossier-confession-label">Признание</span>
-                  <p>{confession}</p>
+                  <RichText text={confession} className="dossier-confession-text" />
                 </div>
               )}
             </div>

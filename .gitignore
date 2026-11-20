@@ -7,3 +7,4 @@ node_modules
 tsconfig.tsbuildinfo
 .claude/settings.local.json
 supabase/.temp
+tools/voice/out/

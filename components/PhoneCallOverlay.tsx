@@ -1,5 +1,6 @@
 "use client";
 
+import RichText, { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface PendingCall {
@@ -7,6 +8,8 @@ export interface PendingCall {
   callerName: string;
   callerRole: string | null;
   dialogueText: string;
+  /** "mobile" — трубка (по умолчанию); "scene" — сцена в ГУВД: записка, коридор, внутренний телефон. */
+  style?: string;
 }
 
 interface PhoneCallOverlayProps {
@@ -24,6 +27,8 @@ interface PhoneCallOverlayProps {
  */
 export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
   const [phase, setPhase] = useState<"ringing" | "talking">("ringing");
+
+  if (call.style === "scene") return <SceneOverlay call={call} onAnswer={onAnswer} onClose={onClose} />;
 
   function handleAnswer() {
     setPhase("talking");
@@ -65,7 +70,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
                 ВЫЗОВ
               </div>
               <div className="phone-call-caller-name">{call.callerName}</div>
-              {call.callerRole && <div className="phone-call-caller-role">{call.callerRole}</div>}
+              {call.callerRole && <div className="phone-call-caller-role">{tp(call.callerRole)}</div>}
               <div className="phone-call-softkeys">
                 <span>Ответ</span>
                 <span>Меню</span>
@@ -76,7 +81,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
               <div className="phone-call-caller-name" style={{ marginBottom: 10 }}>
                 {call.callerName}
               </div>
-              <p className="phone-call-dialogue">{call.dialogueText}</p>
+              <RichText text={call.dialogueText} className="phone-call-dialogue" />
               <div className="phone-call-softkeys">
                 <span>Сброс</span>
                 <span>Меню</span>
@@ -100,6 +105,35 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
             <span key={i} />
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Сцена начальства (supabase/039): записка на столе, разговор в коридоре,
+ * звонок по внутреннему — лист из дела, без мобильного телефона (1996 год).
+ * callerRole — подпись сцены («Записка на столе»), callerName — кто.
+ */
+function SceneOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
+  const [closing, setClosing] = useState(false);
+
+  async function handleClose() {
+    if (closing) return;
+    setClosing(true);
+    await onAnswer();
+    await onClose();
+  }
+
+  return (
+    <div className="phone-call-overlay">
+      <div className="scene-call-sheet" role="dialog" aria-label={call.callerRole ?? call.callerName}>
+        {call.callerRole && <div className="scene-call-place">{tp(call.callerRole)}</div>}
+        <div className="scene-call-who">{tp(call.callerName)}</div>
+        <RichText text={call.dialogueText} className="scene-call-text" />
+        <button className="scene-call-btn" onClick={handleClose} disabled={closing}>
+          Понятно
+        </button>
       </div>
     </div>
   );

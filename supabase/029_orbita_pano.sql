@@ -1,0 +1,15 @@
+-- Квартира Фархада: частичная панорама 180°, обложка и предметы «есть, но не улика»
+begin;
+update locations set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-orbita-wide.jpg', preview_image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-orbita-cover.jpg', pano_haov = 180 where id = 'a2371d56-be63-59a7-81d4-f8745d432f5d';
+delete from case_decoy_categories where location_id = 'a2371d56-be63-59a7-81d4-f8745d432f5d';
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Ковёр', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Ковёр на стене, красный, с узором. Выбит недавно, пыли нет. В доме всё по-вдовьи аккуратно.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Сервант', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Сервант с фарфоровым чайником и пиалами. Посуда для гостей, стоит ровно, по ранжиру. Давно не доставали.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Папиросы', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Пачки «Беломора» в ряд на подоконнике. Запас на месяц. Хозяин курит много.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Фото в рамке', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'На холодильнике фото женщины в чёрной рамке. Покойная жена хозяина. Рамка протёрта.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Грамота', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Школьная грамота дочери: «За отличную учёбу». Зарина, 10 класс. Повешена на самое видное место.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Телевизор', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Телевизор под вышитой салфеткой. Сверху стопка квитанций за свет, все оплачены день в день.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Пальто', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Тёмное пальто на крючке в прихожей. В карманах пусто: ни ключей, ни бумажек.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Зеркало', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'Зеркало в прихожей без рамы. Чистое.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Плакат', 'a2371d56-be63-59a7-81d4-f8745d432f5d', 'На двери в комнату дочери плакат эстрадной певицы. Дочери дома нет: отец отправил её к родне в Ташкент.');
+commit;
+select (select count(*) from case_decoy_categories where location_id = 'a2371d56-be63-59a7-81d4-f8745d432f5d') decoys, (select pano_haov from locations where id = 'a2371d56-be63-59a7-81d4-f8745d432f5d') haov;

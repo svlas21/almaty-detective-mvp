@@ -1,5 +1,8 @@
 "use client";
 
+import { img } from "@/lib/img";
+
+import { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface MapPoint {
@@ -25,7 +28,7 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
     <>
       <div style={{ position: "relative", width: "100%", borderRadius: 8, overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imageUrl} alt="Карта дела" style={{ width: "100%", display: "block" }} />
+        <img src={img(imageUrl, { w: 2400, q: 78 })} alt="Карта дела" decoding="async" style={{ width: "100%", display: "block" }} />
 
         {points.map((p) => (
           <button
@@ -89,7 +92,8 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
                 {selected.previewImageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={selected.previewImageUrl}
+                    src={img(selected.previewImageUrl, { w: 1000, q: 78 })}
+                    decoding="async"
                     alt={selected.name}
                     style={{ width: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }}
                   />
@@ -108,11 +112,11 @@ export default function MapView({ imageUrl, points, onVisit }: MapViewProps) {
                     Место
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 600, marginBottom: 8, lineHeight: 1.25 }}>
-                    {selected.name}
+                    {tp(selected.name)}
                   </div>
                   {selected.shortDescription && (
                     <p style={{ fontSize: 13.5, lineHeight: 1.5, color: "#9ca3af", marginBottom: 16 }}>
-                      {selected.shortDescription}
+                      {tp(selected.shortDescription)}
                     </p>
                   )}
                   <button

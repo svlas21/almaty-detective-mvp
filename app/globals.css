@@ -377,12 +377,12 @@ body {
 .dossier-quote {
   position: relative;
   font-family: var(--font-pt-serif), serif;
-  font-style: italic;
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--ink);
   padding-left: 30px;
-  margin: 0;
+  margin: 4px 0 0;
+  text-align: left;
 }
 
 .dossier-quote::before {
@@ -433,7 +433,7 @@ body {
 }
 
 .dossier-answer {
-  margin: 8px 0 0 21px;
+  margin: 10px 0 0 21px;
   padding-left: 12px;
   border-left: 2px solid var(--paper-shadow);
   font-family: var(--font-pt-serif), serif;
@@ -588,9 +588,98 @@ body {
 
 .dossier-confession p {
   font-family: var(--font-pt-serif), serif;
-  font-style: italic;
   color: var(--ink);
   margin: 8px 0 0;
+}
+
+.voice-row {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0 18px;
+}
+
+.voice-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--void);
+  background: var(--amber);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px 13px 18px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.voice-btn:hover { background: var(--amber-dim); transform: translateY(-1px); }
+.voice-btn:active { transform: translateY(0) scale(0.98); }
+.voice-btn.is-playing { background: var(--militia); color: var(--paper); }
+
+/* Пока не нажимали — мягкая пульсация, чтобы кнопку заметили */
+.voice-btn.is-fresh { animation: voice-pulse 2.2s ease-out infinite; }
+@keyframes voice-pulse {
+  0% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 0 rgba(214, 160, 60, 0.6); }
+  70% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 14px rgba(214, 160, 60, 0); }
+  100% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 0 rgba(214, 160, 60, 0); }
+}
+
+.voice-btn-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 11px;
+}
+
+.voice-btn-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--paper);
+  opacity: 0.8;
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
+
+.voice-btn--sm {
+  font-size: 11px;
+  padding: 6px 14px 7px 8px;
+  gap: 7px;
+}
+.voice-btn--sm .voice-btn-icon { width: 20px; height: 20px; font-size: 9px; }
+.voiced-answer-btn { margin: 10px 0 4px; }
+
+/* Появление текста: строки проявляются по очереди */
+.rt-anim .rt-line {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: rt-in 0.55s ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 110ms + 150ms);
+}
+@keyframes rt-in { to { opacity: 1; transform: none; } }
+
+/* Синхронизация с озвучкой: сказанное — обычным, текущее — подсвечено, будущее — приглушено */
+.rt-sync .rt-line { transition: opacity 0.35s ease, color 0.35s ease, background-color 0.35s ease; }
+.rt-sync .rt-future { opacity: 0.38 !important; }
+.rt-sync .rt-now {
+  background: linear-gradient(transparent 62%, rgba(214, 160, 60, 0.28) 62%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-anim .rt-line { animation: none; opacity: 1; transform: none; }
+  .voice-btn.is-fresh { animation: none; }
 }
 
 .dossier-btn {
@@ -1747,4 +1836,647 @@ body {
 
 .phone-call-hangup-btn:active {
   box-shadow: 0 2px 0 #7e2f11;
+}
+
+/* ───────── RichText: типографика сценарных текстов ───────── */
+.rt {
+  font-family: var(--font-pt-serif), serif;
+  hyphens: manual;           /* без «дик-товали»: переносы со словами мешают читать */
+  -webkit-hyphens: manual;
+  overflow-wrap: break-word;
+  max-width: 62ch;
+}
+
+.rt .rt-block + .rt-block {
+  margin-top: 0.9em;
+}
+
+/* !important перебивает старые правила вида .dossier-reaction p / .evidence-result p */
+.rt p.rt-line {
+  margin: 0 !important;
+  text-wrap: pretty;
+}
+
+.rt p.rt-line + p.rt-line {
+  margin-top: 0.45em !important;
+}
+
+/* Реплика: висячее тире, текст ровной колонкой */
+.rt .rt-speech,
+.rt .rt-cont {
+  padding-left: 1.15em;
+}
+
+.rt .rt-speech {
+  text-indent: -1.15em;
+}
+
+.rt .rt-speech + .rt-speech {
+  margin-top: 0.55em !important;
+}
+
+.rt .rt-dash {
+  color: var(--stamp);
+  opacity: 0.75;
+}
+
+/* Ремарка автора внутри сцены с диалогом */
+.rt--dialogue .rt-narr {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.94em;
+}
+
+.dossier-quote.rt--dialogue .rt-block:first-child .rt-narr:first-child {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 1em;
+}
+
+.dossier-reaction .rt,
+.evidence-result .rt {
+  margin-top: 8px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.dossier-confession .rt {
+  margin-top: 10px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.dossier-answer.rt {
+  max-width: none;
+}
+
+.evidence-doc-description.rt .rt-line:first-child {
+  color: var(--ink);
+}
+
+.rt-location {
+  line-height: 1.55;
+  max-width: none;            /* короткая подпись локации — на всю ширину карточки */
+}
+.rt-location p.rt-line { text-wrap: pretty; }
+
+.rt-ending {
+  margin-top: 16px;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: none;
+}
+
+/* Абзацы обычного текста (улика, документ) — чуть больше воздуха */
+.rt--plain p.rt-line + p.rt-line {
+  margin-top: 0.5em !important;
+}
+
+/* ───────── Осмотр: найденная улика / не улика / мимо ───────── */
+.evidence-tag-label { position: relative; }
+.evidence-tag-label.is-pending,
+.evidence-tag-label.is-miss { opacity: 0.35; pointer-events: none; }
+.evidence-tag-label.is-present { opacity: 0.6; pointer-events: none; border-style: dashed; }
+.evidence-tag-label.is-found {
+  pointer-events: none;
+  border: 2px solid var(--stamp);
+  background: #f7eee0;
+  color: var(--stamp);
+  box-shadow: 0 0 0 3px rgba(156, 43, 31, 0.12);
+}
+.evidence-tag-stamp {
+  position: absolute;
+  top: -9px;
+  right: -8px;
+  transform: rotate(8deg);
+  background: var(--stamp);
+  color: #f7eee0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  animation: stamp-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.evidence-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.evidence-result.is-found {
+  border: 2px solid var(--stamp);
+  background: rgba(156, 43, 31, 0.06);
+  animation: result-in 0.3s ease-out;
+}
+.evidence-result.is-found .evidence-result-label { color: var(--stamp); font-weight: 700; }
+.evidence-result.is-pending { opacity: 0.7; }
+.evidence-stamp {
+  display: inline-block;
+  transform: rotate(-3deg);
+  border: 2.5px solid var(--stamp);
+  color: var(--stamp);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+  animation: stamp-in 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.evidence-badge {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px dashed var(--paper-shadow);
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+.evidence-badge.is-muted { opacity: 0.7; }
+
+@keyframes stamp-in {
+  0% { transform: scale(2.2) rotate(-12deg); opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes result-in {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evidence-tag-stamp, .evidence-stamp, .evidence-result.is-found { animation: none; }
+}
+
+/* ───────── Снимок улики (лист фототаблицы) ───────── */
+.evidence-result-body.has-photo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 36%);
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .evidence-result-body.has-photo { grid-template-columns: 1fr; }
+}
+.ev-photo {
+  margin: 4px 0 0;
+  transform: rotate(1.4deg);
+  animation: result-in 0.35s ease-out;
+}
+.ev-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28), 0 2px 4px rgba(0, 0, 0, 0.18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ev-photo { animation: none; }
+}
+
+/* ───────── Машинопись (текст найденной улики) ─────────
+   Правила машинописного документа: шрифт один, выделения — двойной удар
+   (жирное), разрядка, подчёркивание и красная строка. Курсива нет. */
+.rt.typed {
+  --ink: #23201c;
+  max-width: none;
+  margin-top: 10px;
+  padding: 22px 34px 26px;
+  font-family: "Courier New", Courier, var(--font-pt-mono), monospace;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+  text-shadow: 0 0 0.6px rgba(35, 32, 28, 0.5);   /* краска чуть растеклась */
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  font-variant-ligatures: none;
+  background:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse at 88% 92%, rgba(150, 100, 60, 0.12), transparent 55%),
+    #ecd9c4;
+  border: 1px solid rgba(120, 90, 60, 0.18);
+  border-radius: 1px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+/* шапка листа: разрядкой, отбита пунктиром «из дефисов» */
+.rt.typed[data-doc]::before {
+  content: attr(data-doc);
+  display: block;
+  text-align: center;
+  font-size: 0.82em;
+  letter-spacing: 0.42em;
+  padding-bottom: 0.55em;
+  margin: 0 0 1.1em;
+  border-bottom: 1.5px dashed rgba(35, 32, 28, 0.45);
+  text-shadow: 0.5px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
+}
+.rt.typed p.rt-line {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0 !important;
+}
+/* красная строка у повествования (у реплик — висячее тире, как было) */
+.rt.typed p.rt-narr { text-indent: 2.2em; }
+.rt.typed .rt-block + .rt-block { margin-top: 0.95em; }
+.rt.typed .rt-narr { font-style: normal; color: inherit; font-size: inherit; }
+.rt.typed .rt-dash { color: inherit; opacity: 1; }
+
+/* первая строка — описание предмета: двойной удар (машинописное «жирное») */
+.rt.typed .rt-block:first-child .rt-line:first-child {
+  text-indent: 0;
+  text-shadow: 0.55px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
+}
+/* подписи «Первые:», «Справка:» — разрядкой */
+.rt.typed .rt-label {
+  letter-spacing: 0.22em;
+  text-shadow: 0.45px 0 0 var(--ink), 0 0 0.6px rgba(35, 32, 28, 0.5);
+}
+/* последняя строка — вывод следователя: подчёркнута, как подбивали на машинке */
+.rt.typed .rt-block:last-child .rt-line:last-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  text-decoration-color: rgba(35, 32, 28, 0.75);
+}
+@media (max-width: 760px) {
+  .rt.typed { font-size: 15px; padding: 18px 18px 20px; }
+  .rt.typed p.rt-narr { text-indent: 1.4em; }
+}
+
+
+/* ───────── Папка дела: разделы и виды листов ───────── */
+.evidence-sections { display: flex; flex-direction: column; gap: 30px; }
+.evidence-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.evidence-section-title::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px dashed rgba(233, 224, 201, 0.35);
+}
+.evidence-section-count {
+  order: 2;
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid rgba(233, 224, 201, 0.4);
+  border-radius: 10px;
+  color: var(--amber);
+}
+.evidence-section-title::after { order: 1; }
+
+/* Показания — серо-голубоватый бланк протокола допроса, слева «поля» с отметкой */
+.rt.typed.typed-testimony {
+  background:
+    linear-gradient(to right, transparent 0, transparent 18px, rgba(69, 79, 120, 0.35) 18px, rgba(69, 79, 120, 0.35) 19px, transparent 19px),
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.4), transparent 60%),
+    #e6e2d8;
+  padding-left: 46px;
+}
+/* Заключения экспертов — белее, с круглой печатью ЭКО */
+.rt.typed.typed-expertise {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.5), transparent 60%),
+    #f1ebdd;
+}
+.rt.typed.typed-expertise::after {
+  content: "ЭКО ГУВД";
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(64, 86, 160, 0.55);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(241, 235, 221, 1), inset 0 0 0 5px rgba(64, 86, 160, 0.45);
+  color: rgba(64, 86, 160, 0.7);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-shadow: none;
+  transform: rotate(-12deg);
+}
+/* Справки — канцелярская бумага, шапка мельче */
+.rt.typed.typed-document {
+  background:
+    radial-gradient(ellipse at 80% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
+    #e9e3cf;
+}
+
+
+/* ───────── Бланк документа (протокол / заключение / справка) ─────────
+   Печатная часть — PT Serif, «вписанное» — машинопись. */
+.ev-form {
+  position: relative;
+  margin-top: 10px;
+  padding: 18px 30px 22px;
+  background:
+    radial-gradient(ellipse at 15% 5%, rgba(255, 255, 255, 0.45), transparent 60%),
+    radial-gradient(ellipse at 90% 95%, rgba(150, 110, 70, 0.10), transparent 55%),
+    #f3ecdc;
+  border: 1px solid rgba(120, 90, 60, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  font-family: var(--font-pt-serif), serif;
+  color: #26221c;
+}
+.ev-form.is-testimony { background-color: #ebe7dc; }
+.ev-form.is-expertise { background-color: #f6f2e6; }
+.ev-form.is-document  { background-color: #ece5cf; }
+
+.ev-form-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8a8070;
+  letter-spacing: 0.02em;
+}
+.ev-form-top u { text-decoration-thickness: 1px; text-underline-offset: 3px; padding: 0 6px; }
+
+.ev-form-title {
+  margin: 10px 0 14px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+}
+.ev-form-title small {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.ev-form-fill {
+  font-family: "Courier New", Courier, var(--font-pt-mono), monospace;
+  font-size: 15.5px;
+  text-shadow: 0 0 0.6px rgba(35, 32, 28, 0.5);
+  border-bottom: 1px solid #3a342b;
+  padding: 0 6px 1px;
+}
+.ev-form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.ev-form-date .ev-form-fill { padding: 0 4px 1px; }
+
+.ev-form-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.ev-form-label { white-space: nowrap; }
+.ev-form-line {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ev-form-line .ev-form-fill { display: block; }
+.ev-form-line em,
+.ev-form-sign-line em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: #8a8070;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* текст на бланке — машинопись без собственной «бумаги» */
+.rt.typed.ev-form-body {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.ev-form.is-thing .rt.typed.ev-form-body,
+.ev-form .rt.typed.ev-form-body { font-size: 16px; }
+
+.ev-form-signs {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 36px;
+  margin-top: 22px;
+  font-size: 14px;
+}
+.ev-form-sign { display: flex; align-items: baseline; gap: 10px; }
+.ev-form-sign-line {
+  display: flex;
+  flex-direction: column;
+  width: 150px;
+  border-top: 1px solid #3a342b;
+  margin-top: 14px;
+}
+.ev-form-sign-line em { margin-top: 2px; }
+
+.ev-form-stamp {
+  position: absolute;
+  right: 26px;
+  bottom: 18px;
+  width: 78px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(64, 86, 160, 0.55);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px #f6f2e6, inset 0 0 0 6px rgba(64, 86, 160, 0.45);
+  color: rgba(64, 86, 160, 0.75);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .ev-form { padding: 14px 16px 18px; }
+  .ev-form-row { flex-direction: column; gap: 6px; }
+  .ev-form-signs { justify-content: flex-start; }
+}
+
+
+/* Повторное открытие: найденные и осмотренные карточки кликабельны */
+.evidence-tag-label.is-found,
+.evidence-tag-label.is-present { pointer-events: auto; cursor: pointer; }
+.evidence-tag-label.is-present:hover { opacity: 0.85; }
+.evidence-tag-label.is-found:hover { box-shadow: 0 0 0 4px rgba(156, 43, 31, 0.2); }
+.evidence-tag-label.is-active { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+
+/* «Предъявить улику»: уже предъявлявшиеся этому персонажу */
+.dossier-evidence-tag { position: relative; }
+.dossier-evidence-tag.is-presented {
+  border-style: solid;
+  border-color: rgba(69, 79, 61, 0.55);
+  background: rgba(69, 79, 61, 0.07);
+  color: var(--ink-soft);
+}
+.dossier-evidence-tag.is-active {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.dossier-presented-mark {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3deg);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--militia);
+  border: 1.5px solid var(--militia);
+  border-radius: 3px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+
+/* Допрос только на месте */
+.polaroid-place {
+  margin: 4px 0 0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a7a5a;
+}
+.polaroid-place::before { content: "◦ "; }
+.polaroid-place.is-here { color: var(--militia); font-weight: 700; }
+.polaroid-place.is-here::before { content: "● "; }
+.dossier-offsite { text-align: center; }
+.dossier-offsite-text {
+  font-family: var(--font-pt-serif), serif;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0 0 16px;
+}
+
+
+/* «Передать на экспертизу»: формальная отметка для своих сотрудников
+   (не штамп, как у подозреваемых, а служебный статус строкой) */
+.dossier-evidence-tag.is-submitted {
+  border-style: solid;
+  border-color: rgba(64, 86, 130, 0.45);
+  background: rgba(64, 86, 130, 0.06);
+  color: var(--ink-soft);
+}
+.dossier-submitted-status {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #405682;
+  text-align: center;
+  line-height: 1.3;
+}
+.dossier-submitted-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #405682;
+  vertical-align: 1px;
+}
+
+/* Пустой обыск: короткая запись в протокол — сама по себе подсказка */
+.evidence-search-note {
+  max-width: 640px;
+  margin: 4px auto 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent, #9a2e24);
+  background: rgba(0, 0, 0, 0.04);
+  font-style: italic;
+  text-align: left;
+}
+
+/* Сцены начальства (supabase/039): лист из дела вместо трубки */
+.scene-call-sheet {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 28px 32px 24px;
+  border-radius: 2px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(196, 183, 144, 0.45);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.scene-call-place {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.scene-call-who {
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--paper-shadow);
+}
+
+.scene-call-text {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.scene-call-btn {
+  display: block;
+  margin: 20px 0 0 auto;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 3px;
+  padding: 10px 22px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.scene-call-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

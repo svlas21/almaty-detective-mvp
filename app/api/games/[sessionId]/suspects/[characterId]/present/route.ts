@@ -1,7 +1,111 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireOnSite } from "@/lib/onSite";
+import { resolveReactionRules, type ReactionRule } from "@/lib/graphRules";
+import { isFemaleName } from "@/lib/gender";
 
 export const dynamic = "force-dynamic";
+
+// Если своей реакции на улику нет — короткая реплика вместо одной и той же
+// заглушки. Учитывается, ЧЬЯ это улика (человек сам её дал / это его
+// показания или заключение) и КАКОГО она вида: вещь, показания, экспертиза,
+// документ. Выбор детерминированный: тот же персонаж на ту же улику отвечает
+// одинаково. Только речь, никаких действий с предметом.
+type EvidenceKind = "thing" | "testimony" | "expertise" | "document";
+
+const FALLBACK: Record<"person" | "expert", Record<EvidenceKind, string[]>> = {
+  person: {
+    thing: [
+      "— Не понимаю, к чему вы клоните.",
+      "— Не знаю, что вам на это сказать.",
+      "— Про это мне сказать нечего.",
+      "— Это не ко мне. Спросите других.",
+    ],
+    testimony: [
+      "— Мало ли кто что говорит. Я за чужие слова не отвечаю.",
+      "— Это пусть они и объясняют. Мне добавить нечего.",
+      "— Не знаю, что вам там наговорили. Я при этом не был{|а}.",
+    ],
+    expertise: [
+      "— В экспертизах я не разбираюсь. Что там написано, вам виднее.",
+      "— Это ваши бумаги, учёные. Мне сказать нечего.",
+    ],
+    document: [
+      "— Бумаги — это ваше дело. Мне сказать нечего.",
+      "— Что там в ваших справках, я не знаю.",
+    ],
+  },
+  expert: {
+    thing: [
+      "— По этому материалу заключения пока нет.",
+      "— Тут мне зацепиться не за что.",
+      "— Это не по моей части.",
+    ],
+    testimony: [
+      "— Показания — это к следователю, не ко мне. Я работаю с материалом.",
+      "— Слова к делу не приложишь. Принесите вещь — посмотрю.",
+    ],
+    expertise: [
+      "— Это заключение коллег. Оспаривать не буду, добавить нечего.",
+      "— С выводами {согласен|согласна}. От себя пока ничего не добавлю.",
+    ],
+    document: [
+      "— Справка как справка. По моей части тут ничего.",
+      "— Это не по моей части.",
+    ],
+  },
+};
+
+const OWN: Record<"person" | "expert", Record<EvidenceKind, string>> = {
+  person: {
+    thing: "— Я же сам{|а} вам это отдал{|а}. Что ещё?",
+    testimony: "— Я вам это уже рассказал{|а}. Добавить нечего.",
+    expertise: "— Я вам это уже рассказал{|а}. Добавить нечего.",
+    document: "— Я же сам{|а} вам это дал{|а}.",
+  },
+  expert: {
+    thing: "— Этот материал я уже смотрел{|а}. Всё в заключении.",
+    testimony: "— Это мои выводы. Пока новых материалов нет — добавить нечего.",
+    expertise: "— Это моё заключение. Пока новых материалов нет — добавить нечего.",
+    document: "— Это я вам и готовил{|а}. Всё, что было, там указано.",
+  },
+};
+
+function fallbackReaction(
+  characterId: string,
+  characterName: string,
+  evidenceId: string,
+  isExpert: boolean,
+  kind: string | null | undefined,
+  own: boolean,
+  lines?: Record<string, string | string[]> | null
+) {
+  const who = isExpert ? "expert" : "person";
+  const k: EvidenceKind = (["thing", "testimony", "expertise", "document"] as const).includes(kind as EvidenceKind)
+    ? (kind as EvidenceKind)
+    : "thing";
+  let text: string;
+  // своя манера персонажа (поле fallback_lines), если задана
+  const ownLine = lines?.[`own_${k}`] ?? (k === "testimony" ? undefined : lines?.own_expertise);
+  const personal = lines?.[k];
+  if (own && typeof ownLine === "string") {
+    text = ownLine;
+  } else if (own) {
+    text = OWN[who][k];
+  } else if (Array.isArray(personal) && personal.length > 0) {
+    let h = 0;
+    for (const ch of characterId + evidenceId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    text = personal[h % personal.length];
+  } else {
+    const pool = FALLBACK[who][k];
+    let h = 0;
+    for (const ch of characterId + evidenceId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    text = pool[h % pool.length];
+  }
+  // {мужской|женский} — согласование по роду
+  const female = isFemaleName(characterName);
+  return text.replace(/\{([^|{}]*)\|([^|{}]*)\}/g, (_: string, m: string, f: string) => (female ? f : m));
+}
 
 export async function POST(
   req: NextRequest,
@@ -11,13 +115,29 @@ export async function POST(
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select(
-      "discovered_characters, discovered_evidence, collected_evidence, discovered_locations, viewed_reactions, log"
-    )
-    .eq("session_id", sessionId)
-    .single();
+  // Состояние, персонаж и улика читаются одновременно (раньше — по очереди);
+  // параллельно — проверка «следователь на месте» (lib/onSite.ts)
+  const [offSite, stateRes, characterRes, evidenceRes] = await Promise.all([
+    requireOnSite(db, sessionId, characterId),
+    db
+      .from("session_state")
+      .select(
+        "discovered_characters, discovered_evidence, collected_evidence, discovered_locations, viewed_reactions, log"
+      )
+      .eq("session_id", sessionId)
+      .single(),
+    db
+      .from("characters")
+      .select("case_id, name, reactions, reaction_rules, fixed_questions, fallback_lines, confession_text, confession_requires_evidence, is_expert")
+      .eq("id", characterId)
+      .single(),
+    db.from("evidence").select("name, kind").eq("id", evidenceId).single(),
+  ]);
+  const { data: state, error: stateError } = stateRes;
+  const { data: character, error: characterError } = characterRes;
+  const evidence = evidenceRes.data;
+
+  if (offSite) return offSite;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
@@ -31,27 +151,38 @@ export async function POST(
     return NextResponse.json({ error: "Сначала найдите эту улику" }, { status: 400 });
   }
 
-  const { data: character, error: characterError } = await db
-    .from("characters")
-    .select("case_id, name, reactions, confession_text, confession_requires_evidence, is_expert")
-    .eq("id", characterId)
-    .single();
-
   if (characterError || !character) {
     return NextResponse.json({ error: "Подозреваемый не найден" }, { status: 404 });
   }
 
-  const { data: evidence } = await db
-    .from("evidence")
-    .select("name")
-    .eq("id", evidenceId)
-    .single();
+  // Правила из данных (supabase/011_graph_rules.sql): реплика зависит от уже
+  // собранных улик и может выдать новые. Если правил на эту улику нет —
+  // прежняя логика (reactions-словарь + хардкод-цепочки ниже).
+  const ruleResult = resolveReactionRules(
+    character.reaction_rules as ReactionRule[] | null,
+    evidenceId,
+    state.collected_evidence,
+    !!character.is_expert
+  );
 
+  // «Своя» улика: этот человек её выдал (правилом реакции или вопросом протокола)
+  const own =
+    ((character.reaction_rules as ReactionRule[] | null) ?? []).some((r) => (r.grants ?? []).includes(evidenceId)) ||
+    ((character.fixed_questions as { grants_evidence_id?: string }[] | null) ?? []).some(
+      (q) => q?.grants_evidence_id === evidenceId
+    );
   const reaction =
+    ruleResult?.text ??
     character.reactions?.[evidenceId] ??
-    (character.is_expert
-      ? "По этому материалу заключения пока нет."
-      : "«Не понимаю, к чему вы клоните» — пожимает плечами.");
+    fallbackReaction(
+      characterId,
+      character.name,
+      evidenceId,
+      !!character.is_expert,
+      evidence?.kind,
+      own,
+      character.fallback_lines as Record<string, string | string[]> | null
+    );
 
   // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
   // и не допросом, а после того как игрок увидел конкретную реакцию конкретного
@@ -89,6 +220,26 @@ export async function POST(
       });
     }
   };
+
+  for (const grantedId of ruleResult?.grants ?? []) {
+    const { data: granted } = await db
+      .from("evidence")
+      .select("id, name")
+      .eq("case_id", character.case_id)
+      .eq("id", grantedId)
+      .maybeSingle();
+    if (granted && !collectedEvidence.includes(granted.id)) {
+      collectedEvidence = [...collectedEvidence, granted.id];
+      discoveredEvidence = Array.from(new Set([...discoveredEvidence, granted.id]));
+      grantedEvidenceLogEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: granted.name,
+        source: character.name,
+        at: new Date().toISOString(),
+      });
+    }
+  }
 
   if (
     evidence?.name === "Ежедневник на столе" &&

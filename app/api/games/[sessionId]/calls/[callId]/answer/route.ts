@@ -29,7 +29,7 @@ export async function POST(
 
   const { data: call, error: callError } = await db
     .from("phone_calls")
-    .select("dialogue_text, unlocks_location_id, grants_evidence_id, characters(name)")
+    .select("dialogue_text, unlocks_location_id, grants_evidence_id, caller_name, characters(name)")
     .eq("id", callId)
     .single();
 
@@ -54,7 +54,7 @@ export async function POST(
       ? [...state.collected_evidence, call.grants_evidence_id]
       : state.collected_evidence;
 
-  const callerName = (call.characters as { name: string } | null)?.name ?? "Неизвестный";
+  const callerName = (call.characters as unknown as { name: string } | null)?.name ?? call.caller_name ?? "Неизвестный";
 
   // Журнал расследования (Дело №9704): если звонок выдаёт улику, это тоже
   // отдельная "evidence"-запись — по тому же принципу, что и в present/ask/
