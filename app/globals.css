@@ -603,42 +603,75 @@ body {
   overflow: hidden;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--militia);
-  background: transparent;
-  border: 1px solid var(--militia);
-  border-radius: 3px;
-  padding: 7px 14px 8px;
+  color: var(--void);
+  background: var(--amber);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px 13px 18px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
-.voice-btn:hover,
-.voice-btn.is-playing {
-  background: var(--militia);
-  color: var(--paper, #f3ead8);
+.voice-btn:hover { background: var(--amber-dim); transform: translateY(-1px); }
+.voice-btn:active { transform: translateY(0) scale(0.98); }
+.voice-btn.is-playing { background: var(--militia); color: var(--paper); }
+
+/* Пока не нажимали — мягкая пульсация, чтобы кнопку заметили */
+.voice-btn.is-fresh { animation: voice-pulse 2.2s ease-out infinite; }
+@keyframes voice-pulse {
+  0% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 0 rgba(214, 160, 60, 0.6); }
+  70% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 14px rgba(214, 160, 60, 0); }
+  100% { box-shadow: 0 3px 10px rgba(0,0,0,.25), 0 0 0 0 rgba(214, 160, 60, 0); }
 }
 
 .voice-btn-icon {
-  font-size: 10px;
-  width: 12px;
-  text-align: center;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 11px;
 }
 
 .voice-btn-bar {
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 2px;
+  height: 3px;
   width: 100%;
-  background: var(--amber);
+  background: var(--paper);
+  opacity: 0.8;
   transform-origin: left;
   transition: transform 0.25s linear;
+}
+
+/* Появление текста: строки проявляются по очереди */
+.rt-anim .rt-line {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: rt-in 0.55s ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 110ms + 150ms);
+}
+@keyframes rt-in { to { opacity: 1; transform: none; } }
+
+/* Синхронизация с озвучкой: сказанное — обычным, текущее — подсвечено, будущее — приглушено */
+.rt-sync .rt-line { transition: opacity 0.35s ease, color 0.35s ease, background-color 0.35s ease; }
+.rt-sync .rt-future { opacity: 0.38 !important; }
+.rt-sync .rt-now {
+  background: linear-gradient(transparent 62%, rgba(214, 160, 60, 0.28) 62%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-anim .rt-line { animation: none; opacity: 1; transform: none; }
+  .voice-btn.is-fresh { animation: none; }
 }
 
 .dossier-btn {

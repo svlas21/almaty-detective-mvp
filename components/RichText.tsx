@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { ElementType } from "react";
 
 /**
@@ -143,18 +144,43 @@ interface RichTextProps {
   /** Шапка машинописного листа (.rt.typed): «ПРОТОКОЛ ОСМОТРА», «ЗАКЛЮЧЕНИЕ ЭКСПЕРТА»… */
   docTitle?: string;
   as?: ElementType;
+  /** Строки появляются по очереди (fade-in с задержкой). */
+  animate?: boolean;
+  /** Синхронизация с озвучкой: доля прозвучавшей прямой речи 0..1; null — звука нет. */
+  spoken?: number | null;
 }
 
-export default function RichText({ text, className, as: Tag = "div", docTitle }: RichTextProps) {
+export default function RichText({ text, className, as: Tag = "div", docTitle, animate, spoken }: RichTextProps) {
   if (!text) return null;
   const { blocks, hasSpeech } = parse(text);
   const mode = hasSpeech ? "rt--dialogue" : "rt--plain";
+  // Для синхронизации: границы каждой строки речи в долях общей длины речи.
+  const voiced = (l: Line) => l.kind === "speech" || l.kind === "cont";
+  const total = blocks.flat().reduce((n, l) => n + (voiced(l) ? l.text.length : 0), 0) || 1;
+  let acc = 0;
+  let idx = 0;
+  const syncClass = (l: Line) => {
+    if (spoken == null || !voiced(l)) return "";
+    const from = acc / total;
+    acc += l.text.length;
+    const to = acc / total;
+    if (spoken <= 0) return "";
+    return spoken >= to ? " rt-past" : spoken >= from ? " rt-now" : " rt-future";
+  };
   return (
-    <Tag className={`rt ${mode}${className ? " " + className : ""}`} lang="ru" data-doc={docTitle}>
+    <Tag
+      className={`rt ${mode}${animate ? " rt-anim" : ""}${spoken != null && spoken > 0 ? " rt-sync" : ""}${className ? " " + className : ""}`}
+      lang="ru"
+      data-doc={docTitle}
+    >
       {blocks.map((block, bi) => (
         <div className="rt-block" key={bi}>
           {block.map((line, li) => (
-            <p className={`rt-line rt-${line.kind}`} key={li}>
+            <p
+              className={`rt-line rt-${line.kind}${syncClass(line)}`}
+              key={li}
+              style={animate ? ({ "--i": idx++ } as CSSProperties) : undefined}
+            >
               {line.kind === "speech" && <span className="rt-dash">—{NBSP}</span>}
               {renderLine(line)}
             </p>

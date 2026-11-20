@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SuspectAvatar } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 import RichText, { tp } from "@/components/RichText";
@@ -21,6 +22,7 @@ interface IntroScreenProps {
 }
 
 export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
+  const [spoken, setSpoken] = useState<number | null>(character.intro_audio_url ? 0 : null);
   return (
     <div className="dossier-page">
       <div className="dossier-tab-row">
@@ -50,11 +52,11 @@ export default function IntroScreen({ character, onFinish }: IntroScreenProps) {
 
         {character.intro_audio_url && (
           <div className="voice-row">
-            <VoiceButton src={character.intro_audio_url} />
+            <VoiceButton src={character.intro_audio_url} label="Послушать шефа" onProgress={setSpoken} />
           </div>
         )}
 
-        <RichText text={character.intro_text} className="dossier-quote" />
+        <RichText text={character.intro_text} className="dossier-quote" animate spoken={spoken} />
       </div>
 
       <InterrogationProtocol
