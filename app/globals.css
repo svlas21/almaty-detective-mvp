@@ -2539,7 +2539,35 @@ body {
   border-bottom: 1px dashed var(--paper-shadow);
 }
 
-.dossier-evidence-name { flex: 1; text-wrap: pretty; }
+.dossier-evidence-body {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dossier-evidence-name { flex: 1; min-width: 0; text-wrap: pretty; }
+
+/* Маленькое фото улики: как карточка-фотография, приколотая к листу */
+.dossier-evidence-thumb {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  background: #fff;
+  padding: 3px;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(42, 35, 24, 0.25);
+  transform: rotate(2deg);
+}
+
+.dossier-evidence-tag.is-presented .dossier-evidence-thumb,
+.dossier-evidence-tag.is-submitted .dossier-evidence-thumb { filter: grayscale(0.6); opacity: 0.75; }
+
+@media (max-width: 480px) {
+  .dossier-evidence-body { flex-direction: column-reverse; gap: 8px; }
+  .dossier-evidence-thumb { width: 52px; height: 52px; transform: rotate(-1.5deg); }
+}
 
 .dossier-evidence-tag.is-presented,
 .dossier-evidence-tag.is-submitted {

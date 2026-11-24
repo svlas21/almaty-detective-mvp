@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import RichText, { tp } from "@/components/RichText";
+import { img } from "@/lib/img";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
 
@@ -10,6 +11,7 @@ interface CollectedEvidenceItem {
   name: string;
   description: string | null;
   kind?: "thing" | "testimony" | "expertise" | "document" | null;
+  image_url?: string | null;
 }
 
 interface TopicItem {
@@ -238,7 +240,19 @@ export default function SuspectDetail({
                       }
                     >
                       <span className="dossier-evidence-kind">{KIND_LABEL[e.kind ?? ""] ?? "Улика"}</span>
-                      <span className="dossier-evidence-name">{tp(e.name)}</span>
+                      <span className="dossier-evidence-body">
+                        <span className="dossier-evidence-name">{tp(e.name)}</span>
+                        {e.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className="dossier-evidence-thumb"
+                            src={img(e.image_url, { w: 160, q: 70 })}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                      </span>
                       {presentedIds?.has(e.id) &&
                         (isExpert ? (
                           <span className="dossier-submitted-status">{doneLabel}</span>
