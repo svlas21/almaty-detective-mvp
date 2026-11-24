@@ -2488,6 +2488,118 @@ body {
   vertical-align: 1px;
 }
 
+/* ---- Карточки улик в досье: компактные «карточки картотеки» (переопределяет стили выше) ---- */
+.dossier-evidence-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.dossier-evidence-tag {
+  aspect-ratio: auto;
+  min-height: 108px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 12px 14px 12px;
+  background: #f3ecda;
+  border: 1px solid var(--paper-shadow);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(42, 35, 24, 0.06);
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease, opacity 150ms ease;
+}
+
+.dossier-evidence-tag:hover {
+  border-color: var(--stamp);
+  background: #f6f0e0;
+  box-shadow: 0 4px 12px rgba(42, 35, 24, 0.12);
+  transform: translateY(-1px);
+}
+
+.dossier-evidence-kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+}
+
+.dossier-evidence-kind::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px dashed var(--paper-shadow);
+}
+
+.dossier-evidence-name { flex: 1; text-wrap: pretty; }
+
+.dossier-evidence-tag.is-presented,
+.dossier-evidence-tag.is-submitted {
+  border-style: solid;
+  border-color: var(--paper-shadow);
+  background: rgba(42, 35, 24, 0.04);
+  box-shadow: none;
+  color: var(--ink-soft);
+}
+
+.dossier-evidence-tag.is-presented .dossier-evidence-kind,
+.dossier-evidence-tag.is-submitted .dossier-evidence-kind { color: var(--ink-soft); }
+
+.dossier-evidence-tag.is-active {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink), 0 4px 12px rgba(42, 35, 24, 0.14);
+}
+
+.dossier-presented-mark,
+.dossier-submitted-status {
+  position: static;
+  transform: none;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  opacity: 1;
+}
+
+.dossier-presented-mark {
+  color: var(--militia);
+  border: 1.5px solid var(--militia);
+  border-radius: 3px;
+  padding: 2px 6px;
+  transform: rotate(-2deg);
+}
+
+.dossier-submitted-status { color: #405682; padding: 0; border: none; }
+
+/* Вкладки: без синей рамки браузера, аккуратный фокус с клавиатуры */
+.dossier-tabs-btn { letter-spacing: 0.08em; }
+.dossier-tabs-btn:focus { outline: none; }
+.dossier-tabs-btn:focus-visible { outline: 2px solid var(--stamp); outline-offset: -4px; }
+.dossier-evidence-tag:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  .dossier-evidence-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dossier-evidence-tag { min-height: 96px; padding: 10px 11px; font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dossier-evidence-tag, .dossier-evidence-tag:hover { transition: none; transform: none; }
+}
+
 /* Пустой обыск: короткая запись в протокол — сама по себе подсказка */
 .evidence-search-note {
   max-width: 640px;

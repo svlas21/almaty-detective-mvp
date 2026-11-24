@@ -76,6 +76,12 @@ export default function SuspectDetail({
   const tabLabels = isExpert
     ? { items: "Передать на экспертизу", testimony: "Обсудить показания" }
     : { items: "Предъявить улику", testimony: "Зачитать показания" };
+  const KIND_LABEL: Record<string, string> = {
+    thing: "Вещдок",
+    document: "Документ",
+    expertise: "Экспертиза",
+    testimony: "Показания",
+  };
   const doneLabel = isExpert
     ? isTestimonyTab ? "Обсуждено" : "Передано на экспертизу"
     : isTestimonyTab ? "Зачитано" : "Предъявлено";
@@ -231,7 +237,8 @@ export default function SuspectDetail({
                           : undefined
                       }
                     >
-                      {tp(e.name)}
+                      <span className="dossier-evidence-kind">{KIND_LABEL[e.kind ?? ""] ?? "Улика"}</span>
+                      <span className="dossier-evidence-name">{tp(e.name)}</span>
                       {presentedIds?.has(e.id) &&
                         (isExpert ? (
                           <span className="dossier-submitted-status">{doneLabel}</span>
