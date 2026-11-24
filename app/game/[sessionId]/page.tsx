@@ -111,6 +111,9 @@ function formatTime(minutes: number) {
   return `${h}:${m}`;
 }
 
+/** Пустая локация: после скольких проверенных предметов показать итог «ничего нет». */
+const SEARCH_NOTE_AFTER = 3;
+
 export default function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [state, setState] = useState<StateResponse | null>(null);
@@ -147,6 +150,9 @@ export default function GameScreen() {
   const [topicAnswer, setTopicAnswer] = useState<{ topicLabel: string; text: string } | null>(null);
   const [askingTopicId, setAskingTopicId] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  // Пустая локация (search_note): итог «ничего нет» показываем не сразу,
+  // а после ответа «Нет» или когда игрок проверил несколько предметов.
+  const [saidNo, setSaidNo] = useState(false);
 
   async function loadState(options?: { silent?: boolean }) {
     if (!options?.silent) setLoading(true);
@@ -245,6 +251,8 @@ export default function GameScreen() {
   }
 
   function startSearch() {
+    setLastResult(null);
+    setSaidNo(false);
     setLocationPhase("searching");
     setSecondsLeft(40);
     setPanoramaReady(false);
@@ -426,6 +434,10 @@ export default function GameScreen() {
       </div>
     );
   }
+
+  // Сколько предметов на этой локации уже проверено (кроме найденных улик)
+  const checkedHere = Object.values(resultById).filter((k) => k === "present" || k === "miss").length;
+  const searchConcluded = !!state?.location?.search_note && (saidNo || checkedHere >= SEARCH_NOTE_AFTER);
 
   return (
     <div className="game-shell">
@@ -695,9 +707,6 @@ export default function GameScreen() {
           <div className="evidence-timeout-card">
             <h2 className="evidence-timeout-title">⏱ Время осмотра истекло</h2>
             <p className="evidence-timeout-subtitle">Вы можете вернуться и осмотреть место ещё раз.</p>
-            {state.location?.search_note && (
-              <RichText text={state.location.search_note} className="evidence-search-note" />
-            )}
 
             <EvidenceSearch
               pool={pool}
@@ -706,6 +715,7 @@ export default function GameScreen() {
               resultById={resultById}
               activeId={lastResult?.id}
               foundIds={new Set(state.collectedEvidence.map((e) => e.id))}
+              onAnswerNo={() => setSaidNo(true)}
             />
 
             {lastResult && (
@@ -730,10 +740,16 @@ export default function GameScreen() {
               </div>
             )}
 
+            {searchConcluded && (
+              <RichText text={state.location!.search_note!} className="evidence-search-note" />
+            )}
+
             <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
-              <button className="people-sheet-search-btn" onClick={startSearch}>
-                🔍 Осмотреть снова
-              </button>
+              {!searchConcluded && (
+                <button className="people-sheet-search-btn" onClick={startSearch}>
+                  🔍 Осмотреть снова
+                </button>
+              )}
               <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
                 ✅ Закончить осмотр
               </button>

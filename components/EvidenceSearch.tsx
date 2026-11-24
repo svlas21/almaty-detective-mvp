@@ -19,9 +19,11 @@ interface EvidenceSearchProps {
   foundIds?: Set<string>;
   /** Карточка, результат которой сейчас показан */
   activeId?: string;
+  /** Игрок ответил «Нет» на вопрос об уликах. */
+  onAnswerNo?: () => void;
 }
 
-export default function EvidenceSearch({ pool, onGuess, triedIds, resultById = {}, foundIds, activeId }: EvidenceSearchProps) {
+export default function EvidenceSearch({ pool, onGuess, triedIds, resultById = {}, foundIds, activeId, onAnswerNo }: EvidenceSearchProps) {
   const [askedYet, setAskedYet] = useState<"idle" | "searching">("idle");
 
   if (askedYet === "idle") {
@@ -32,7 +34,7 @@ export default function EvidenceSearch({ pool, onGuess, triedIds, resultById = {
           <button className="people-sheet-search-btn" onClick={() => setAskedYet("searching")}>
             Да
           </button>
-          <button className="dossier-btn-muted" onClick={() => setAskedYet("idle")}>
+          <button className="dossier-btn-muted" onClick={() => onAnswerNo?.()}>
             Нет
           </button>
         </div>
