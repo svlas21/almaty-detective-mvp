@@ -326,12 +326,13 @@ async function upload() {
     let note = "";
     if (l.db) {
       let value = pub;
-      if (l.db.index != null) {
-        // ссылка внутри jsonb-массива: fixed_questions[index].audio_url
+      if (l.db.index != null || l.db.match) {
+        // ссылка внутри jsonb-массива: fixed_questions[index].audio_url или reaction_rules[id=R14].audio_url
         const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
         const arr = (await g.json())?.[0]?.[l.db.column];
-        if (!Array.isArray(arr) || !arr[l.db.index]) fail(`В базе нет ${l.db.column}[${l.db.index}]`);
-        arr[l.db.index][l.db.key] = pub;
+        const i = l.db.match ? (Array.isArray(arr) ? arr.findIndex((x) => x?.id === l.db.match) : -1) : l.db.index;
+        if (!Array.isArray(arr) || i < 0 || !arr[i]) fail(`В базе нет ${l.db.column}[${l.db.match ?? l.db.index}]`);
+        arr[i][l.db.key || "audio_url"] = pub;
         value = arr;
       }
       const u = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}`, {
@@ -340,7 +341,7 @@ async function upload() {
       });
       const rows = u.ok ? await u.json() : [];
       if (!u.ok || !rows.length) fail(`Запись в базу ${l.id}: ${u.status} ${u.ok ? "строка не найдена" : await u.text()}`);
-      note = ` → ${l.db.table}.${l.db.column}${l.db.index != null ? `[${l.db.index}].${l.db.key}` : ""}`;
+      note = ` → ${l.db.table}.${l.db.column}${l.db.index != null || l.db.match ? `[${l.db.match ?? l.db.index}].${l.db.key || "audio_url"}` : ""}`;
     }
     console.log(`  ✔ ${l.id}: загружено${note}`);
   }

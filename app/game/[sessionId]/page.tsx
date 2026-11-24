@@ -142,7 +142,7 @@ export default function GameScreen() {
   const [secondsLeft, setSecondsLeft] = useState(40);
   const [panoramaReady, setPanoramaReady] = useState(false);
   const [selectedSuspect, setSelectedSuspect] = useState<SuspectListItem | null>(null);
-  const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string } | null>(null);
+  const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string; audio?: string | null } | null>(null);
   const [suspectConfession, setSuspectConfession] = useState<string | null>(null);
   const [presentingEvidenceId, setPresentingEvidenceId] = useState<string | null>(null);
   const [topicAnswer, setTopicAnswer] = useState<{ topicLabel: string; text: string } | null>(null);
@@ -352,7 +352,7 @@ export default function GameScreen() {
     });
     if (res.ok) {
       const data = await res.json();
-      setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
+      setSuspectReaction({ evidenceName: evidence.name, text: data.reaction, audio: data.audio ?? null });
       setPresentedLocal((prev) => [...prev, `${selectedSuspect.id}:${evidence.id}`]);
       markInterviewed(selectedSuspect.id);
       if (data.confession) setSuspectConfession(data.confession);

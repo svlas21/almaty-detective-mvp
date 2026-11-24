@@ -17,6 +17,8 @@ export type ReactionRule = {
   fallback?: boolean;
   /** Поздний вариант: если готов, текст перечисленных реакций не показывается (их выдачи сохраняются). */
   supersedes?: string[];
+  /** Озвучка реплики (Supabase Storage, tools/voice/lumean.mjs upload). */
+  audio_url?: string | null;
 };
 
 /** null/пусто = условия нет; иначе нужен хотя бы один полностью собранный набор. */
@@ -47,7 +49,7 @@ export function resolveReactionRules(
   evidenceId: string,
   collected: string[],
   isExpert: boolean
-): { text: string; grants: string[] } | null {
+): { text: string; grants: string[]; audio?: string | null } | null {
   const forEvidence = (rules ?? []).filter((r) => r.on === evidenceId);
   if (forEvidence.length === 0) return null;
 
@@ -71,6 +73,7 @@ export function resolveReactionRules(
 
   const texts: string[] = [];
   const grants = new Set<string>();
+  const audios: (string | null)[] = [];
   for (const rule of ready) {
     const ruleGrants = rule.grants ?? [];
     const alreadyGiven = ruleGrants.length > 0 && ruleGrants.every((id) => collected.includes(id));
@@ -80,8 +83,11 @@ export function resolveReactionRules(
       continue;
     }
     texts.push(rule.text);
+    audios.push(rule.audio_url ?? null);
     ruleGrants.forEach((id) => grants.add(id));
   }
   for (const r of inherited) (r.grants ?? []).forEach((id) => grants.add(id));
-  return { text: texts.join("\n\n"), grants: [...grants] };
+  // Звук — только если прозвучит ровно одна реплика целиком (иначе текст и голос разойдутся)
+  const audio = texts.length === 1 && audios.length === 1 ? audios[0] : null;
+  return { text: texts.join("\n\n"), grants: [...grants], audio };
 }

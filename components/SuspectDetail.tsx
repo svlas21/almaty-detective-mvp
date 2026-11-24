@@ -4,7 +4,7 @@ import { useState } from "react";
 import RichText, { tp } from "@/components/RichText";
 import { img } from "@/lib/img";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
-import InterrogationProtocol from "@/components/InterrogationProtocol";
+import InterrogationProtocol, { VoicedAnswer } from "@/components/InterrogationProtocol";
 
 interface CollectedEvidenceItem {
   id: string;
@@ -23,7 +23,7 @@ interface TopicItem {
 interface SuspectDetailProps {
   suspect: SuspectListItem;
   collectedEvidence: CollectedEvidenceItem[];
-  reaction: { evidenceName: string; text: string } | null;
+  reaction: { evidenceName: string; text: string; audio?: string | null } | null;
   confession: string | null;
   presentingId: string | null;
   /** Улики, которые этому персонажу уже предъявляли */
@@ -118,7 +118,11 @@ export default function SuspectDetail({
           </div>
         )}
 
-        <RichText text={suspect.intro_text} className="dossier-quote" />
+        {suspect.intro_audio_url && suspect.intro_text ? (
+          <VoicedAnswer text={suspect.intro_text} src={suspect.intro_audio_url} className="dossier-quote" />
+        ) : (
+          <RichText text={suspect.intro_text} className="dossier-quote" />
+        )}
       </div>
 
       {/* «В розыске» (Дело №9704) — псевдоним/поддельный документ, лично не
@@ -270,7 +274,11 @@ export default function SuspectDetail({
               {reaction && (
                 <div className="dossier-reaction">
                   <div className="dossier-reaction-label">{tp(reaction.evidenceName)}</div>
-                  <RichText text={reaction.text} className="dossier-reaction-text" />
+                  {reaction.audio ? (
+                    <VoicedAnswer key={reaction.audio} text={reaction.text} src={reaction.audio} className="dossier-reaction-text" />
+                  ) : (
+                    <RichText text={reaction.text} className="dossier-reaction-text" />
+                  )}
                 </div>
               )}
 

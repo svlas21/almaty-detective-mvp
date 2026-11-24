@@ -13,11 +13,11 @@ export interface InterrogationQuestion {
   audio_url?: string | null;
 }
 
-function VoicedAnswer({ text, src }: { text: string; src: string }) {
+export function VoicedAnswer({ text, src, className = "dossier-answer" }: { text: string; src: string; className?: string }) {
   const [spoken, setSpoken] = useState(0);
   return (
     <div className="voiced-answer">
-      <RichText text={text} className="dossier-answer" animate spoken={spoken} />
+      <RichText text={text} className={className} animate spoken={spoken} />
       <div className="voiced-answer-btn">
         <VoiceButton src={src} compact label="Слушать" onProgress={setSpoken} />
       </div>

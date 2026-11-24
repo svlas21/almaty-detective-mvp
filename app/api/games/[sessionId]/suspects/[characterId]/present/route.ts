@@ -303,7 +303,9 @@ export async function POST(
     })
     .eq("session_id", sessionId);
 
-  const response: { reaction: string; confession?: string } = { reaction };
+  // Озвучка — только если реплика пришла из правила целиком (не заглушка)
+  const audio = ruleResult && ruleResult.text === reaction ? ruleResult.audio ?? null : null;
+  const response: { reaction: string; confession?: string; audio?: string | null } = { reaction, audio };
 
   if (
     character.confession_requires_evidence &&
