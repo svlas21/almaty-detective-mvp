@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
 import { requireOnSite } from "@/lib/onSite";
 import { resolveReactionRules, type ReactionRule } from "@/lib/graphRules";
 import { isFemaleName } from "@/lib/gender";
@@ -277,6 +278,7 @@ export async function POST(
   const viewedReactionKey = `${characterId}:${evidenceId}`;
   const viewedReactions = Array.from(new Set([...(state.viewed_reactions ?? []), viewedReactionKey]));
 
+  const gm = await gameMinutes(db, sessionId);
   await db
     .from("session_state")
     .update({
@@ -285,6 +287,7 @@ export async function POST(
       viewed_reactions: viewedReactions,
       log: [
         ...(state.log ?? []),
+        ...stamp([
         {
           type: "present",
           characterName: character.name,
@@ -293,6 +296,7 @@ export async function POST(
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
+        ], gm),
       ],
     })
     .eq("session_id", sessionId);

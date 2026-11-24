@@ -19,6 +19,7 @@ import SuspectDetail from "@/components/SuspectDetail";
 import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
 import PhoneCallOverlay, { PendingCall } from "@/components/PhoneCallOverlay";
+import CaseJournal, { type JournalEntry } from "@/components/CaseJournal";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
@@ -44,11 +45,7 @@ interface LockedLocation {
 
 type MapLocation = UnlockedLocation | LockedLocation;
 
-interface LogEntry {
-  type: string;
-  text: string;
-  at: string;
-}
+type LogEntry = JournalEntry;
 
 interface CollectedEvidenceItem {
   id: string;
@@ -844,20 +841,7 @@ export default function GameScreen() {
           <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} />
         )}
 
-        {tab === "log" && (
-          <div className="card">
-            <h2>Журнал действий</h2>
-            {state.log.length === 0 && <p className="muted">Пока пусто.</p>}
-            {[...state.log].reverse().map((entry, i) => (
-              <div key={i} className="log-entry">
-                <div className="time">
-                  {new Date(entry.at).toLocaleTimeString("ru-RU")}
-                </div>
-                {tp(entry.text)}
-              </div>
-            ))}
-          </div>
-        )}
+        {tab === "log" && <CaseJournal entries={state.log} />}
 
         {tab === "help" && (
           <div className="card">

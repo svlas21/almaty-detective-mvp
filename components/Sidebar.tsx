@@ -16,7 +16,7 @@ const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
   { id: "expertise", icon: "🧪", label: "Экспертиза" },
   { id: "evidence", icon: "🗂", label: "Улики" },
   { id: "accuse", icon: "⚖", label: "Обвинение" },
-  { id: "log", icon: "🕒", label: "Журнал" },
+  { id: "log", icon: "📒", label: "Ежедневник" },
   { id: "help", icon: "❓", label: "Помощь" },
 ];
 

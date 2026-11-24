@@ -54,7 +54,7 @@ export async function POST(
   // "found" (реальная находка) отличается от "miss" (декой/неверная догадка).
   const appendLog = (entry: { outcome: "found" | "miss"; evidenceName?: string }) => [
     ...(stateForLog?.log ?? []),
-    { type: "evidence" as const, at: new Date().toISOString(), ...entry },
+    { type: "evidence" as const, at: new Date().toISOString(), gm: updatedSession.elapsed_minutes, ...entry },
   ];
 
   // evidenceId может быть обманкой из case_decoy_categories — категорией

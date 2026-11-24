@@ -51,7 +51,13 @@ export async function POST(
         discovered_characters: mergedCharacters,
         log: [
           ...(state.log ?? []),
-          { type: "travel", text: `Прибыли: ${targetRes.data?.name ?? "локация"}`, at: new Date().toISOString() },
+          {
+            type: "travel",
+            text: `Прибыли: ${targetRes.data?.name ?? "локация"}`,
+            locationName: targetRes.data?.name ?? null,
+            at: new Date().toISOString(),
+            gm: sessionRes.data.elapsed_minutes + TIME_COSTS.TRAVEL_BETWEEN_LOCATIONS,
+          },
         ],
       })
       .eq("session_id", sessionId),

@@ -3032,3 +3032,187 @@ body {
   .debrief { padding: 22px 18px 26px; }
   .debrief-step { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ============================================================
+   Ежедневник следователя (components/CaseJournal.tsx)
+   ============================================================ */
+.journal { max-width: 980px; margin: 0 auto; padding: 8px 0 40px; }
+
+.journal-head { text-align: center; margin: 12px 0 22px; }
+.journal-case {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #c4553f;
+}
+.journal-title {
+  margin: 6px 0 4px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #efe7d4;
+}
+.journal-sub { margin: 0; font-family: var(--font-pt-serif), Georgia, serif; font-style: italic; color: #9a907d; }
+
+.journal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 18px;
+  padding: 6px;
+  border: 1px solid #3a352d;
+  border-radius: 999px;
+  background: #1b1915;
+}
+.journal-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a39a87;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.journal-filter:hover { color: #efe7d4; }
+.journal-filter.is-active { background: #3a352d; color: #efe7d4; }
+.journal-filter:focus { outline: none; }
+.journal-filter:focus-visible { outline: 2px solid #c4553f; outline-offset: 1px; }
+.journal-filter-count { font-size: 11px; opacity: 0.65; }
+
+.journal-page {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 3px;
+  padding: 28px 36px 32px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 0 70px rgba(196, 183, 144, 0.35);
+}
+
+.journal-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 22px;
+  padding: 12px 16px;
+  border: 1px solid var(--paper-shadow);
+  border-radius: 6px;
+  background: #f6f1e3;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 16px;
+  color: var(--ink);
+}
+.journal-search:focus { outline: none; border-color: var(--stamp); box-shadow: 0 0 0 3px rgba(156, 43, 31, 0.12); }
+
+.journal-empty { margin: 8px 0 0; font-family: var(--font-pt-serif), Georgia, serif; font-style: italic; color: var(--ink-soft); }
+
+.journal-day + .journal-day { margin-top: 26px; }
+.journal-day-title {
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--paper-shadow);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+}
+
+.journal-list { list-style: none; margin: 0; padding: 0; }
+.journal-item { border-bottom: 1px solid rgba(196, 183, 144, 0.45); }
+.journal-item:last-child { border-bottom: none; }
+
+.journal-row {
+  display: grid;
+  grid-template-columns: 34px 52px 118px minmax(0, 1fr) 18px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 4px;
+  list-style: none;
+}
+summary.journal-row { cursor: pointer; border-radius: 4px; }
+summary.journal-row::-webkit-details-marker { display: none; }
+summary.journal-row:hover { background: rgba(42, 35, 24, 0.04); }
+summary.journal-row:focus { outline: none; }
+summary.journal-row:focus-visible { outline: 2px solid var(--stamp); outline-offset: -2px; }
+
+.journal-n { font-family: var(--font-jetbrains-mono), monospace; font-size: 13px; color: var(--ink-soft); text-align: right; }
+.journal-time { font-family: var(--font-jetbrains-mono), monospace; font-size: 13px; color: var(--ink-soft); }
+
+.journal-tag {
+  justify-self: start;
+  padding: 2px 7px;
+  border: 1px solid var(--paper-shadow);
+  border-radius: 3px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.journal-tag.is-found { border-color: var(--militia); color: var(--militia); font-weight: 700; }
+.journal-tag.is-fail { border-color: var(--paper-shadow); color: var(--ink-soft); text-decoration: line-through; }
+.journal-tag.is-done { border: 2px solid var(--stamp); color: var(--stamp); font-weight: 800; transform: rotate(-2deg); }
+
+.journal-text { font-family: var(--font-pt-serif), Georgia, serif; font-size: 16px; line-height: 1.45; text-wrap: pretty; }
+.journal-main { color: var(--ink); }
+.journal-item.is-travel .journal-main {
+  text-decoration: underline;
+  text-decoration-color: rgba(196, 85, 63, 0.6);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.journal-item.is-evidence .journal-main { font-weight: 700; }
+.journal-note { color: var(--ink-soft); font-style: italic; }
+
+.journal-more {
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--ink-soft);
+  border-bottom: 1.5px solid var(--ink-soft);
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+  align-self: center;
+}
+details[open] > summary .journal-more { transform: rotate(45deg); }
+
+.journal-details {
+  margin: 0 4px 14px 106px;
+  padding: 10px 14px;
+  border-left: 2px solid var(--paper-shadow);
+  background: rgba(255, 255, 255, 0.35);
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .journal-page { padding: 18px 14px 22px; }
+  .journal-filters { flex-wrap: nowrap; justify-content: flex-start; width: auto; overflow-x: auto; scrollbar-width: none; }
+  .journal-filter { flex: none; }
+  .journal-row { grid-template-columns: 40px minmax(0, 1fr) 14px; gap: 4px 10px; }
+  .journal-n { display: none; }
+  .journal-tag { grid-column: 2; grid-row: 1; }
+  .journal-time { grid-column: 1; grid-row: 1 / span 2; }
+  .journal-text { grid-column: 2; }
+  .journal-more { grid-column: 3; grid-row: 1; }
+  .journal-details { margin-left: 50px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journal-more, .journal-filter { transition: none; }
+}

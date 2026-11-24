@@ -2,6 +2,7 @@
 
 import RichText, { tp } from "@/components/RichText";
 import { useState } from "react";
+import { gameDate, MONTHS_NOM, WEEKDAYS } from "@/lib/gameClock";
 
 export interface PendingCall {
   id: string;
@@ -113,11 +114,6 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose, elapsedMinut
   );
 }
 
-/** Начало дела 9704: понедельник, 25 ноября 1996 года, 9:10 (вводная). */
-const CASE_START = new Date(1996, 10, 25, 9, 10);
-const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-const WEEKDAYS = ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"];
-
 /**
  * Записка: «повествование: «текст записки»». Если в тексте нет кавычек-ёлочек,
  * это не записка, а обычная сцена.
@@ -155,7 +151,7 @@ function SceneOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOver
   const note = isNote ? splitNote(call.dialogueText) : null;
 
   if (note) {
-    const day = new Date(CASE_START.getTime() + (elapsedMinutes ?? 0) * 60_000);
+    const day = gameDate(elapsedMinutes ?? 0);
     return (
       <div className="phone-call-overlay">
         <div className="scene-window" role="dialog" aria-label={call.callerRole ?? call.callerName}>
@@ -173,7 +169,7 @@ function SceneOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOver
               <span />
             </div>
             <div className="calendar-sheet-date">
-              <span className="calendar-sheet-month">{MONTHS[day.getMonth()]}</span>
+              <span className="calendar-sheet-month">{MONTHS_NOM[day.getMonth()]}</span>
               <span className="calendar-sheet-day">{day.getDate()}</span>
               <span className="calendar-sheet-weekday">{WEEKDAYS[day.getDay()]}</span>
             </div>

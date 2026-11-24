@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
 import { requireOnSite } from "@/lib/onSite";
 
 export const dynamic = "force-dynamic";
@@ -63,8 +64,9 @@ export async function POST(
   const viewedQuestions = merge(state.viewed_questions ?? [], [`${characterId}:${questionIndex}`]);
 
   const question = (character.fixed_questions ?? [])[questionIndex] as
-    | { grants_evidence_id?: string }
+    | { q?: string; a?: string; grants_evidence_id?: string }
     | undefined;
+  const firstView = !(state.viewed_questions ?? []).includes(`${characterId}:${questionIndex}`);
   const grantsEvidenceId = question?.grants_evidence_id;
 
   let discoveredEvidence = state.discovered_evidence ?? [];
@@ -72,7 +74,17 @@ export async function POST(
   // Журнал расследования (Дело №9704): улика, выданная точечным вопросом
   // протокола, тоже должна оставить след в журнале — без этого раскрытие
   // ответа с грантом проходило вообще без записи в log.
-  let log = state.log ?? [];
+  // Ежедневник: каждый впервые прочитанный вопрос протокола — отдельная запись.
+  const newEntries: Record<string, unknown>[] = [];
+  if (firstView && question?.q) {
+    newEntries.push({
+      type: "question",
+      characterName: character.name,
+      question: question.q,
+      answerText: question.a ?? "",
+      at: new Date().toISOString(),
+    });
+  }
 
   if (grantsEvidenceId) {
     const { data: grantedEvidence } = await db
@@ -85,18 +97,19 @@ export async function POST(
     if (grantedEvidence) {
       discoveredEvidence = merge(discoveredEvidence, [grantedEvidence.id]);
       collectedEvidence = merge(collectedEvidence, [grantedEvidence.id]);
-      log = [
-        ...log,
-        {
-          type: "evidence",
-          outcome: "found",
-          evidenceName: grantedEvidence.name,
-          source: character.name,
-          at: new Date().toISOString(),
-        },
-      ];
+      newEntries.push({
+        type: "evidence",
+        outcome: "found",
+        evidenceName: grantedEvidence.name,
+        source: character.name,
+        at: new Date().toISOString(),
+      });
     }
   }
+
+  const log = newEntries.length
+    ? [...(state.log ?? []), ...stamp(newEntries, await gameMinutes(db, sessionId))]
+    : state.log ?? [];
 
   const { error: updateError } = await db
     .from("session_state")

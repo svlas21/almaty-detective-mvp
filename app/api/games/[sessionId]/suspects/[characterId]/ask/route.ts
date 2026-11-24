@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
 import { requireOnSite } from "@/lib/onSite";
 
 export const dynamic = "force-dynamic";
@@ -156,6 +157,7 @@ export async function POST(
       discovered_evidence: discoveredEvidence,
       log: [
         ...(state.log ?? []),
+        ...stamp([
         {
           type: "ask",
           characterName: character.name,
@@ -164,6 +166,7 @@ export async function POST(
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
+        ], await gameMinutes(db, sessionId)),
       ],
     })
     .eq("session_id", sessionId);

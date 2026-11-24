@@ -106,7 +106,7 @@ export async function GET(
     );
     state.log = [
       ...(state.log ?? []),
-      ...autoGranted.map((e) => ({ type: "evidence", outcome: "found", evidenceName: e.name, source: "ГУВД", at: now })),
+      ...autoGranted.map((e) => ({ type: "evidence", outcome: "found", evidenceName: e.name, source: "ГУВД", at: now, gm: session.elapsed_minutes })),
     ];
     stateUpdate.collected_evidence = state.collected_evidence;
     stateUpdate.discovered_evidence = state.discovered_evidence;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { stamp } from "@/lib/journal";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function POST(
 
   const { data: session, error: sessionError } = await db
     .from("game_sessions")
-    .select("purchase_id")
+    .select("purchase_id, elapsed_minutes")
     .eq("id", sessionId)
     .single();
 
@@ -42,7 +43,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("viewed_reactions")
+    .select("viewed_reactions, log")
     .eq("session_id", sessionId)
     .single();
 
@@ -86,14 +87,26 @@ export async function POST(
       return optionCorrect && reactionSeen;
     });
 
+  // Ежедневник: итог второй части обвинения
+  const writeLog = db
+    .from("session_state")
+    .update({
+      log: [
+        ...(state.log ?? []),
+        ...stamp([{ type: "accuse", stage: "accomplices", correct, at: new Date().toISOString() }], session.elapsed_minutes ?? null),
+      ],
+    })
+    .eq("session_id", sessionId);
+
   if (!correct) {
+    await writeLog;
     return NextResponse.json({ correct: false });
   }
 
-  await db
-    .from("game_sessions")
-    .update({ status: "finished", finished_at: new Date().toISOString() })
-    .eq("id", sessionId);
+  await Promise.all([
+    writeLog,
+    db.from("game_sessions").update({ status: "finished", finished_at: new Date().toISOString() }).eq("id", sessionId),
+  ]);
 
   return NextResponse.json({ correct: true, endingText: accusation.ending_text, debrief: accusation.debrief ?? null });
 }

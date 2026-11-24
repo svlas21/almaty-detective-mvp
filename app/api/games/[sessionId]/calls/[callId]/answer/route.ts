@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function POST(
 
   const { data: call, error: callError } = await db
     .from("phone_calls")
-    .select("dialogue_text, unlocks_location_id, grants_evidence_id, caller_name, characters(name)")
+    .select("dialogue_text, unlocks_location_id, grants_evidence_id, caller_name, caller_role, style, characters(name)")
     .eq("id", callId)
     .single();
 
@@ -88,13 +89,17 @@ export async function POST(
       collected_evidence: collectedEvidence,
       log: [
         ...(state.log ?? []),
+        ...stamp([
         {
           type: "call",
           callerName,
+          callerRole: call.caller_role ?? null,
+          style: call.style ?? null,
           dialogueText: call.dialogue_text,
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
+        ], await gameMinutes(db, sessionId)),
       ],
     })
     .eq("session_id", sessionId);

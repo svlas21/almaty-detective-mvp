@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { stamp } from "@/lib/journal";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function POST(
 
   const { data: session, error: sessionError } = await db
     .from("game_sessions")
-    .select("purchase_id")
+    .select("purchase_id, elapsed_minutes")
     .eq("id", sessionId)
     .single();
 
@@ -42,7 +43,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("collected_evidence")
+    .select("collected_evidence, log")
     .eq("session_id", sessionId)
     .single();
 
@@ -78,6 +79,25 @@ export async function POST(
     allSubmittedActuallyCollected &&
     organizerCharacterId === accusation.correct_organizer_character_id &&
     requiredEvidenceIds.every((id) => submittedEvidenceIds.includes(id));
+
+  // Ежедневник: попытка обвинения (без подсказки, каких улик не хватило)
+  const { data: accused } = await db
+    .from("characters")
+    .select("name")
+    .eq("id", organizerCharacterId ?? "00000000-0000-0000-0000-000000000000")
+    .maybeSingle();
+  await db
+    .from("session_state")
+    .update({
+      log: [
+        ...(state.log ?? []),
+        ...stamp(
+          [{ type: "accuse", stage: "organizer", characterName: accused?.name ?? "", correct, at: new Date().toISOString() }],
+          session.elapsed_minutes ?? null
+        ),
+      ],
+    })
+    .eq("session_id", sessionId);
 
   return NextResponse.json({ correct });
 }
