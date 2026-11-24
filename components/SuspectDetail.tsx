@@ -66,15 +66,19 @@ export default function SuspectDetail({
   // а не по label/name, чтобы не зависеть от текстовых совпадений.
   const visibleTopics = topics.filter((t) => t.subject_character_id !== suspect.id);
 
-  // У эксперта две вкладки: вещи, документы и заключения — на экспертизу,
-  // показания свидетелей — обсудить.
-  const [expertTab, setExpertTab] = useState<"submit" | "discuss">("submit");
-  const isDiscuss = suspect.is_expert === true && expertTab === "discuss";
-  const shownEvidence = suspect.is_expert
-    ? collectedEvidence.filter((e) => (e.kind === "testimony") === isDiscuss)
-    : collectedEvidence;
+  // Две вкладки: вещи, документы и заключения — отдельно, показания — отдельно.
+  // У эксперта: «на экспертизу» / «обсудить», у остальных: «предъявить» / «зачитать».
+  const isExpert = suspect.is_expert === true;
+  const [evidenceTab, setEvidenceTab] = useState<"items" | "testimony">("items");
+  const isTestimonyTab = evidenceTab === "testimony";
+  const shownEvidence = collectedEvidence.filter((e) => (e.kind === "testimony") === isTestimonyTab);
   const testimonyCount = collectedEvidence.filter((e) => e.kind === "testimony").length;
-  const doneLabel = isDiscuss ? "Обсуждено" : "Передано на экспертизу";
+  const tabLabels = isExpert
+    ? { items: "Передать на экспертизу", testimony: "Обсудить показания" }
+    : { items: "Предъявить улику", testimony: "Зачитать показания" };
+  const doneLabel = isExpert
+    ? isTestimonyTab ? "Обсуждено" : "Передано на экспертизу"
+    : isTestimonyTab ? "Зачитано" : "Предъявлено";
 
   return (
     <div className="dossier-page">
@@ -182,36 +186,32 @@ export default function SuspectDetail({
           {(suspect.is_suspect === true || suspect.is_expert === true || suspect.has_reactions === true) &&
             (suspect.fixed_questions?.length ?? 0) > 0 && (
             <div className="dossier-card">
-              {suspect.is_expert ? (
-                <div className="dossier-tabs" role="tablist">
-                  <button
-                    role="tab"
-                    aria-selected={!isDiscuss}
-                    className={`dossier-tabs-btn${!isDiscuss ? " is-active" : ""}`}
-                    onClick={() => setExpertTab("submit")}
-                  >
-                    Передать на экспертизу
-                    <span className="dossier-tabs-count">{collectedEvidence.length - testimonyCount}</span>
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={isDiscuss}
-                    className={`dossier-tabs-btn${isDiscuss ? " is-active" : ""}`}
-                    onClick={() => setExpertTab("discuss")}
-                  >
-                    Обсудить показания
-                    <span className="dossier-tabs-count">{testimonyCount}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="dossier-section-label">Предъявить улику</div>
-              )}
+              <div className="dossier-tabs" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={!isTestimonyTab}
+                  className={`dossier-tabs-btn${!isTestimonyTab ? " is-active" : ""}`}
+                  onClick={() => setEvidenceTab("items")}
+                >
+                  {tabLabels.items}
+                  <span className="dossier-tabs-count">{collectedEvidence.length - testimonyCount}</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={isTestimonyTab}
+                  className={`dossier-tabs-btn${isTestimonyTab ? " is-active" : ""}`}
+                  onClick={() => setEvidenceTab("testimony")}
+                >
+                  {tabLabels.testimony}
+                  <span className="dossier-tabs-count">{testimonyCount}</span>
+                </button>
+              </div>
 
               {shownEvidence.length === 0 ? (
                 <div className="dossier-evidence-empty">
                   <div className="dossier-evidence-empty-icon" />
                   <span>
-                    {isDiscuss
+                    {isTestimonyTab
                       ? "Показаний пока нет — допросите свидетелей."
                       : "Улик для предъявления пока нет — соберите их на месте происшествия."}
                   </span>
@@ -227,20 +227,16 @@ export default function SuspectDetail({
                       onClick={() => (presentingId ? undefined : onPresent(e))}
                       title={
                         presentedIds?.has(e.id)
-                          ? suspect.is_expert
-                            ? isDiscuss
-                              ? "Уже обсуждали — нажмите, чтобы перечитать ответ"
-                              : "Уже передавали на экспертизу — нажмите, чтобы перечитать ответ"
-                            : "Уже предъявляли — нажмите, чтобы перечитать ответ"
+                          ? `${doneLabel} — нажмите, чтобы перечитать ответ`
                           : undefined
                       }
                     >
                       {tp(e.name)}
                       {presentedIds?.has(e.id) &&
-                        (suspect.is_expert ? (
+                        (isExpert ? (
                           <span className="dossier-submitted-status">{doneLabel}</span>
                         ) : (
-                          <span className="dossier-presented-mark">Предъявлено</span>
+                          <span className="dossier-presented-mark">{doneLabel}</span>
                         ))}
                     </div>
                   ))}
