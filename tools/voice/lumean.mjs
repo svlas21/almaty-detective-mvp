@@ -193,7 +193,12 @@ function speak(text) {
 const loadLines = (ch) => {
   const f = join(HERE, "lines", `${args().lines || `${ch}-test`}.json`);
   if (!existsSync(f)) fail(`Нет файла реплик ${f}`);
-  return JSON.parse(readFileSync(f, "utf8")).map((l) => ({ ...l, text: speak(l.text) }));
+  // --only scene3 (или scene1,scene3): озвучить только эти реплики, остальные файлы не трогать
+  const only = args().only ? String(args().only).split(",").map((x) => x.trim()) : null;
+  const all = JSON.parse(readFileSync(f, "utf8")).map((l) => ({ ...l, text: speak(l.text) }));
+  const picked = only ? all.filter((l) => only.includes(l.id)) : all;
+  if (only && !picked.length) fail(`В ${f} нет реплик ${only.join(", ")}`);
+  return picked;
 };
 
 async function setup() {
