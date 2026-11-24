@@ -68,7 +68,8 @@ export async function GET(
     db.from("evidence").select("id, name, requires_any").eq("case_id", caseId).eq("auto_grant", true),
     db
       .from("phone_calls")
-      .select("id, caller_role, caller_name, style, unlock_condition_key, dialogue_text, unlocks_location_id, order_index, characters(name)")
+      // "*": колонка audio_url появляется миграцией 046; до неё запрос не падает
+      .select("*, characters(name)")
       .eq("case_id", caseId)
       .order("order_index", { ascending: true }),
     db.from("evidence").select("id").eq("case_id", caseId).eq("name", "Автомобиль потерпевшего").maybeSingle(),
@@ -196,6 +197,7 @@ export async function GET(
         callerRole: pendingCallRow.caller_role,
         dialogueText: pendingCallRow.dialogue_text,
         style: pendingCallRow.style ?? "mobile",
+        audioUrl: (pendingCallRow as { audio_url?: string | null }).audio_url ?? null,
       }
     : null;
 
