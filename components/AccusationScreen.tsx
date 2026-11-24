@@ -17,6 +17,8 @@ interface Person {
   id: string;
   name?: string;
   portrait_url?: string | null;
+  /** Игрок уже встретил этого человека в игре */
+  unlocked?: boolean;
 }
 
 const KIND_SECTIONS: { kind: string; title: string }[] = [
@@ -297,11 +299,18 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
   }
 
   const ready = !!selectedOrganizerId && selectedEvidenceIds.size >= 2;
+  // Кандидаты появляются по мере расследования: только те, кого игрок уже встретил.
+  // Сколько их всего, не показываем — это подсказка.
+  const knownOptions = organizerOptions.filter((o) => personById(o.character_id)?.unlocked);
+  const hiddenCount = organizerOptions.length - knownOptions.length;
   return (
     <Sheet step={0}>
       <h3 className="accuse-q">1. Кто организовал похищение и убийство Игоря Сартакова?</h3>
+      {knownOptions.length === 0 && (
+        <p className="accuse-muted">Пока обвинять некого. Фигуранты появятся здесь, когда вы с ними познакомитесь.</p>
+      )}
       <div className="accuse-suspects" role="radiogroup">
-        {organizerOptions.map((option) => {
+        {knownOptions.map((option) => {
           const person = personById(option.character_id);
           const on = selectedOrganizerId === option.character_id;
           return (
@@ -321,10 +330,17 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
             </button>
           );
         })}
+        {hiddenCount > 0 && knownOptions.length > 0 && (
+          <div className="accuse-suspect-more" aria-hidden="true">
+            <span className="accuse-suspect-more-mark">?</span>
+            <span>Новые фигуранты появятся по ходу расследования</span>
+          </div>
+        )}
       </div>
 
       <h3 className="accuse-q">2. На каких доказательствах строится обвинение?</h3>
-      <p className="accuse-muted">Отметьте не меньше двух.</p>
+      <p className="accuse-muted">Отметьте не меньше двух. Здесь только то, что уже лежит в папке дела.</p>
+      {collectedEvidence.length === 0 && <p className="accuse-muted">Папка пока пуста.</p>}
       {KIND_SECTIONS.map((sec) => {
         const items = collectedEvidence.filter((e) => (e.kind ?? "thing") === sec.kind);
         if (!items.length) return null;

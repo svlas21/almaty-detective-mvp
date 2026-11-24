@@ -3472,6 +3472,36 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
   animation: stamp-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 
+.accuse-suspect-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border: 1.5px dashed var(--paper-shadow);
+  border-radius: 4px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.accuse-suspect-more-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  border: 1.5px dashed var(--paper-shadow);
+  border-radius: 3px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 36px;
+  font-style: normal;
+  color: var(--paper-shadow);
+}
+
 /* выбор доказательств */
 .accuse-ev-group + .accuse-ev-group { margin-top: 18px; }
 .accuse-ev-title {
