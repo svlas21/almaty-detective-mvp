@@ -36,6 +36,9 @@ const marckScript = Marck_Script({
 export const metadata: Metadata = {
   title: "Детектив Алматы",
   description: "Онлайн детективная игра про Алматы (MVP-скелет)",
+  // Автоперевод браузера (Google Translate) переписывает текст на странице,
+  // и React падает с NotFoundError: insertBefore. Игра и так на русском.
+  other: { google: "notranslate" },
 };
 
 export default function RootLayout({
@@ -44,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${ptMono.variable} ${marckScript.variable}`}>
+    <html lang="ru" translate="no" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${ptMono.variable} ${marckScript.variable}`}>
       <body>{children}</body>
     </html>
   );
