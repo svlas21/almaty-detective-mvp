@@ -3216,3 +3216,145 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
 @media (prefers-reduced-motion: reduce) {
   .journal-more, .journal-filter { transition: none; }
 }
+
+/* ============================================================
+   Памятка следователю (components/HelpGuide.tsx)
+   ============================================================ */
+.help { max-width: 860px; margin: 0 auto; padding: 12px 0 40px; }
+
+.help-sheet {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 3px;
+  padding: 40px 52px 44px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 0 70px rgba(196, 183, 144, 0.35);
+}
+
+.help-head { text-align: center; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 3px double var(--paper-shadow); }
+.help-org {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.help-title {
+  margin: 10px 0 6px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: clamp(30px, 4.5vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.help-meta {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border: 1.5px solid var(--stamp);
+  border-radius: 3px;
+  transform: rotate(-2deg);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+}
+
+.help-list { list-style: none; margin: 0; padding: 0; }
+.help-item { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; padding: 18px 0; border-bottom: 1px dashed var(--paper-shadow); }
+.help-item:last-child { border-bottom: none; }
+.help-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.help-item-title {
+  margin: 6px 0 8px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stamp);
+}
+.help-item-body p,
+.help-steps li {
+  margin: 0 0 8px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.help-item-body p:last-child { margin-bottom: 0; }
+.help-item-body b { font-weight: 700; }
+.help-steps { margin: 4px 0 10px; padding-left: 22px; }
+
+.help-legend { margin: 12px 0 12px; padding: 12px 14px; background: rgba(255, 255, 255, 0.35); border-left: 2px solid var(--paper-shadow); }
+.help-legend-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+.help-chip {
+  justify-self: start;
+  padding: 3px 8px;
+  border: 1px dashed var(--paper-shadow);
+  border-radius: 3px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.help-chip.is-found { border: 2px solid var(--stamp); color: var(--stamp); font-weight: 800; transform: rotate(-2deg); }
+.help-chip.is-muted { opacity: 0.7; }
+
+.help-tips {
+  margin-top: 26px;
+  padding: 16px 20px 16px 22px;
+  background: #f1ead8;
+  border: 1px solid var(--paper-shadow);
+  border-left: 4px solid var(--stamp);
+  border-radius: 0;
+}
+.help-tips-label {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.help-tips ul { margin: 0; padding-left: 18px; }
+.help-tips li {
+  margin: 4px 0;
+  font-family: var(--font-hand), cursive;
+  font-size: 22px;
+  line-height: 1.3;
+  color: #2b4a8a;
+}
+
+@media (max-width: 640px) {
+  .help-sheet { padding: 24px 16px 26px; }
+  .help-item { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
+  .help-num { width: 28px; height: 28px; font-size: 13px; }
+  .help-legend-row { grid-template-columns: 1fr; gap: 4px; }
+}

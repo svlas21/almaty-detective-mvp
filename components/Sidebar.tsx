@@ -17,7 +17,7 @@ const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
   { id: "evidence", icon: "🗂", label: "Улики" },
   { id: "accuse", icon: "⚖", label: "Обвинение" },
   { id: "log", icon: "📒", label: "Ежедневник" },
-  { id: "help", icon: "❓", label: "Помощь" },
+  { id: "help", icon: "📋", label: "Памятка" },
 ];
 
 // process.env.NODE_ENV инлайнится сборщиком и в клиентском бандле —

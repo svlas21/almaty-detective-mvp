@@ -20,6 +20,7 @@ import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
 import PhoneCallOverlay, { PendingCall } from "@/components/PhoneCallOverlay";
 import CaseJournal, { type JournalEntry } from "@/components/CaseJournal";
+import HelpGuide from "@/components/HelpGuide";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
@@ -843,15 +844,7 @@ export default function GameScreen() {
 
         {tab === "log" && <CaseJournal entries={state.log} />}
 
-        {tab === "help" && (
-          <div className="card">
-            <h2>Как играть</h2>
-            <p>1. На карте кликайте открытые точки → «Осмотреть».</p>
-            <p>2. На месте нажмите «Да» на вопрос про улики и выбирайте варианты из облака.</p>
-            <p>3. Собранные улики смотрите во вкладке «Улики».</p>
-            <p>4. Когда будете готовы — переходите в «Обвинение» (скоро).</p>
-          </div>
-        )}
+        {tab === "help" && <HelpGuide />}
           </>
         )}
       </div>
