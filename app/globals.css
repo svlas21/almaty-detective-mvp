@@ -479,6 +479,12 @@ body {
   color: var(--paper);
 }
 
+/* Всё предъявлено — счётчик гаснет */
+.dossier-tabs-btn .dossier-tabs-count.is-zero {
+  background: rgba(42, 35, 24, 0.08);
+  color: var(--ink-soft);
+}
+
 @media (max-width: 480px) {
   .dossier-tabs-btn { flex: 1; justify-content: center; text-align: center; padding: 8px 6px 9px; font-size: 10.5px; letter-spacing: 0.04em; gap: 6px; line-height: 1.3; }
 }

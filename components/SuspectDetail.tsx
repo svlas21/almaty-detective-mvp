@@ -74,7 +74,10 @@ export default function SuspectDetail({
   const [evidenceTab, setEvidenceTab] = useState<"items" | "testimony">("items");
   const isTestimonyTab = evidenceTab === "testimony";
   const shownEvidence = collectedEvidence.filter((e) => (e.kind === "testimony") === isTestimonyTab);
-  const testimonyCount = collectedEvidence.filter((e) => e.kind === "testimony").length;
+  // Счётчик на вкладке — сколько ещё не предъявляли (всё предъявлено → 0).
+  const notDone = collectedEvidence.filter((e) => !presentedIds?.has(e.id));
+  const leftTestimony = notDone.filter((e) => e.kind === "testimony").length;
+  const leftItems = notDone.length - leftTestimony;
   const tabLabels = isExpert
     ? { items: "Передать на экспертизу", testimony: "Обсудить показания" }
     : { items: "Предъявить улику", testimony: "Зачитать показания" };
@@ -202,7 +205,7 @@ export default function SuspectDetail({
                   onClick={() => setEvidenceTab("items")}
                 >
                   {tabLabels.items}
-                  <span className="dossier-tabs-count">{collectedEvidence.length - testimonyCount}</span>
+                  <span className={`dossier-tabs-count${leftItems === 0 ? " is-zero" : ""}`}>{leftItems}</span>
                 </button>
                 <button
                   role="tab"
@@ -211,7 +214,7 @@ export default function SuspectDetail({
                   onClick={() => setEvidenceTab("testimony")}
                 >
                   {tabLabels.testimony}
-                  <span className="dossier-tabs-count">{testimonyCount}</span>
+                  <span className={`dossier-tabs-count${leftTestimony === 0 ? " is-zero" : ""}`}>{leftTestimony}</span>
                 </button>
               </div>
 
