@@ -31,6 +31,8 @@ export async function POST(
   const { topicId } = await req.json();
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   if (!topicId) {
     return NextResponse.json({ error: "topicId обязателен" }, { status: 400 });
@@ -166,7 +168,7 @@ export async function POST(
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
-        ], await gameMinutes(db, sessionId)),
+        ], await gmPromise),
       ],
     })
     .eq("session_id", sessionId);

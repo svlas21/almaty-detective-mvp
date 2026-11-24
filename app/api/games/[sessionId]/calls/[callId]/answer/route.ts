@@ -17,6 +17,8 @@ export async function POST(
 ) {
   const db = supabaseAdmin();
   const { sessionId, callId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   const { data: state, error: stateError } = await db
     .from("session_state")
@@ -99,7 +101,7 @@ export async function POST(
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
-        ], await gameMinutes(db, sessionId)),
+        ], await gmPromise),
       ],
     })
     .eq("session_id", sessionId);

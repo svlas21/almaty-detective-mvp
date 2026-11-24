@@ -32,14 +32,21 @@ export async function POST(
   const { questionIndex } = (await req.json()) as { questionIndex?: number };
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   if (typeof questionIndex !== "number") {
     return NextResponse.json({ error: "questionIndex обязателен" }, { status: 400 });
   }
 
-  const [offSite, characterRes] = await Promise.all([
+  const [offSite, characterRes, stateRes] = await Promise.all([
     requireOnSite(db, sessionId, characterId),
     db.from("characters").select("case_id, name, fixed_questions").eq("id", characterId).single(),
+    db
+      .from("session_state")
+      .select("discovered_evidence, collected_evidence, viewed_questions, log")
+      .eq("session_id", sessionId)
+      .single(),
   ]);
   if (offSite) return offSite;
   const { data: character, error: characterError } = characterRes;
@@ -48,11 +55,7 @@ export async function POST(
     return NextResponse.json({ error: "Подозреваемый не найден" }, { status: 404 });
   }
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select("discovered_evidence, collected_evidence, viewed_questions, log")
-    .eq("session_id", sessionId)
-    .single();
+  const { data: state, error: stateError } = stateRes;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
@@ -108,7 +111,7 @@ export async function POST(
   }
 
   const log = newEntries.length
-    ? [...(state.log ?? []), ...stamp(newEntries, await gameMinutes(db, sessionId))]
+    ? [...(state.log ?? []), ...stamp(newEntries, await gmPromise)]
     : state.log ?? [];
 
   const { error: updateError } = await db

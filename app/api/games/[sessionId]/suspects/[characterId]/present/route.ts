@@ -117,6 +117,8 @@ export async function POST(
   const { evidenceId } = await req.json();
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   // Состояние, персонаж и улика читаются одновременно (раньше — по очереди);
   // параллельно — проверка «следователь на месте» (lib/onSite.ts)
@@ -278,7 +280,7 @@ export async function POST(
   const viewedReactionKey = `${characterId}:${evidenceId}`;
   const viewedReactions = Array.from(new Set([...(state.viewed_reactions ?? []), viewedReactionKey]));
 
-  const gm = await gameMinutes(db, sessionId);
+  const gm = await gmPromise;
   await db
     .from("session_state")
     .update({
