@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import RichText, { tp } from "@/components/RichText";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol from "@/components/InterrogationProtocol";
@@ -8,6 +9,7 @@ interface CollectedEvidenceItem {
   id: string;
   name: string;
   description: string | null;
+  kind?: "thing" | "testimony" | "expertise" | "document" | null;
 }
 
 interface TopicItem {
@@ -63,6 +65,16 @@ export default function SuspectDetail({
   // (см. supabase/009_topic_subject_character.sql) — сравнение по id,
   // а не по label/name, чтобы не зависеть от текстовых совпадений.
   const visibleTopics = topics.filter((t) => t.subject_character_id !== suspect.id);
+
+  // У эксперта две вкладки: вещи, документы и заключения — на экспертизу,
+  // показания свидетелей — обсудить.
+  const [expertTab, setExpertTab] = useState<"submit" | "discuss">("submit");
+  const isDiscuss = suspect.is_expert === true && expertTab === "discuss";
+  const shownEvidence = suspect.is_expert
+    ? collectedEvidence.filter((e) => (e.kind === "testimony") === isDiscuss)
+    : collectedEvidence;
+  const testimonyCount = collectedEvidence.filter((e) => e.kind === "testimony").length;
+  const doneLabel = isDiscuss ? "Обсуждено" : "Передано на экспертизу";
 
   return (
     <div className="dossier-page">
@@ -170,18 +182,43 @@ export default function SuspectDetail({
           {(suspect.is_suspect === true || suspect.is_expert === true || suspect.has_reactions === true) &&
             (suspect.fixed_questions?.length ?? 0) > 0 && (
             <div className="dossier-card">
-              <div className="dossier-section-label">
-                {suspect.is_expert ? "Передать на экспертизу" : "Предъявить улику"}
-              </div>
+              {suspect.is_expert ? (
+                <div className="dossier-tabs" role="tablist">
+                  <button
+                    role="tab"
+                    aria-selected={!isDiscuss}
+                    className={`dossier-tabs-btn${!isDiscuss ? " is-active" : ""}`}
+                    onClick={() => setExpertTab("submit")}
+                  >
+                    Передать на экспертизу
+                    <span className="dossier-tabs-count">{collectedEvidence.length - testimonyCount}</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={isDiscuss}
+                    className={`dossier-tabs-btn${isDiscuss ? " is-active" : ""}`}
+                    onClick={() => setExpertTab("discuss")}
+                  >
+                    Обсудить показания
+                    <span className="dossier-tabs-count">{testimonyCount}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="dossier-section-label">Предъявить улику</div>
+              )}
 
-              {collectedEvidence.length === 0 ? (
+              {shownEvidence.length === 0 ? (
                 <div className="dossier-evidence-empty">
                   <div className="dossier-evidence-empty-icon" />
-                  <span>Улик для предъявления пока нет — соберите их на месте происшествия.</span>
+                  <span>
+                    {isDiscuss
+                      ? "Показаний пока нет — допросите свидетелей."
+                      : "Улик для предъявления пока нет — соберите их на месте происшествия."}
+                  </span>
                 </div>
               ) : (
                 <div className="dossier-evidence-grid">
-                  {collectedEvidence.map((e) => (
+                  {shownEvidence.map((e) => (
                     <div
                       key={e.id}
                       className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}${
@@ -191,7 +228,9 @@ export default function SuspectDetail({
                       title={
                         presentedIds?.has(e.id)
                           ? suspect.is_expert
-                            ? "Уже передавали на экспертизу — нажмите, чтобы перечитать ответ"
+                            ? isDiscuss
+                              ? "Уже обсуждали — нажмите, чтобы перечитать ответ"
+                              : "Уже передавали на экспертизу — нажмите, чтобы перечитать ответ"
                             : "Уже предъявляли — нажмите, чтобы перечитать ответ"
                           : undefined
                       }
@@ -199,7 +238,7 @@ export default function SuspectDetail({
                       {tp(e.name)}
                       {presentedIds?.has(e.id) &&
                         (suspect.is_expert ? (
-                          <span className="dossier-submitted-status">Передано на экспертизу</span>
+                          <span className="dossier-submitted-status">{doneLabel}</span>
                         ) : (
                           <span className="dossier-presented-mark">Предъявлено</span>
                         ))}
