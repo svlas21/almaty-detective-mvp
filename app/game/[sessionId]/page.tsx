@@ -839,7 +839,7 @@ export default function GameScreen() {
         )}
 
         {tab === "accuse" && (
-          <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} />
+          <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} people={state.allSuspects} />
         )}
 
         {tab === "log" && <CaseJournal entries={state.log} />}

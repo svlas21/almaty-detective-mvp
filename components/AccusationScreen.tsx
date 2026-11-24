@@ -1,12 +1,57 @@
 "use client";
 
 import RichText, { tp } from "@/components/RichText";
+import { SuspectAvatar } from "@/components/SuspectsList";
+import { img } from "@/lib/img";
 import { useEffect, useState } from "react";
 
 interface CollectedEvidenceItem {
   id: string;
   name: string;
   description: string | null;
+  kind?: "thing" | "testimony" | "expertise" | "document" | null;
+  image_url?: string | null;
+}
+
+interface Person {
+  id: string;
+  name?: string;
+  portrait_url?: string | null;
+}
+
+const KIND_SECTIONS: { kind: string; title: string }[] = [
+  { kind: "thing", title: "Вещественные доказательства" },
+  { kind: "expertise", title: "Заключения экспертов" },
+  { kind: "document", title: "Справки и документы" },
+  { kind: "testimony", title: "Показания" },
+];
+
+const STEPS = ["Организатор", "Соучастники", "Дело закрыто"];
+
+function Steps({ current }: { current: number }) {
+  return (
+    <ol className="accuse-steps" aria-label="Этапы обвинения">
+      {STEPS.map((label, i) => (
+        <li key={label} className={`accuse-step${i === current ? " is-current" : ""}${i < current ? " is-done" : ""}`}>
+          <span className="accuse-step-n">{i < current ? "✓" : i + 1}</span>
+          {label}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Sheet({ step, children }: { step: number; children: React.ReactNode }) {
+  return (
+    <div className="accuse">
+      <header className="accuse-head">
+        <div className="accuse-case">Дело № 9704 · ГУВД г. Алматы</div>
+        <h2 className="accuse-title">Обвинительное заключение</h2>
+        <Steps current={step} />
+      </header>
+      <div className="accuse-sheet">{children}</div>
+    </div>
+  );
 }
 
 interface OrganizerOption {
@@ -68,9 +113,12 @@ function DebriefView({ debrief }: { debrief: Debrief }) {
 interface AccusationScreenProps {
   sessionId: string;
   collectedEvidence: CollectedEvidenceItem[];
+  /** Фигуранты дела — для портретов в карточках выбора */
+  people?: Person[];
 }
 
-export default function AccusationScreen({ sessionId, collectedEvidence }: AccusationScreenProps) {
+export default function AccusationScreen({ sessionId, collectedEvidence, people = [] }: AccusationScreenProps) {
+  const personById = (id: string) => people.find((p) => p.id === id);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [organizerOptions, setOrganizerOptions] = useState<OrganizerOption[]>([]);
@@ -164,131 +212,168 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
     }
   }
 
-  if (loading) {
+  if (loading || loadError) {
     return (
-      <div className="card">
-        <h2>Обвинение</h2>
-        <p className="muted">Загрузка…</p>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="card">
-        <h2>Обвинение</h2>
-        <p className="muted">Обвинение пока недоступно.</p>
-      </div>
+      <Sheet step={0}>
+        <p className="accuse-muted">{loading ? "Загрузка…" : "Обвинение пока недоступно."}</p>
+      </Sheet>
     );
   }
 
   if (stage === "ending") {
     return (
       <>
-        <div className="card" style={{ textAlign: "center" }}>
-          <h2>Дело закрыто</h2>
-          <RichText text={endingText} className="rt-ending" />
-        </div>
+        <Sheet step={2}>
+          <div className="accuse-closed">
+            <span className="accuse-closed-stamp">Дело закрыто</span>
+            <RichText text={endingText} className="rt-ending" />
+          </div>
+        </Sheet>
         {debrief && <DebriefView debrief={debrief} />}
       </>
     );
   }
 
   if (stage === "accomplices") {
+    const answered = Object.keys(accompliceAnswers).length;
     return (
-      <div className="card">
-        <h2>Обвинение · сообщники</h2>
-        <p className="muted">Ответьте на вопрос по каждому из причастных.</p>
+      <Sheet step={1}>
+        <p className="accuse-lead">Организатор установлен. Теперь — роль каждого из остальных фигурантов.</p>
 
-        {accomplices.map((acc) => (
-          <div key={acc.characterId} style={{ marginTop: 20 }}>
-            <strong>{tp(acc.question)}</strong>
-            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-              {acc.options.map((option, i) => (
-                <label key={i} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name={`accomplice-${acc.characterId}`}
-                    checked={accompliceAnswers[acc.characterId] === i}
-                    onChange={() =>
-                      setAccompliceAnswers((prev) => ({ ...prev, [acc.characterId]: i }))
-                    }
-                  />
-                  {tp(option.label)}
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
+        <div className="accuse-people">
+          {accomplices.map((acc) => {
+            const person = personById(acc.characterId);
+            return (
+              <section key={acc.characterId} className="accuse-person">
+                <div className="accuse-person-head">
+                  <SuspectAvatar id={acc.characterId} name={person?.name} portraitUrl={person?.portrait_url} size={56} style={{ borderRadius: 3 }} />
+                  <h3 className="accuse-person-q">{tp(acc.question)}</h3>
+                </div>
+                <div className="accuse-options" role="radiogroup">
+                  {acc.options.map((option, i) => {
+                    const on = accompliceAnswers[acc.characterId] === i;
+                    return (
+                      <button
+                        key={i}
+                        role="radio"
+                        aria-checked={on}
+                        className={`accuse-option${on ? " is-on" : ""}`}
+                        onClick={() => {
+                          setAccompliceWrong(false);
+                          setAccompliceAnswers((prev) => ({ ...prev, [acc.characterId]: i }));
+                        }}
+                      >
+                        {tp(option.label)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
 
         {accompliceWrong && (
-          <p style={{ marginTop: 16, color: "#c96a4a" }}>Кажется, это не то. Подумайте ещё.</p>
+          <div className="accuse-rejected" role="alert">
+            <span className="accuse-rejected-stamp">Возвращено</span>
+            Прокурор вернул дело на доработку: в ролях фигурантов что-то не сходится.
+          </div>
         )}
 
-        <div style={{ marginTop: 20 }}>
+        <div className="accuse-actions">
+          <span className="accuse-count">
+            Отвечено: {answered} из {accomplices.length}
+          </span>
           <button
-            className="btn"
-            disabled={Object.keys(accompliceAnswers).length < accomplices.length || accompliceSubmitting}
+            className="accuse-submit"
+            disabled={answered < accomplices.length || accompliceSubmitting}
             onClick={submitAccomplices}
           >
-            {accompliceSubmitting ? "Проверяем…" : "Завершить дело"}
+            {accompliceSubmitting ? "Проверяем…" : "Подписать и закрыть дело"}
           </button>
         </div>
-      </div>
+      </Sheet>
     );
   }
 
+  const ready = !!selectedOrganizerId && selectedEvidenceIds.size >= 2;
   return (
-    <div className="card">
-      <h2>Обвинение · организатор</h2>
-      <p className="muted">Кто организовал похищение и убийство Игоря Сартакова?</p>
-
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-        {organizerOptions.map((option) => (
-          <label
-            key={option.character_id}
-            style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-          >
-            <input
-              type="radio"
-              name="organizer"
-              checked={selectedOrganizerId === option.character_id}
-              onChange={() => setSelectedOrganizerId(option.character_id)}
-            />
-            {tp(option.label)}
-          </label>
-        ))}
+    <Sheet step={0}>
+      <h3 className="accuse-q">1. Кто организовал похищение и убийство Игоря Сартакова?</h3>
+      <div className="accuse-suspects" role="radiogroup">
+        {organizerOptions.map((option) => {
+          const person = personById(option.character_id);
+          const on = selectedOrganizerId === option.character_id;
+          return (
+            <button
+              key={option.character_id}
+              role="radio"
+              aria-checked={on}
+              className={`accuse-suspect${on ? " is-on" : ""}`}
+              onClick={() => {
+                setOrganizerWrong(false);
+                setSelectedOrganizerId(option.character_id);
+              }}
+            >
+              <SuspectAvatar id={option.character_id} name={option.label} portraitUrl={person?.portrait_url} size={84} style={{ borderRadius: 3, display: "block" }} />
+              <span className="accuse-suspect-name">{tp(option.label)}</span>
+              {on && <span className="accuse-suspect-mark">Обвиняемый</span>}
+            </button>
+          );
+        })}
       </div>
 
-      <p className="muted" style={{ marginTop: 20 }}>
-        Обоснуйте выбор минимум двумя уликами:
-      </p>
-      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {collectedEvidence.map((e) => (
-          <span
-            key={e.id}
-            className="topic-chip"
-            style={selectedEvidenceIds.has(e.id) ? { opacity: 1, borderColor: "#b5451b" } : { opacity: 0.55 }}
-            onClick={() => toggleEvidence(e.id)}
-          >
-            {tp(e.name)}
-          </span>
-        ))}
-      </div>
+      <h3 className="accuse-q">2. На каких доказательствах строится обвинение?</h3>
+      <p className="accuse-muted">Отметьте не меньше двух.</p>
+      {KIND_SECTIONS.map((sec) => {
+        const items = collectedEvidence.filter((e) => (e.kind ?? "thing") === sec.kind);
+        if (!items.length) return null;
+        return (
+          <div key={sec.kind} className="accuse-ev-group">
+            <div className="accuse-ev-title">{sec.title}</div>
+            <div className="accuse-ev-grid">
+              {items.map((e) => {
+                const on = selectedEvidenceIds.has(e.id);
+                return (
+                  <button
+                    key={e.id}
+                    role="checkbox"
+                    aria-checked={on}
+                    className={`accuse-ev${on ? " is-on" : ""}`}
+                    onClick={() => {
+                      setOrganizerWrong(false);
+                      toggleEvidence(e.id);
+                    }}
+                  >
+                    <span className="accuse-ev-box" aria-hidden="true" />
+                    <span className="accuse-ev-name">{tp(e.name)}</span>
+                    {e.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="accuse-ev-thumb" src={img(e.image_url, { w: 120, q: 70 })} alt="" loading="lazy" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {organizerWrong && (
-        <p style={{ marginTop: 16, color: "#c96a4a" }}>Кажется, это не то. Подумайте ещё.</p>
+        <div className="accuse-rejected" role="alert">
+          <span className="accuse-rejected-stamp">Возвращено</span>
+          Прокурор вернул дело на доработку: обвинение не сходится с доказательствами.
+        </div>
       )}
 
-      <div style={{ marginTop: 20 }}>
-        <button
-          className="btn"
-          disabled={!selectedOrganizerId || selectedEvidenceIds.size < 2 || organizerSubmitting}
-          onClick={submitOrganizer}
-        >
-          {organizerSubmitting ? "Проверяем…" : "Обвинить"}
+      <div className="accuse-actions">
+        <span className="accuse-count">
+          {selectedOrganizerId ? "Обвиняемый выбран" : "Обвиняемый не выбран"} · доказательств: {selectedEvidenceIds.size}
+        </span>
+        <button className="accuse-submit" disabled={!ready || organizerSubmitting} onClick={submitOrganizer}>
+          {organizerSubmitting ? "Проверяем…" : "Предъявить обвинение"}
         </button>
       </div>
-    </div>
+    </Sheet>
   );
 }
