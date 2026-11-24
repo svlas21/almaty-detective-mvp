@@ -741,7 +741,13 @@ export default function GameScreen() {
             )}
 
             {searchConcluded && (
-              <RichText text={state.location!.search_note!} className="evidence-search-note" />
+              <div className="search-verdict" role="status">
+                <div className="search-verdict-head">
+                  <span className="search-verdict-label">Итог осмотра · запись в протокол</span>
+                  <span className="search-verdict-stamp">Улик не обнаружено</span>
+                </div>
+                <RichText text={state.location!.search_note!} className="search-verdict-text" />
+              </div>
             )}
 
             <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
@@ -750,9 +756,15 @@ export default function GameScreen() {
                   🔍 Осмотреть снова
                 </button>
               )}
-              <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
-                ✅ Закончить осмотр
-              </button>
+              {searchConcluded ? (
+                <button className="people-sheet-search-btn" onClick={() => setLocationPhase("hub")}>
+                  👥 Поговорить с людьми
+                </button>
+              ) : (
+                <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
+                  ✅ Закончить осмотр
+                </button>
+              )}
               <button className="map-return-btn" onClick={() => setMapView("map")}>
                 🗺 Карта Алматы
               </button>

@@ -2645,6 +2645,84 @@ body {
   text-align: left;
 }
 
+/* Итог осмотра пустой локации: запись в протокол со штампом */
+.search-verdict {
+  position: relative;
+  max-width: 720px;
+  margin: 22px auto 6px;
+  padding: 18px 24px 20px 28px;
+  text-align: left;
+  background: #f4eedd;
+  border: 1px solid var(--paper-shadow);
+  border-radius: 3px;
+  box-shadow: 0 8px 22px rgba(42, 35, 24, 0.12);
+  animation: result-in 260ms ease-out;
+}
+
+.search-verdict::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  border-left: 1.5px solid rgba(156, 43, 31, 0.45);
+}
+
+.search-verdict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.search-verdict-label {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.search-verdict-stamp {
+  flex: none;
+  transform: rotate(-4deg);
+  border: 2.5px solid var(--stamp);
+  border-radius: 3px;
+  padding: 5px 12px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  animation: stamp-in 0.45s 0.15s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.search-verdict-text,
+.search-verdict-text p {
+  margin: 0;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.search-verdict-text p + p { margin-top: 0; }
+
+@media (max-width: 560px) {
+  .search-verdict { padding: 16px 16px 18px 24px; }
+  .search-verdict-head { flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
+  .search-verdict-text, .search-verdict-text p { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-verdict, .search-verdict-stamp { animation: none; }
+}
+
 /* Сцены начальства (supabase/039): лист из дела вместо трубки */
 .scene-call-sheet {
   position: relative;
