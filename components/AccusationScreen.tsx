@@ -20,6 +20,51 @@ interface AccompliceQuestion {
   options: { label: string }[];
 }
 
+export interface Debrief {
+  title?: string;
+  truth: { when: string; text: string }[];
+  false_leads: { who: string; why: string; why_not: string }[];
+}
+
+function DebriefView({ debrief }: { debrief: Debrief }) {
+  return (
+    <div className="debrief">
+      <div className="debrief-head">
+        <span className="debrief-kicker">Разбор дела</span>
+        <h2>{tp(debrief.title ?? "Как всё было на самом деле")}</h2>
+      </div>
+      <ol className="debrief-timeline">
+        {debrief.truth.map((t, i) => (
+          <li key={i} className="debrief-step">
+            <span className="debrief-when">{tp(t.when)}</span>
+            <RichText text={t.text} className="debrief-text" />
+          </li>
+        ))}
+      </ol>
+      {debrief.false_leads.length > 0 && (
+        <>
+          <h3 className="debrief-sub">Ложные следы</h3>
+          <div className="debrief-leads">
+            {debrief.false_leads.map((l, i) => (
+              <div key={i} className="debrief-lead">
+                <div className="debrief-lead-who">{tp(l.who)}</div>
+                <div className="debrief-lead-row">
+                  <span className="debrief-lead-label">Почему подозревали</span>
+                  <RichText text={l.why} />
+                </div>
+                <div className="debrief-lead-row is-not">
+                  <span className="debrief-lead-label">На самом деле</span>
+                  <RichText text={l.why_not} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface AccusationScreenProps {
   sessionId: string;
   collectedEvidence: CollectedEvidenceItem[];
@@ -43,6 +88,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
   const [accompliceWrong, setAccompliceWrong] = useState(false);
 
   const [endingText, setEndingText] = useState<string | null>(null);
+  const [debrief, setDebrief] = useState<Debrief | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +157,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
     setAccompliceSubmitting(false);
     if (data.correct) {
       setEndingText(data.endingText ?? "");
+      setDebrief(data.debrief ?? null);
       setStage("ending");
     } else {
       setAccompliceWrong(true);
@@ -137,10 +184,13 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
 
   if (stage === "ending") {
     return (
-      <div className="card" style={{ textAlign: "center" }}>
-        <h2>Дело закрыто</h2>
-        <RichText text={endingText} className="rt-ending" />
-      </div>
+      <>
+        <div className="card" style={{ textAlign: "center" }}>
+          <h2>Дело закрыто</h2>
+          <RichText text={endingText} className="rt-ending" />
+        </div>
+        {debrief && <DebriefView debrief={debrief} />}
+      </>
     );
   }
 
@@ -191,7 +241,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence }: Accus
   return (
     <div className="card">
       <h2>Обвинение · организатор</h2>
-      <p className="muted">Кто организовал похищение и убийство Игоря Матросова?</p>
+      <p className="muted">Кто организовал похищение и убийство Игоря Сартакова?</p>
 
       <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         {organizerOptions.map((option) => (

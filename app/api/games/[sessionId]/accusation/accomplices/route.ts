@@ -58,7 +58,7 @@ export async function POST(
 
   const { data: accusation } = await db
     .from("case_accusation")
-    .select("accomplices, ending_text")
+    .select("accomplices, ending_text, debrief")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
@@ -95,5 +95,5 @@ export async function POST(
     .update({ status: "finished", finished_at: new Date().toISOString() })
     .eq("id", sessionId);
 
-  return NextResponse.json({ correct: true, endingText: accusation.ending_text });
+  return NextResponse.json({ correct: true, endingText: accusation.ending_text, debrief: accusation.debrief ?? null });
 }

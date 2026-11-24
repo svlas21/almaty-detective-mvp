@@ -2480,3 +2480,111 @@ body {
   opacity: 0.6;
   cursor: default;
 }
+
+/* ============================================================
+   Разбор после финала
+   ============================================================ */
+.debrief {
+  margin-top: 24px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 32px 36px 36px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.debrief-kicker {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--stamp);
+}
+.debrief-head h2 {
+  font-family: var(--font-pt-serif), serif;
+  font-size: 26px;
+  margin: 6px 0 22px;
+  color: var(--ink);
+}
+.debrief-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--paper-shadow);
+}
+.debrief-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 16px;
+  padding: 0 0 18px 20px;
+}
+.debrief-step::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--stamp);
+}
+.debrief-step:last-child::before { background: var(--stamp); }
+.debrief-when {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--militia);
+  padding-top: 2px;
+}
+.debrief-text {
+  font-family: var(--font-pt-serif), serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.debrief-sub {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--militia);
+  margin: 30px 0 14px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--paper-shadow);
+}
+.debrief-leads {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.debrief-lead {
+  border: 1px solid var(--paper-shadow);
+  border-radius: 4px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.25);
+  font-family: var(--font-pt-serif), serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.debrief-lead-who {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.debrief-lead-row { margin-top: 8px; }
+.debrief-lead-label {
+  display: block;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  margin-bottom: 2px;
+}
+.debrief-lead-row.is-not .debrief-lead-label { color: var(--militia); }
+@media (max-width: 640px) {
+  .debrief { padding: 22px 18px 26px; }
+  .debrief-step { grid-template-columns: 1fr; gap: 4px; }
+}
