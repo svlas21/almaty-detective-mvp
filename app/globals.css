@@ -1540,9 +1540,9 @@ body {
 .mention-popup-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1619,7 +1619,10 @@ body {
 .phone-call-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 6, 8, 0.88);
+  background: rgba(5, 6, 8, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2479,6 +2482,156 @@ body {
 .scene-call-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Записка начальства: окно + листок перекидного календаря, синий карандаш */
+.scene-window {
+  width: min(500px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: #24211d;
+  border: 1px solid #3a342c;
+  border-radius: 6px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-pt-serif), Georgia, serif;
+  animation: scene-window-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes scene-window-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.scene-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.scene-window-place {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #9a8f7a;
+}
+
+.scene-window-x {
+  width: 30px;
+  height: 30px;
+  margin-right: -8px;
+  border: none;
+  background: none;
+  color: #8a8172;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.scene-window-x:hover { color: #e9e0c9; background: rgba(255, 255, 255, 0.06); }
+
+.scene-window-narration {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.55;
+  font-style: italic;
+  color: #bdb5a3;
+  text-wrap: pretty;
+}
+
+.calendar-sheet {
+  margin: 0 6px;
+  padding: 0 0 22px;
+  background: #f1ead8;
+  border-radius: 2px;
+  transform: rotate(-1.2deg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), inset 0 0 40px rgba(196, 183, 144, 0.35);
+}
+
+.calendar-sheet-holes {
+  display: flex;
+  justify-content: center;
+  gap: 58px;
+  padding-top: 8px;
+}
+
+.calendar-sheet-holes span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #24211d;
+}
+
+.calendar-sheet-date {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 6px 22px 8px;
+  border-bottom: 1px solid #c9bfa6;
+  font-family: var(--font-pt-serif), Georgia, serif;
+}
+
+.calendar-sheet-month,
+.calendar-sheet-weekday {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.calendar-sheet-month { color: #8a3b2b; }
+.calendar-sheet-weekday { color: #6d665a; }
+
+.calendar-sheet-day {
+  font-size: 46px;
+  line-height: 1;
+  font-weight: 700;
+  color: #8a3b2b;
+}
+
+.calendar-sheet-hand {
+  padding: 14px 24px 0;
+  font-family: var(--font-hand), cursive;
+  font-size: 23px;
+  line-height: 1.35;
+  color: #2b4a8a;
+}
+
+.calendar-sheet-hand p { margin: 0 0 8px; text-wrap: pretty; }
+.calendar-sheet-hand p:last-child { margin-bottom: 0; }
+
+.scene-window-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
+.scene-window-btn {
+  background: #efe7d4;
+  color: #24211d;
+  border: none;
+  border-radius: 3px;
+  padding: 10px 24px;
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.scene-window-btn:hover { background: #fff8e6; }
+.scene-window-btn:disabled,
+.scene-window-x:disabled { opacity: 0.6; cursor: default; }
+
+@media (max-width: 480px) {
+  .scene-window { padding: 16px 14px 18px; }
+  .calendar-sheet { margin: 0; }
+  .calendar-sheet-hand { font-size: 21px; padding: 12px 16px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-window { animation: none; }
 }
 
 /* ============================================================

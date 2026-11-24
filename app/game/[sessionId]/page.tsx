@@ -432,6 +432,7 @@ export default function GameScreen() {
       {state.pendingCall && !selectedSuspect && locationPhase !== "searching" && !navigating && (
         <PhoneCallOverlay
           call={state.pendingCall}
+          elapsedMinutes={state.session.elapsed_minutes}
           onAnswer={() => answerCall(state.pendingCall!.id)}
           onClose={closeCall}
         />

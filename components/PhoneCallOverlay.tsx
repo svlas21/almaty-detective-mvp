@@ -18,6 +18,8 @@ interface PhoneCallOverlayProps {
   onAnswer: () => void | Promise<void>;
   /** Закрывает оверлей и обновляет state экрана (после "Положить трубку"). */
   onClose: () => void;
+  /** Игровое время (минуты от начала дела) — для даты на листке календаря. */
+  elapsedMinutes?: number;
 }
 
 /**
@@ -25,10 +27,11 @@ interface PhoneCallOverlayProps {
  * у Nokia 2110i), пассивный: игрок жмёт "Ответить", слушает реплику
  * звонящего и кладёт трубку. Клавиатура и вторая софт-клавиша декоративные.
  */
-export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
+export default function PhoneCallOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOverlayProps) {
   const [phase, setPhase] = useState<"ringing" | "talking">("ringing");
 
-  if (call.style === "scene") return <SceneOverlay call={call} onAnswer={onAnswer} onClose={onClose} />;
+  if (call.style === "scene")
+    return <SceneOverlay call={call} onAnswer={onAnswer} onClose={onClose} elapsedMinutes={elapsedMinutes} />;
 
   function handleAnswer() {
     setPhase("talking");
@@ -110,12 +113,35 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
   );
 }
 
+/** Начало дела 9704: понедельник, 25 ноября 1996 года, 9:10 (вводная). */
+const CASE_START = new Date(1996, 10, 25, 9, 10);
+const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const WEEKDAYS = ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"];
+
+/**
+ * Записка: «повествование: «текст записки»». Если в тексте нет кавычек-ёлочек,
+ * это не записка, а обычная сцена.
+ */
+function splitNote(text: string): { narration: string; lines: string[] } | null {
+  const open = text.indexOf("«");
+  const close = text.lastIndexOf("»");
+  if (open < 0 || close <= open) return null;
+  const narration = text.slice(0, open).trim().replace(/:$/, ".");
+  const lines = text
+    .slice(open + 1, close)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return { narration, lines };
+}
+
 /**
  * Сцена начальства (supabase/039): записка на столе, разговор в коридоре,
- * звонок по внутреннему — лист из дела, без мобильного телефона (1996 год).
+ * звонок по внутреннему — без мобильного телефона (1996 год).
  * callerRole — подпись сцены («Записка на столе»), callerName — кто.
+ * Записка рисуется листком перекидного календаря, почерк синим карандашом.
  */
-function SceneOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
+function SceneOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOverlayProps) {
   const [closing, setClosing] = useState(false);
 
   async function handleClose() {
@@ -123,6 +149,49 @@ function SceneOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
     setClosing(true);
     await onAnswer();
     await onClose();
+  }
+
+  const isNote = /записк/i.test(call.callerRole ?? "");
+  const note = isNote ? splitNote(call.dialogueText) : null;
+
+  if (note) {
+    const day = new Date(CASE_START.getTime() + (elapsedMinutes ?? 0) * 60_000);
+    return (
+      <div className="phone-call-overlay">
+        <div className="scene-window" role="dialog" aria-label={call.callerRole ?? call.callerName}>
+          <div className="scene-window-head">
+            <span className="scene-window-place">{tp(call.callerRole ?? "")}</span>
+            <button className="scene-window-x" onClick={handleClose} disabled={closing} aria-label="Закрыть">
+              ×
+            </button>
+          </div>
+          {note.narration && <p className="scene-window-narration">{tp(note.narration)}</p>}
+
+          <div className="calendar-sheet">
+            <div className="calendar-sheet-holes" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+            <div className="calendar-sheet-date">
+              <span className="calendar-sheet-month">{MONTHS[day.getMonth()]}</span>
+              <span className="calendar-sheet-day">{day.getDate()}</span>
+              <span className="calendar-sheet-weekday">{WEEKDAYS[day.getDay()]}</span>
+            </div>
+            <div className="calendar-sheet-hand">
+              {note.lines.map((line, i) => (
+                <p key={i}>{tp(line)}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="scene-window-actions">
+            <button className="scene-window-btn" onClick={handleClose} disabled={closing}>
+              Понятно
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

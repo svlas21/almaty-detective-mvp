@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PT_Serif, JetBrains_Mono, PT_Mono } from "next/font/google";
+import { PT_Serif, JetBrains_Mono, PT_Mono, Marck_Script } from "next/font/google";
 import "./globals.css";
 
 const ptSerif = PT_Serif({
@@ -25,6 +25,14 @@ const ptMono = PT_Mono({
   display: "swap",
 });
 
+// Рукописный почерк (записки начальства синим карандашом)
+const marckScript = Marck_Script({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400"],
+  variable: "--font-hand",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Детектив Алматы",
   description: "Онлайн детективная игра про Алматы (MVP-скелет)",
@@ -36,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${ptMono.variable}`}>
+    <html lang="ru" className={`${ptSerif.variable} ${jetbrainsMono.variable} ${ptMono.variable} ${marckScript.variable}`}>
       <body>{children}</body>
     </html>
   );
