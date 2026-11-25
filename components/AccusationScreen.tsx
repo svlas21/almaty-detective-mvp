@@ -19,6 +19,8 @@ interface Person {
   portrait_url?: string | null;
   /** Игрок уже встретил этого человека в игре */
   unlocked?: boolean;
+  is_expert?: boolean;
+  is_case_subject?: boolean;
 }
 
 const KIND_SECTIONS: { kind: string; title: string }[] = [
@@ -123,7 +125,6 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
   const personById = (id: string) => people.find((p) => p.id === id);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [organizerOptions, setOrganizerOptions] = useState<OrganizerOption[]>([]);
   const [accomplices, setAccomplices] = useState<AccompliceQuestion[]>([]);
 
   const [stage, setStage] = useState<"organizer" | "accomplices" | "ending">("organizer");
@@ -149,7 +150,6 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
         if (!data) {
           setLoadError(true);
         } else {
-          setOrganizerOptions(data.organizerOptions ?? []);
           setAccomplices(data.accomplices ?? []);
         }
         setLoading(false);
@@ -299,16 +299,20 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
   }
 
   const ready = !!selectedOrganizerId && selectedEvidenceIds.size >= 2;
-  // Кандидаты появляются по мере расследования: только те, кого игрок уже встретил.
-  // Сколько их всего, не показываем — это подсказка.
-  const knownOptions = organizerOptions.filter((o) => personById(o.character_id)?.unlocked);
-  const hiddenCount = organizerOptions.length - knownOptions.length;
+  // Обвинить можно любого, с кем игрок познакомился по делу (кроме экспертов и
+  // персонажей вводной): список не подсказывает, кто подозреваемый, а кто нет.
+  // Верный ответ проверяет сервер (accusation/organizer) по id.
+  const knownOptions: OrganizerOption[] = people
+    .filter((p) => p.unlocked && !p.is_expert && p.is_case_subject !== false && p.name)
+    .map((p) => ({ character_id: p.id, label: p.name as string }));
   return (
     <Sheet step={0}>
       <h3 className="accuse-q">1. Кто организовал похищение и убийство Игоря Сартакова?</h3>
-      {knownOptions.length === 0 && (
-        <p className="accuse-muted">Пока обвинять некого. Фигуранты появятся здесь, когда вы с ними познакомитесь.</p>
-      )}
+      <p className="accuse-muted">
+        {knownOptions.length === 0
+          ? "Пока обвинять некого. Здесь появятся все, с кем вы познакомитесь по делу."
+          : "Здесь все, с кем вы познакомились по делу."}
+      </p>
       <div className="accuse-suspects" role="radiogroup">
         {knownOptions.map((option) => {
           const person = personById(option.character_id);
@@ -330,12 +334,6 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
             </button>
           );
         })}
-        {hiddenCount > 0 && knownOptions.length > 0 && (
-          <div className="accuse-suspect-more" aria-hidden="true">
-            <span className="accuse-suspect-more-mark">?</span>
-            <span>Новые фигуранты появятся по ходу расследования</span>
-          </div>
-        )}
       </div>
 
       <h3 className="accuse-q">2. На каких доказательствах строится обвинение?</h3>
