@@ -20,10 +20,10 @@ const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
   { id: "help", icon: "📋", label: "Памятка" },
 ];
 
-// process.env.NODE_ENV инлайнится сборщиком и в клиентском бандле —
-// проверка тут лишь прячет кнопку в UI, реальная защита — на сервере
-// в app/api/dev/reset-session/route.ts.
-const IS_DEV = process.env.NODE_ENV !== "production";
+// Кнопка «Начать заново» видна, пока идёт разработка — и в npm run dev, и в
+// npm start. Перед запуском для игроков: NEXT_PUBLIC_DEV_TOOLS=off в .env
+// (прячет кнопку; сервер в app/api/dev/reset-session/route.ts тоже откажет).
+const IS_DEV = process.env.NEXT_PUBLIC_DEV_TOOLS !== "off";
 
 export default function Sidebar({ active, onChange }: SidebarProps) {
   const { sessionId } = useParams<{ sessionId: string }>();
