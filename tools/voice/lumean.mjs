@@ -35,16 +35,32 @@ function fail(msg) {
 
 const KEY = loadKey();
 
+// Сетевой сбой («fetch failed»): запрос повторяем до 5 раз с паузой. Кроме создания заказа —
+// повторный заказ мог бы списать оплату дважды; для заказов есть журнал .orders.json.
 async function api(method, path, body) {
-  const res = await fetch(BASE + path, {
-    method,
-    headers: {
-      Accept: "application/json",
-      "X-API-KEY": KEY,
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      res = await fetch(BASE + path, {
+        method,
+        headers: {
+          Accept: "application/json",
+          "X-API-KEY": KEY,
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      break;
+    } catch (e) {
+      if ((method === "POST" && path === "/orders") || attempt >= 5) throw new Error(`Нет связи с Lumean (${method} ${path}): ${e.cause?.code || e.message}`);
+      console.log(`  … нет связи, повтор ${attempt}/4 через ${attempt * 5} с`);
+      await new Promise((r) => setTimeout(r, attempt * 5000));
+    }
+  }
+  return parse(res, method, path);
+}
+
+async function parse(res, method, path) {
   let json = null;
   try {
     json = await res.json();
@@ -196,7 +212,9 @@ const loadLines = (ch) => {
   // --only scene3 (или scene1,scene3): озвучить только эти реплики, остальные файлы не трогать
   const only = args().only ? String(args().only).split(",").map((x) => x.trim()) : null;
   const all = JSON.parse(readFileSync(f, "utf8")).map((l) => ({ ...l, text: speak(l.text) }));
-  const picked = only ? all.filter((l) => only.includes(l.id)) : all;
+  let picked = only ? all.filter((l) => only.includes(l.id)) : all;
+  // --missing: только реплики, для которых ещё нет mp3 в папке озвучки
+  if (args().missing) picked = picked.filter((l) => !existsSync(join(OUT, ch, args().lines || "test", `${l.id}.mp3`)));
   if (only && !picked.length) fail(`В ${f} нет реплик ${only.join(", ")}`);
   return picked;
 };
@@ -268,8 +286,24 @@ async function generate() {
   if (ans !== "да") return console.log("Отменено, ничего не списано.");
   const dir = join(OUT, ch, args().lines || "test");
   mkdirSync(dir, { recursive: true });
+  // Журнал заказов: если связь оборвалась после оплаты, повторный запуск докачает
+  // готовый заказ, а не закажет и не оплатит реплику ещё раз.
+  const ordersFile = join(dir, ".orders.json");
+  const orders = existsSync(ordersFile) ? JSON.parse(readFileSync(ordersFile, "utf8")) : {};
+  const saveOrders = () => writeFileSync(ordersFile, JSON.stringify(orders, null, 1));
+  let failed = 0;
   for (const l of lines) {
-    const order = await api("POST", "/orders", { template_id: st.template_id, input_text: l.text, name: `${ch}-${l.id}` });
+   try {
+    const known = orders[l.id];
+    let order;
+    if (known && known.text === l.text && !known.done) {
+      order = { id: known.id };
+      console.log(`  ↻ ${l.id}: докачиваю оплаченный заказ`);
+    } else {
+      order = await api("POST", "/orders", { template_id: st.template_id, input_text: l.text, name: `${ch}-${l.id}` });
+      orders[l.id] = { id: order.id, text: l.text, done: false };
+      saveOrders();
+    }
     let o2;
     for (let i = 0; i < 90; i++) {
       await new Promise((r) => setTimeout(r, 3000));
@@ -285,7 +319,16 @@ async function generate() {
     const res = await fetch(link.url);
     const file = join(dir, `${l.id}.mp3`);
     writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+    orders[l.id].done = true;
+    saveOrders();
     console.log(`  ✔ ${l.id}: ${file}${o2.price_formatted ? "  (" + o2.price_formatted + ")" : ""}`);
+   } catch (e) {
+    failed++;
+    console.log(`  ✖ ${l.id}: ${e.message}`);
+    if (failed >= 3) { console.log("\nТри ошибки подряд — останавливаюсь. Проверьте интернет и запустите ту же команду ещё раз: оплаченное докачается."); break; }
+    continue;
+   }
+   failed = 0;
   }
   console.log(`\nПослушать: open ${dir}`);
 }
