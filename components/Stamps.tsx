@@ -8,7 +8,7 @@ import { useId } from "react";
  * красный штамп «Приобщено к делу». Оттиск неровный — фильтр «чернила».
  */
 
-const INK = "#3b3f9a";
+const INK = "#3443b8";
 const RED = "#a3271c";
 
 function InkFilter({ id, seed = 3, strength = 1 }: { id: string; seed?: number; strength?: number }) {
@@ -32,8 +32,15 @@ function Emblem({ r }: { r: number }) {
 }
 
 interface RoundProps {
-  outer: string;
-  inner?: string;
+  /** Внешняя полоса (крупно, повторяется по кругу) */
+  band: string;
+  /** Мелкий плотный текст по всему кругу: казахский, затем русский */
+  small: string;
+  /** Средний текст по верхней дуге */
+  top?: string;
+  /** Средний текст по нижней дуге (читается слева направо) */
+  bottom?: string;
+  /** Без герба — надпись в центре */
   center?: string[];
   emblem?: boolean;
   color?: string;
@@ -43,15 +50,22 @@ interface RoundProps {
   className?: string;
 }
 
-/** Круглая печать: внешнее кольцо текста, внутреннее (если есть), центр — герб или надпись. */
-export function RoundSeal({ outer, inner, center, emblem, color = INK, size = 118, rotate = -8, seed = 3, className }: RoundProps) {
+const SEAL_FONT = "'Arial Narrow', 'Roboto Condensed', Arial, Helvetica, sans-serif";
+
+/**
+ * Круглая печать по образцу казахстанских гербовых: толстый обод, полоса
+ * «ҚАЗАҚСТАН РЕСПУБЛИКАСЫ», мелкий плотный текст на двух языках по кругу,
+ * название по верхней дуге, подпись по нижней, герб в центре.
+ */
+export function RoundSeal({ band, small, top, bottom, center, emblem, color = INK, size = 118, rotate = -8, seed = 3, className }: RoundProps) {
   const uid = useId().replace(/:/g, "");
-  const fOuter = `so${uid}`;
-  const fInner = `si${uid}`;
   const ink = `ink${uid}`;
-  const circle = (r: number) => `M ${100 - r} 100 a ${r} ${r} 0 1 1 ${2 * r} 0 a ${r} ${r} 0 1 1 ${-2 * r} 0`;
-  const rO = 79;
-  const rI = 57;
+  const full = (r: number) => `M ${100 - r} 100 a ${r} ${r} 0 1 1 ${2 * r} 0 a ${r} ${r} 0 1 1 ${-2 * r} 0`;
+  const upper = (r: number) => `M ${100 - r} 100 A ${r} ${r} 0 0 1 ${100 + r} 100`;
+  const lower = (r: number) => `M ${100 - r} 100 A ${r} ${r} 0 0 0 ${100 + r} 100`;
+  const ids = { band: `b${uid}`, small: `s${uid}`, top: `t${uid}`, bottom: `u${uid}` };
+  const bandText = `${band} ✻ ${band} ✻ `;
+  const font = { fontFamily: SEAL_FONT, fontWeight: 700 } as const;
   return (
     <svg
       viewBox="0 0 200 200"
@@ -62,40 +76,55 @@ export function RoundSeal({ outer, inner, center, emblem, color = INK, size = 11
       aria-hidden="true"
     >
       <defs>
-        <path id={fOuter} d={circle(rO)} />
-        <path id={fInner} d={circle(rI)} />
-        <InkFilter id={ink} seed={seed} />
+        <path id={ids.band} d={full(87.5)} />
+        <path id={ids.small} d={full(73.5)} />
+        <path id={ids.top} d={upper(62)} />
+        <path id={ids.bottom} d={lower(68)} />
+        <InkFilter id={ink} seed={seed} strength={0.55} />
       </defs>
       <g filter={`url(#${ink})`} fill={color} stroke={color}>
-        <circle cx="100" cy="100" r="96" fill="none" strokeWidth="3.2" />
-        <circle cx="100" cy="100" r="91" fill="none" strokeWidth="1" />
-        <text stroke="none" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: 13.5, fontWeight: 700 }}>
-          <textPath href={`#${fOuter}`} startOffset="0" textLength={2 * Math.PI * rO * 0.985} lengthAdjust="spacing">
-            {outer} ★
+        <circle cx="100" cy="100" r="97" fill="none" strokeWidth="3.4" />
+        <text stroke="none" style={{ ...font, fontSize: 10.5, letterSpacing: 1.2 }}>
+          <textPath href={`#${ids.band}`} textLength={2 * Math.PI * 87.5 * 0.99} lengthAdjust="spacing">
+            {bandText}
           </textPath>
         </text>
-        <circle cx="100" cy="100" r={inner ? 67 : 69} fill="none" strokeWidth="1.2" />
-        {inner && (
-          <>
-            <text stroke="none" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: 10.5, fontWeight: 700 }}>
-              <textPath href={`#${fInner}`} startOffset="0" textLength={2 * Math.PI * rI * 0.98} lengthAdjust="spacing">
-                {inner} •
-              </textPath>
-            </text>
-            <circle cx="100" cy="100" r="47" fill="none" strokeWidth="1" />
-          </>
+        <circle cx="100" cy="100" r="81.5" fill="none" strokeWidth="1.1" />
+        <text stroke="none" style={{ ...font, fontSize: 6.4 }}>
+          <textPath href={`#${ids.small}`} textLength={2 * Math.PI * 73.5 * 0.985} lengthAdjust="spacingAndGlyphs">
+            {small} ✻
+          </textPath>
+        </text>
+        {top && (
+          <text stroke="none" style={{ ...font, fontSize: 9 }}>
+            <textPath
+              href={`#${ids.top}`}
+              startOffset="50%"
+              textAnchor="middle"
+              {...(top.length > 26 ? { textLength: Math.PI * 62 * 0.86, lengthAdjust: "spacingAndGlyphs" } : {})}
+            >
+              {top}
+            </textPath>
+          </text>
+        )}
+        {bottom && (
+          <text stroke="none" style={{ ...font, fontSize: 9, letterSpacing: 1.6 }}>
+            <textPath href={`#${ids.bottom}`} startOffset="50%" textAnchor="middle">
+              {bottom}
+            </textPath>
+          </text>
         )}
         {emblem ? (
-          <Emblem r={inner ? 45 : 66} />
+          <Emblem r={48} />
         ) : (
           (center ?? []).map((line, i, all) => (
             <text
               key={i}
               x="100"
-              y={100 + (i - (all.length - 1) / 2) * 17 + 5}
+              y={100 + (i - (all.length - 1) / 2) * 16 + 5}
               textAnchor="middle"
               stroke="none"
-              style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: i === 0 ? 17 : 12, fontWeight: 700 }}
+              style={{ ...font, fontSize: i === 0 ? 18 : 10 }}
             >
               {line}
             </text>
@@ -162,34 +191,51 @@ export function AttachedStamp({ sheet }: { sheet?: number }) {
 
 // ───────── Какая печать на каком документе ─────────
 
-type SealDef = { outer: string; inner?: string; center?: string[]; emblem?: boolean };
+type SealDef = Omit<RoundProps, "color" | "size" | "rotate" | "seed" | "className">;
+
+const KZ = "ҚАЗАҚСТАН РЕСПУБЛИКАСЫ";
 
 export const SEALS: Record<string, SealDef> = {
   guvd: {
-    outer: "АЛМАТЫ ҚАЛАСЫНЫҢ ІШКІ ІСТЕР БАС БАСҚАРМАСЫ",
-    inner: "ГУВД г. АЛМАТЫ МВД РЕСПУБЛИКИ КАЗАХСТАН",
+    band: KZ,
+    small:
+      "ҚАЗАҚСТАН РЕСПУБЛИКАСЫ ІШКІ ІСТЕР МИНИСТРЛІГІНІҢ АЛМАТЫ ҚАЛАСЫ БОЙЫНША ІШКІ ІСТЕР БАС БАСҚАРМАСЫ ✻ ГЛАВНОЕ УПРАВЛЕНИЕ ВНУТРЕННИХ ДЕЛ г. АЛМАТЫ МВД РЕСПУБЛИКИ КАЗАХСТАН",
+    top: "Ішкі істер бас басқармасы ✻ ГУВД г. Алматы",
+    bottom: "Канцелярия",
     emblem: true,
   },
   rovd: {
-    outer: "АЛМАТЫ ҚАЛАСЫ МЕДЕУ АУДАНДЫҚ ІШКІ ІСТЕР БӨЛІМІ",
-    inner: "МЕДЕУСКИЙ РОВД г. АЛМАТЫ",
+    band: KZ,
+    small:
+      "АЛМАТЫ ҚАЛАСЫ ІШКІ ІСТЕР БАС БАСҚАРМАСЫНЫҢ МЕДЕУ АУДАНДЫҚ ІШКІ ІСТЕР БӨЛІМІ ✻ МЕДЕУСКИЙ РАЙОННЫЙ ОТДЕЛ ВНУТРЕННИХ ДЕЛ ГУВД г. АЛМАТЫ",
+    top: "Медеу аудандық ІІБ ✻ Медеуский РОВД",
+    bottom: "Дежурная часть",
     emblem: true,
   },
   prosecutor: {
-    outer: "АЛМАТЫ ҚАЛАСЫНЫҢ ПРОКУРАТУРАСЫ",
-    inner: "ПРОКУРАТУРА г. АЛМАТЫ",
+    band: KZ,
+    small:
+      "ҚАЗАҚСТАН РЕСПУБЛИКАСЫ БАС ПРОКУРАТУРАСЫНЫҢ АЛМАТЫ ҚАЛАСЫНЫҢ ПРОКУРАТУРАСЫ ✻ ПРОКУРАТУРА г. АЛМАТЫ ГЕНЕРАЛЬНОЙ ПРОКУРАТУРЫ РЕСПУБЛИКИ КАЗАХСТАН",
+    top: "Қала прокуратурасы ✻ Прокуратура города",
+    bottom: "Алматы",
     emblem: true,
   },
   eko: {
-    outer: "ЭКСПЕРТНО-КРИМИНАЛИСТИЧЕСКИЙ ОТДЕЛ ГУВД г. АЛМАТЫ",
-    center: ["ЭКО", "для", "заключений"],
+    band: "АЛМАТЫ ҚАЛАСЫ ІІББ",
+    small:
+      "АЛМАТЫ ҚАЛАСЫ ІШКІ ІСТЕР БАС БАСҚАРМАСЫНЫҢ САРАПТАУ-КРИМИНАЛИСТИКАЛЫҚ БӨЛІМІ ✻ ЭКСПЕРТНО-КРИМИНАЛИСТИЧЕСКИЙ ОТДЕЛ ГУВД г. АЛМАТЫ",
+    center: ["ЭКО", "для заключений"],
   },
   sme: {
-    outer: "АЛМАТИНСКОЕ ГОРОДСКОЕ БЮРО СУДЕБНО-МЕДИЦИНСКОЙ ЭКСПЕРТИЗЫ",
-    center: ["СМЭ", "для", "заключений"],
+    band: "АЛМАТЫ ҚАЛАСЫ",
+    small:
+      "АЛМАТЫ ҚАЛАЛЫҚ СОТ-МЕДИЦИНАЛЫҚ САРАПТАМА БЮРОСЫ ✻ АЛМАТИНСКОЕ ГОРОДСКОЕ БЮРО СУДЕБНО-МЕДИЦИНСКОЙ ЭКСПЕРТИЗЫ",
+    center: ["СМЭ", "для заключений"],
   },
   ivc: {
-    outer: "ИНФОРМАЦИОННО-ВЫЧИСЛИТЕЛЬНЫЙ ЦЕНТР ГУВД г. АЛМАТЫ",
+    band: "АЛМАТЫ ҚАЛАСЫ ІІББ",
+    small:
+      "АЛМАТЫ ҚАЛАСЫ ІШКІ ІСТЕР БАС БАСҚАРМАСЫНЫҢ АҚПАРАТТЫҚ-ЕСЕПТЕУ ОРТАЛЫҒЫ ✻ ИНФОРМАЦИОННО-ВЫЧИСЛИТЕЛЬНЫЙ ЦЕНТР ГУВД г. АЛМАТЫ",
     center: ["ИВЦ", "№ 2"],
   },
 };
