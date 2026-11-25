@@ -407,8 +407,52 @@ async function upload() {
   console.log("\nГотово. Перезагрузите игру в браузере.");
 }
 
+// Удаление старой озвучки из Supabase Storage (бакет voice, папки 9704/<персонаж>/).
+// Пример: cleanup --old chief,daniyar,valentina,olzhas
+// Сначала проверяет, что игра на эти файлы больше не ссылается; если ссылается — ничего не удаляет.
+async function cleanup() {
+  const o = args();
+  const olds = String(o.old || "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (!olds.length) fail("Укажите --old chief,daniyar,...");
+  const url = envVar("NEXT_PUBLIC_SUPABASE_URL").replace(/\/$/, "");
+  const sk = envVar("SUPABASE_SERVICE_ROLE_KEY");
+  const H = { Authorization: `Bearer ${sk}`, apikey: sk, "Content-Type": "application/json" };
+  const caseId = o.case || "9704";
+  // 1. Что игра сейчас использует
+  const used = [];
+  for (const [table, cols] of [["characters", "intro_audio_url,fixed_questions,reaction_rules"], ["phone_calls", "*"]]) {
+    const r = await fetch(`${url}/rest/v1/${table}?select=${cols}`, { headers: H });
+    if (!r.ok) fail(`Не прочитал ${table}: ${r.status} ${await r.text()}`);
+    used.push(JSON.stringify(await r.json()));
+  }
+  const usedText = used.join("\n");
+  // 2. Что лежит в старых папках
+  const files = [];
+  for (const ch of olds) {
+    const prefix = `${caseId}/${ch}`;
+    const r = await fetch(`${url}/storage/v1/object/list/voice`, { method: "POST", headers: H, body: JSON.stringify({ prefix, limit: 1000 }) });
+    if (!r.ok) fail(`Не прочитал папку ${prefix}: ${r.status} ${await r.text()}`);
+    for (const f of await r.json()) if (f.name && f.id) files.push(`${prefix}/${f.name}`);
+  }
+  if (!files.length) return console.log("Старых файлов нет — удалять нечего.");
+  const busy = files.filter((f) => usedText.includes(`/voice/${f}`));
+  if (busy.length) {
+    console.log(`✖ ${busy.length} из ${files.length} файлов игра ещё использует, ничего не удаляю:`);
+    busy.slice(0, 15).forEach((f) => console.log("   · " + f));
+    console.log("Сначала загрузите новую озвучку (upload … -v3), потом повторите cleanup.");
+    return;
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ans = (await rl.question(`Удалить из хранилища ${files.length} старых файлов (${olds.join(", ")})? Это навсегда. Напишите «да»: `)).trim().toLowerCase();
+  rl.close();
+  if (ans !== "да") return console.log("Отменено, ничего не удалено.");
+  const d = await fetch(`${url}/storage/v1/object/voice`, { method: "DELETE", headers: H, body: JSON.stringify({ prefixes: files }) });
+  if (!d.ok) fail(`Удаление: ${d.status} ${await d.text()}`);
+  console.log(`✔ Удалено ${(await d.json()).length ?? files.length} файлов.`);
+}
+
 const cmd = process.argv[2];
-const commands = { check, voices, setup, estimate, generate, upload };
+const commands = { check, voices, setup, estimate, generate, upload, cleanup };
 if (!commands[cmd]) {
   console.log("Команды: check, voices, setup, estimate, generate, upload. Пример: node tools/voice/lumean.mjs check");
   process.exit(cmd ? 1 : 0);
