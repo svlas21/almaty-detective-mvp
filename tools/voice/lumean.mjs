@@ -281,7 +281,10 @@ async function estimate() {
 // Модель берётся из шаблона (state.json) или из имени персонажа (…-v3).
 function withTag(l, st) {
   const v3 = /v3/.test(st.model || "") || /-v3$/.test(args().character || "");
-  return v3 && l.tag ? `[${l.tag}] ${l.text}` : l.text;
+  if (!v3) return l.text;
+  // v3 сам держит ритм; паузы {{pause=…}} из v2 заменяем многоточием между блоками
+  const t = l.text.replace(/\s*\{\{pause=[0-9.]+\}\}\s*/g, "… ").replace(/([.!?…])…/g, "$1").replace(/\s+/g, " ").trim();
+  return l.tag ? `[${l.tag}] ${t}` : t;
 }
 
 async function generate() {
