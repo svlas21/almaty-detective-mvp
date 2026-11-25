@@ -1,8 +1,8 @@
 /**
- * Подписи персонажей на бланках. Рисуются сами (SVG), без чужих картинок:
- * у каждого человека своя, детерминированная по id — одна и та же на всех
- * документах. Начальная буква имени + начало фамилии рукописным шрифтом,
- * дальше росчерк и подчёркивание.
+ * Подписи персонажей на бланках — росчерки «от руки»: крупная заглавная
+ * петля, цепочка наклонных петель, иногда отдельный штрих или подчёркивание.
+ * Рисуются сами (SVG, гладкая кривая через опорные точки), у каждого человека
+ * своя — детерминированно по id, одна и та же на всех документах.
  */
 
 function rng(seed: string) {
@@ -15,56 +15,89 @@ function rng(seed: string) {
   };
 }
 
-const INKS = ["#24398a", "#2d3f9e", "#3a2f7d", "#1f2d6b", "#2a2a2a"];
+type P = [number, number];
+
+/** Гладкая кривая через точки (Catmull-Rom → кубические Безье) */
+function smooth(pts: P[]): string {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1: P = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: P = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C ${c1[0].toFixed(1)} ${c1[1].toFixed(1)}, ${c2[0].toFixed(1)} ${c2[1].toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+// Заглавные «буквы» — опорные точки в поле 1000×450
+const INITIALS: P[][] = [
+  // большая петля снизу-слева вверх-вправо и обратно (как «Д»/«Л»)
+  [[40, 405], [15, 350], [70, 250], [210, 150], [395, 50], [405, 72], [330, 145], [160, 300], [122, 292], [150, 205], [265, 140], [372, 122], [376, 140], [300, 185]],
+  // высокий штрих с крючком наверху
+  [[70, 390], [170, 230], [290, 55], [322, 28], [318, 62], [235, 225], [170, 330], [156, 318], [205, 238], [318, 172]],
+  // овал
+  [[230, 115], [130, 128], [70, 215], [105, 295], [215, 280], [305, 190], [292, 125], [232, 132], [205, 205], [262, 238]],
+  // двойная волна заглавной
+  [[30, 300], [110, 120], [180, 70], [200, 110], [140, 260], [170, 270], [270, 110], [300, 90], [305, 130], [260, 230], [300, 220]],
+];
+
+const INKS = ["#352a8f", "#2b3a9c", "#3a2d84", "#26348a", "#2f2f6e"];
 
 export interface SignatureSpec {
-  text: string;
-  /** Ширина букв (textLength) — росчерк начинается ровно после них */
-  textWidth: number;
-  skew: number;
+  paths: string[];
   color: string;
   rotate: number;
-  path: string;
   width: number;
+  height: number;
 }
 
-/** «Гульнара Сеитова» → «Г. Сеит», «Юрий Николаевич Кан» → «Ю. Кан» */
-function lettersFor(name: string, r: () => number): string {
-  const parts = name.replace(/\(.*?\)/g, "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  const surname = parts[parts.length - 1];
-  const keep = Math.min(surname.length, 2 + Math.floor(r() * 3));
-  const initial = parts.length > 1 && r() > 0.35 ? `${parts[0][0]}.` : "";
-  return `${initial}${surname.slice(0, keep)}`;
-}
-
-export function signatureFor(id: string, name?: string | null): SignatureSpec {
+export function signatureFor(id: string): SignatureSpec {
   const r = rng(id);
-  const text = name ? lettersFor(name, r) : "";
-  const color = INKS[Math.floor(r() * INKS.length)];
-  const rotate = -7 + r() * 8;
+  const tpl = INITIALS[Math.floor(r() * INITIALS.length)];
+  const sx = 0.8 + r() * 0.4;
+  const sy = 0.8 + r() * 0.35;
+  const j = () => (r() - 0.5) * 18;
+  const pts: P[] = tpl.map(([x, y]) => [x * sx + j(), y * sy + j()]);
 
-  // Росчерк: после букв несколько «волн» и возврат линией под подписью
-  const charW = 12;
-  let x = 8 + text.length * charW;
-  const base = 32;
-  let d = `M ${x.toFixed(1)} ${base}`;
-  const humps = text ? 1 + Math.floor(r() * 2) : 3 + Math.floor(r() * 2);
-  for (let i = 0; i < humps; i++) {
-    const w = 12 + r() * 10;
-    const h = (text ? 12 : 18) * (1 - i / (humps + 2)) + r() * 5;
-    d += ` C ${(x + w * 0.2).toFixed(1)} ${(base - h).toFixed(1)}, ${(x + w * 0.6).toFixed(1)} ${(base - h).toFixed(1)}, ${(x + w * 0.5).toFixed(1)} ${base + 2}`;
-    d += ` S ${(x + w * 0.9).toFixed(1)} ${(base + 4).toFixed(1)}, ${(x + w).toFixed(1)} ${(base - 2).toFixed(1)}`;
-    x += w;
+  // Цепочка наклонных петель, затухающих к концу
+  let [x, baseY] = pts[pts.length - 1];
+  baseY = Math.max(baseY, 200 * sy);
+  const n = 3 + Math.floor(r() * 5);
+  const step = 58 + r() * 26;
+  const lean = 55 + r() * 35;
+  for (let i = 0; i < n; i++) {
+    const amp = (150 - i * (80 / n)) * (0.8 + r() * 0.4);
+    pts.push([x + lean + step * 0.55, baseY - amp]);
+    pts.push([x + lean + step * 0.75, baseY - amp + 18]);
+    pts.push([x + step * 0.45, baseY + j() * 0.4]);
+    x += step;
   }
-  const end = x;
-  // подчёркивание: длинный хвост влево, иногда с петлёй
-  const loop = r() > 0.5;
-  const uy = base + 8 + r() * 5;
-  d += loop
-    ? ` C ${(end + 16).toFixed(1)} ${base - 10}, ${(end + 10).toFixed(1)} ${(uy + 6).toFixed(1)}, ${(end - 10).toFixed(1)} ${uy.toFixed(1)}`
-    : ` C ${(end + 8).toFixed(1)} ${base + 6}, ${(end - 4).toFixed(1)} ${(uy + 2).toFixed(1)}, ${(end - 18).toFixed(1)} ${uy.toFixed(1)}`;
-  d += ` S ${(10 + r() * 10).toFixed(1)} ${(uy + 4 - r() * 6).toFixed(1)}, ${(2 + r() * 6).toFixed(1)} ${(uy - 2 - r() * 6).toFixed(1)}`;
+  const end = pts[pts.length - 1];
+  const paths = [smooth(pts)];
 
-  return { text, textWidth: text.length * charW, skew: -8 - r() * 10, color, rotate, path: d, width: Math.max(110, end + 24) };
+  // Финал: отдельный штрих, подчёркивание назад или ничего
+  const tail = r();
+  let maxX = x + lean + step;
+  if (tail < 0.45) {
+    const y0 = baseY - 90 - r() * 40;
+    const x0 = x + 60 + r() * 50;
+    const len = 80 + r() * 60;
+    paths.push(smooth([[x0, y0 + 8], [x0 + len * 0.5, y0 - 4], [x0 + len, y0 - 10]]));
+    maxX = Math.max(maxX, x0 + len);
+  } else if (tail < 0.8) {
+    const uy = baseY + 60 + r() * 40;
+    paths[0] = smooth([...pts, [end[0] + 40, end[1] + 30], [end[0] - 80, uy], [pts[0][0] + 60, uy + 20], [pts[0][0] - 10, uy + 5]]);
+  }
+
+  return {
+    paths,
+    color: INKS[Math.floor(r() * INKS.length)],
+    rotate: -6 + r() * 6,
+    width: Math.ceil(maxX + 30),
+    height: 460,
+  };
 }

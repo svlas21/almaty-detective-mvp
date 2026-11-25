@@ -2383,8 +2383,9 @@ body {
   bottom: calc(100% - 16px);
   translate: -50% 0;
   width: auto;
-  max-width: 180px;
-  height: 46px;
+  max-width: 210px;
+  height: 62px;
+  object-fit: contain;
   overflow: visible;
   pointer-events: none;
   mix-blend-mode: multiply;
@@ -3689,4 +3690,18 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
 @media (prefers-reduced-motion: reduce) {
   .accuse-suspect, .accuse-ev, .accuse-option, .accuse-submit { transition: none; }
   .accuse-suspect-mark, .accuse-closed-stamp, .accuse-rejected { animation: none; }
+}
+
+/* Печати и штампы на бланках (components/Stamps.tsx) */
+.ev-form { position: relative; }
+.ev-form-corner { margin: 2px 0 6px; }
+.stamp-corner { display: block; width: 230px; height: auto; transform: rotate(-1deg); mix-blend-mode: multiply; opacity: 0.88; }
+.ev-form-attached { position: absolute; left: 24px; bottom: 16px; transform: rotate(-4deg); pointer-events: none; }
+.stamp-attached { display: block; mix-blend-mode: multiply; opacity: 0.85; }
+.ev-form-seal { position: absolute; right: 70px; bottom: 6px; pointer-events: none; }
+.stamp-round { display: block; mix-blend-mode: multiply; opacity: 0.82; }
+@media (max-width: 560px) {
+  .ev-form-attached { position: static; margin-top: 10px; transform: rotate(-3deg) scale(0.85); transform-origin: left; }
+  .ev-form-seal { right: 16px; transform: scale(0.85); transform-origin: bottom right; }
+  .stamp-corner { width: 190px; }
 }

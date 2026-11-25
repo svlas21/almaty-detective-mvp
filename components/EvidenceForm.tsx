@@ -1,5 +1,6 @@
 import RichText, { tp } from "@/components/RichText";
 import Signature from "@/components/Signature";
+import { AttachedStamp, CORNERS, CornerStamp, RoundSeal, SEALS, stampsFor } from "@/components/Stamps";
 
 export type EvidenceKind = "thing" | "testimony" | "expertise" | "document";
 
@@ -80,6 +81,8 @@ export default function EvidenceForm({ kind, name, text, sheet, place, signer, c
     f = { ...base, title: titles[first] ?? base.title };
   }
 
+  const stamps = stampsFor(k, name, signer?.name);
+
   return (
     <article className={`ev-form is-${k}`}>
       <header className="ev-form-top">
@@ -88,6 +91,17 @@ export default function EvidenceForm({ kind, name, text, sheet, place, signer, c
           л.д. <u>{sheet ?? "  "}</u>
         </span>
       </header>
+
+      {stamps.corner && (
+        <div className="ev-form-corner">
+          <CornerStamp lines={CORNERS[stamps.corner]} seed={name.length} />
+        </div>
+      )}
+      {sheet ? (
+        <div className="ev-form-attached">
+          <AttachedStamp sheet={sheet} />
+        </div>
+      ) : null}
 
       <h4 className="ev-form-title">
         {f.title}
@@ -132,7 +146,11 @@ export default function EvidenceForm({ kind, name, text, sheet, place, signer, c
           );
         })}
       </footer>
-      {f.stamp && <span className="ev-form-stamp">{f.stamp}</span>}
+      {stamps.seal && (
+        <div className="ev-form-seal">
+          <RoundSeal {...SEALS[stamps.seal]} seed={name.length + 1} rotate={-12 + (name.length % 9)} />
+        </div>
+      )}
     </article>
   );
 }
