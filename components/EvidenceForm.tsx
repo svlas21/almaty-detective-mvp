@@ -1,4 +1,5 @@
 import RichText, { tp } from "@/components/RichText";
+import Signature from "@/components/Signature";
 
 export type EvidenceKind = "thing" | "testimony" | "expertise" | "document";
 
@@ -46,9 +47,17 @@ interface Props {
   sheet?: number;
   /** Место — для протокола осмотра (название локации) */
   place?: string | null;
+  /** Кто выдал документ: допрошенный, эксперт, исполнитель справки */
+  signer?: { id: string; name: string } | null;
+  /** Эксперт-криминалист (подпись на протоколе осмотра) */
+  criminalist?: { id: string; name?: string } | null;
 }
 
-export default function EvidenceForm({ kind, name, text, sheet, place }: Props) {
+type Signer = { id: string; name?: string | null };
+/** Следователь — сам игрок: подпись без букв, всегда одна и та же */
+const INVESTIGATOR: Signer = { id: "investigator", name: null };
+
+export default function EvidenceForm({ kind, name, text, sheet, place, signer, criminalist }: Props) {
   const k: EvidenceKind = kind ?? "thing";
   const base = FORMS[k];
   // Название записи «Виктор: по четвергам…» → «Виктор» идёт в поле бланка
@@ -104,14 +113,24 @@ export default function EvidenceForm({ kind, name, text, sheet, place }: Props) 
       <RichText text={text} className="typed ev-form-body" />
 
       <footer className="ev-form-signs">
-        {f.signers.map((s) => (
-          <div key={s} className="ev-form-sign">
-            <span>{s}</span>
-            <span className="ev-form-sign-line">
-              <em>(подпись)</em>
-            </span>
-          </div>
-        ))}
+        {f.signers.map((role) => {
+          // Неизвестный исполнитель (например, справка из РОВД) — росчерк без букв, свой у каждого документа
+          const who: Signer =
+            role === "Следователь"
+              ? INVESTIGATOR
+              : role === "Эксперт-криминалист"
+                ? criminalist ?? { id: "criminalist" }
+                : signer ?? { id: `doc:${name}`, name: null };
+          return (
+            <div key={role} className="ev-form-sign">
+              <span>{role}</span>
+              <span className="ev-form-sign-line">
+                <Signature id={who.id} name={who.name} className="ev-form-signature" />
+                <em>(подпись)</em>
+              </span>
+            </div>
+          );
+        })}
       </footer>
       {f.stamp && <span className="ev-form-stamp">{f.stamp}</span>}
     </article>

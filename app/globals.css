@@ -2375,6 +2375,22 @@ body {
   margin-top: 14px;
 }
 .ev-form-sign-line em { margin-top: 2px; }
+.ev-form-sign-line { position: relative; }
+/* Подпись чернилами: лежит на строке, слегка её перекрывая */
+.ev-form-signature {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 16px);
+  translate: -50% 0;
+  width: auto;
+  max-width: 180px;
+  height: 46px;
+  overflow: visible;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+}
+.ev-form-signs { padding-top: 18px; }
 
 .ev-form-stamp {
   position: absolute;

@@ -55,6 +55,7 @@ interface CollectedEvidenceItem {
   generic_category?: string | null;
   image_url?: string | null;
   kind?: "thing" | "testimony" | "expertise" | "document" | null;
+  signer?: { id: string; name: string } | null;
 }
 
 // Разделы папки дела и шапки машинописных листов
@@ -435,6 +436,8 @@ export default function GameScreen() {
 
   // Сколько предметов на этой локации уже проверено (кроме найденных улик)
   const checkedHere = Object.values(resultById).filter((k) => k === "present" || k === "miss").length;
+  // Эксперт-криминалист подписывает протоколы осмотра
+  const criminalist = state?.experts?.find((x: { name?: string }) => /Сеитова/.test(x.name ?? "")) ?? null;
   const searchConcluded = !!state?.location?.search_note && (saidNo || checkedHere >= SEARCH_NOTE_AFTER);
 
   return (
@@ -729,7 +732,7 @@ export default function GameScreen() {
                 </div>
                 <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
                   {lastResult.kind === "found" ? (
-                    <EvidenceForm kind="thing" name={lastResult.name} text={lastResult.text} place={state.location?.name} />
+                    <EvidenceForm kind="thing" name={lastResult.name} text={lastResult.text} place={state.location?.name} criminalist={criminalist} />
                   ) : (
                     <RichText text={lastResult.text} className="evidence-result-text" />
                   )}
@@ -822,6 +825,8 @@ export default function GameScreen() {
                                     name={e.name}
                                     text={e.description}
                                     sheet={state.collectedEvidence.findIndex((x) => x.id === e.id) + 1}
+                                    signer={e.signer}
+                                    criminalist={criminalist}
                                   />
                                   {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
                                 </div>

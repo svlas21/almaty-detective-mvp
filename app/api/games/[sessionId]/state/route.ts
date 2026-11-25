@@ -391,7 +391,32 @@ export async function GET(
       ? db.from("session_state").update(stateUpdate).eq("session_id", sessionId)
       : Promise.resolve(null),
   ]);
-  const collectedEvidenceDetails = collectedRes.data;
+  // Кто подписал документ: тот, кто выдал улику (реакция, вопрос протокола,
+  // granted_by). Нужна для подписей на бланках (components/EvidenceForm.tsx).
+  const signers = await cached(`case-signers:${caseId}`, async () => {
+    const [charsRes, evRes] = await Promise.all([
+      db.from("characters").select("id, name, is_expert, reaction_rules, fixed_questions").eq("case_id", caseId),
+      db.from("evidence").select("id, granted_by_character_id").eq("case_id", caseId),
+    ]);
+    const map: Record<string, { id: string; name: string }> = {};
+    const chars = charsRes.data ?? [];
+    const byId = new Map(chars.map((c) => [c.id as string, { id: c.id as string, name: c.name as string }]));
+    for (const e of evRes.data ?? []) {
+      const who = e.granted_by_character_id ? byId.get(e.granted_by_character_id) : undefined;
+      if (who) map[e.id] = who;
+    }
+    for (const c of chars) {
+      const me = { id: c.id as string, name: c.name as string };
+      for (const q of (c.fixed_questions ?? []) as { grants_evidence_id?: string }[]) {
+        if (q?.grants_evidence_id && !map[q.grants_evidence_id]) map[q.grants_evidence_id] = me;
+      }
+      for (const r of (c.reaction_rules ?? []) as { grants?: string[] }[]) {
+        for (const g of r?.grants ?? []) if (!map[g]) map[g] = me;
+      }
+    }
+    return map;
+  });
+  const collectedEvidenceDetails = (collectedRes.data ?? []).map((e) => ({ ...e, signer: signers[e.id] ?? null }));
 
   // Готовность к финальному экрану "Обвинение" (Дело №9704): считается на
   // сервере из уже собранных полей session_state, наружу отдаётся только
