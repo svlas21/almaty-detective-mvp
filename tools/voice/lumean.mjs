@@ -53,10 +53,17 @@ async function api(method, path, body) {
       break;
     } catch (e) {
       if ((method === "POST" && path === "/orders") || attempt >= 5) throw new Error(`Нет связи с Lumean (${method} ${path}): ${e.cause?.code || e.message}`);
-      console.log(`  … нет связи, повтор ${attempt}/4 через ${attempt * 5} с`);
-      await new Promise((r) => setTimeout(r, attempt * 5000));
+      console.log(`  … нет связи, повтор ${attempt}/4 через ${attempt * 15} с`);
+      await new Promise((r) => setTimeout(r, attempt * 15000));
     }
   }
+  if (res.status === 429 && (api.waits = (api.waits || 0) + 1) <= 6) {
+    const wait = Math.max(30, Number(res.headers.get("retry-after")) || 0);
+    console.log(`  … Lumean просит подождать (слишком много запросов), пауза ${wait} с`);
+    await new Promise((r) => setTimeout(r, wait * 1000));
+    return api(method, path, body);
+  }
+  api.waits = 0;
   return parse(res, method, path);
 }
 
@@ -321,8 +328,8 @@ async function generate() {
       saveOrders();
     }
     let o2;
-    for (let i = 0; i < 90; i++) {
-      await new Promise((r) => setTimeout(r, 3000));
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 6000));
       o2 = await api("GET", `/orders/${order.id}`);
       if (["completed", "result_delivered", "partially_completed", "failed", "cancelled", "compensated"].includes(o2.status)) break;
     }
@@ -345,6 +352,7 @@ async function generate() {
     continue;
    }
    failed = 0;
+   await new Promise((r) => setTimeout(r, 4000)); // пауза между заказами, чтобы Lumean не блокировал
   }
   console.log(`\nПослушать: open ${dir}`);
 }
