@@ -229,7 +229,8 @@ async function setup() {
     return;
   }
   let found = null;
-  for (const lang of ["ru", ""]) {
+  if (o.like && st[o.like]) found = { voice_id: st[o.like].voice_id, name: st[o.like].voice_name };
+  for (const lang of found ? [] : ["ru", ""]) {
     const q = new URLSearchParams({ provider: "elevenlabs", search: want.split(" - ")[0].split(" — ")[0], page: "1", per_page: "50" });
     if (lang) q.set("language", lang);
     const d = await api("GET", "/voices?" + q.toString());
@@ -249,7 +250,7 @@ async function setup() {
         model_id: o.model || "eleven_multilingual_v2",
         voice_id: found.voice_id,
         advanced_voice_settings: true,
-        voice_settings: { stability: Number(o.stability ?? 0.5), similarity_boost: 0.75, use_speaker_boost: true, speed: Number(o.speed ?? 1.0) },
+        voice_settings: { stability: Number(o.stability ?? 0.5), similarity_boost: 0.75, style: Number(o.style ?? 0), use_speaker_boost: true, speed: Number(o.speed ?? 1.0) },
       },
     },
   });
