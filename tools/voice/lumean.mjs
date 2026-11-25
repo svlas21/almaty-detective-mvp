@@ -254,7 +254,7 @@ async function setup() {
       },
     },
   });
-  st[ch] = { template_id: tpl.id, voice_id: found.voice_id, voice_name: found.name };
+  st[ch] = { template_id: tpl.id, voice_id: found.voice_id, voice_name: found.name, model: o.model || "eleven_multilingual_v2" };
   saveState(st);
   console.log(`✔ Шаблон создан (бесплатно). Дальше: node tools/voice/lumean.mjs estimate --character ${ch}`);
 }
@@ -277,6 +277,13 @@ async function estimate() {
   console.log(`Озвучить: node tools/voice/lumean.mjs generate --character ${ch}`);
 }
 
+// Подсказка эмоции [устало] перед репликой — только для Eleven v3 (v2 прочитал бы её вслух).
+// Модель берётся из шаблона (state.json) или из имени персонажа (…-v3).
+function withTag(l, st) {
+  const v3 = /v3/.test(st.model || "") || /-v3$/.test(args().character || "");
+  return v3 && l.tag ? `[${l.tag}] ${l.text}` : l.text;
+}
+
 async function generate() {
   const ch = args().character || fail("Укажите --character");
   const st = loadState()[ch] || fail(`Сначала setup для ${ch}`);
@@ -297,12 +304,12 @@ async function generate() {
    try {
     const known = orders[l.id];
     let order;
-    if (known && known.text === l.text && !known.done) {
+    if (known && known.text === withTag(l, st) && !known.done) {
       order = { id: known.id };
       console.log(`  ↻ ${l.id}: докачиваю оплаченный заказ`);
     } else {
-      order = await api("POST", "/orders", { template_id: st.template_id, input_text: l.text, name: `${ch}-${l.id}` });
-      orders[l.id] = { id: order.id, text: l.text, done: false };
+      order = await api("POST", "/orders", { template_id: st.template_id, input_text: withTag(l, st), name: `${ch}-${l.id}` });
+      orders[l.id] = { id: order.id, text: withTag(l, st), done: false };
       saveOrders();
     }
     let o2;
