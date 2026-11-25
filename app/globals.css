@@ -3699,7 +3699,7 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
 .ev-form-attached { position: absolute; left: 24px; bottom: 16px; transform: rotate(-4deg); pointer-events: none; }
 .stamp-attached { display: block; mix-blend-mode: multiply; opacity: 0.85; }
 .ev-form-seal { position: absolute; right: 70px; bottom: 6px; pointer-events: none; }
-.stamp-round { display: block; mix-blend-mode: multiply; opacity: 0.55; }
+.stamp-round { display: block; mix-blend-mode: multiply; opacity: 0.7; }
 @media (max-width: 560px) {
   .ev-form-attached { position: static; margin-top: 10px; transform: rotate(-3deg) scale(0.85); transform-origin: left; }
   .ev-form-seal { right: 16px; transform: scale(0.85); transform-origin: bottom right; }

@@ -51,9 +51,9 @@ function SealInk({ id, seed }: { id: string; seed: number }) {
   return (
     <filter id={id} x="-5%" y="-5%" width="110%" height="110%">
       <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed={seed} result="fine" />
-      <feColorMatrix in="fine" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.75" result="fineMask" />
+      <feColorMatrix in="fine" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.65" result="fineMask" />
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed={seed + 11} result="blot" />
-      <feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 1.75" result="blotMask" />
+      <feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.9 1.85" result="blotMask" />
       <feComposite in="fineMask" in2="blotMask" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="mask" />
       <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="soft" />
       <feComposite in="soft" in2="mask" operator="in" />
