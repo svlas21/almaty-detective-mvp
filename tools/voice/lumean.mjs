@@ -222,7 +222,7 @@ const loadLines = (ch) => {
 async function setup() {
   const o = args();
   const ch = o.character || fail("Укажите --character, например beisenov");
-  const want = o.voice || fail('Укажите --voice "Название голоса"');
+  const want = o.voice || (o.like ? "" : fail('Укажите --voice "Название голоса" или --like <персонаж>'));
   const st = loadState();
   if (st[ch]?.template_id && !o.force) {
     console.log(`Шаблон для ${ch} уже есть: голос «${st[ch].voice_name}». Пересоздать — добавьте --force.`);
