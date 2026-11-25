@@ -38,7 +38,7 @@ export function anyCollected(ids: string[] | null | undefined, collected: string
 export const RULE_NOT_READY_EXPERT =
   "Пока мне не с чем это сопоставить. Принесите больше материалов — тогда скажу что-то определённое.";
 export const RULE_NOT_READY_PERSON = "«Не понимаю, к чему вы клоните», — отвечает и отводит взгляд.";
-export const RULE_GROUP_REPEAT = "«Я уже всё сказал(а). Больше мне добавить нечего».";
+export const RULE_GROUP_REPEAT = "«Я всё сказал{|а}. Больше мне добавить нечего».";
 
 /**
  * Результат предъявления улики персонажу по reaction_rules.

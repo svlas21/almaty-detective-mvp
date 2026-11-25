@@ -27,7 +27,7 @@ const FALLBACK: Record<"person" | "expert", Record<EvidenceKind, string[]>> = {
       "— Это пусть они и объясняют. Мне добавить нечего.",
       "— Это чужие слова. С них и спрашивайте.",
       "— Слышу. Мне на это сказать нечего.",
-      "— Я своё уже рассказал{|а}. За других не отвечаю.",
+      "— Я своё рассказал{|а}. За других не отвечаю.",
     ],
     expertise: [
       "— В экспертизах я не разбираюсь. Что там написано, вам виднее.",
@@ -62,12 +62,12 @@ const FALLBACK: Record<"person" | "expert", Record<EvidenceKind, string[]>> = {
 const OWN: Record<"person" | "expert", Record<EvidenceKind, string>> = {
   person: {
     thing: "— Я же сам{|а} вам это отдал{|а}. Что ещё?",
-    testimony: "— Я вам это уже рассказал{|а}. Добавить нечего.",
-    expertise: "— Я вам это уже рассказал{|а}. Добавить нечего.",
+    testimony: "— Я вам это рассказал{|а}. Добавить нечего.",
+    expertise: "— Я вам это рассказал{|а}. Добавить нечего.",
     document: "— Я же сам{|а} вам это дал{|а}.",
   },
   expert: {
-    thing: "— Этот материал я уже смотрел{|а}. Всё в заключении.",
+    thing: "— Этот материал я смотрел{|а}. Всё в заключении.",
     testimony: "— Это мои выводы. Пока новых материалов нет — добавить нечего.",
     expertise: "— Это моё заключение. Пока новых материалов нет — добавить нечего.",
     document: "— Это я вам и готовил{|а}. Всё, что было, там указано.",
@@ -133,7 +133,8 @@ export async function POST(
       .single(),
     db
       .from("characters")
-      .select("case_id, name, reactions, reaction_rules, fixed_questions, fallback_lines, confession_text, confession_requires_evidence, is_expert")
+      // "*": колонка generic_audio (озвучка общих ответов) появляется миграцией 058
+      .select("*")
       .eq("id", characterId)
       .single(),
     db.from("evidence").select("name, kind").eq("id", evidenceId).single(),
@@ -176,7 +177,7 @@ export async function POST(
     ((character.fixed_questions as { grants_evidence_id?: string }[] | null) ?? []).some(
       (q) => q?.grants_evidence_id === evidenceId
     );
-  const reaction =
+  const reactionRaw =
     ruleResult?.text ??
     character.reactions?.[evidenceId] ??
     fallbackReaction(
@@ -188,6 +189,10 @@ export async function POST(
       own,
       character.fallback_lines as Record<string, string | string[]> | null
     );
+
+  // {мужской|женский} — и в общих фразах правил («Я всё сказал{|а}»)
+  const female = isFemaleName(character.name);
+  const reaction = reactionRaw.replace(/\{([^|{}]*)\|([^|{}]*)\}/g, (_: string, m: string, f: string) => (female ? f : m));
 
   // "Reaction chain evidence" (Дело №9704): улика попадает в инвентарь не обыском
   // и не допросом, а после того как игрок увидел конкретную реакцию конкретного
@@ -304,7 +309,11 @@ export async function POST(
     .eq("session_id", sessionId);
 
   // Озвучка — только если реплика пришла из правила целиком (не заглушка)
-  const audio = ruleResult && ruleResult.text === reaction ? ruleResult.audio ?? null : null;
+  // Озвучка: своя реплика правила, иначе общий ответ этого персонажа его голосом
+  // (characters.generic_audio: {точный текст реплики → mp3}, tools/voice/lines/<персонаж>-generic.json)
+  const generic = (character.generic_audio as Record<string, string> | null | undefined) ?? null;
+  const audio =
+    (ruleResult && ruleResult.text === reactionRaw ? ruleResult.audio ?? null : null) ?? generic?.[reaction] ?? null;
   const response: { reaction: string; confession?: string; audio?: string | null } = { reaction, audio };
 
   if (

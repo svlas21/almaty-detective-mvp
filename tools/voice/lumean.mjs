@@ -393,7 +393,13 @@ async function upload() {
     let note = "";
     if (l.db) {
       let value = pub;
-      if (l.db.index != null || l.db.match) {
+      if (l.db.mapKey) {
+        // словарь в jsonb-колонке: generic_audio["точный текст"] = ссылка
+        const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
+        const obj = (await g.json())?.[0]?.[l.db.column] || {};
+        for (const k of [].concat(l.db.mapKey)) obj[k] = pub; // одна запись может закрывать несколько одинаковых по звуку текстов
+        value = obj;
+      } else if (l.db.index != null || l.db.match) {
         // ссылка внутри jsonb-массива: fixed_questions[index].audio_url или reaction_rules[id=R14].audio_url
         const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
         const arr = (await g.json())?.[0]?.[l.db.column];
