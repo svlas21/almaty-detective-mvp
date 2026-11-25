@@ -303,6 +303,11 @@ async function generate() {
   for (const l of lines) {
    try {
     const known = orders[l.id];
+    // Уже озвучено этим же текстом и файл на месте — не платим второй раз (переозвучить: --force)
+    if (known && known.done && known.text === withTag(l, st) && existsSync(join(dir, `${l.id}.mp3`)) && !args().force) {
+      console.log(`  = ${l.id}: уже озвучено, пропускаю`);
+      continue;
+    }
     let order;
     if (known && known.text === withTag(l, st) && !known.done) {
       order = { id: known.id };
