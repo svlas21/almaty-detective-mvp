@@ -26,38 +26,9 @@ function InkFilter({ id, seed = 3, strength = 1 }: { id: string; seed?: number; 
   );
 }
 
-/** Упрощённый силуэт герба: шанырак с лучами, крылья, звезда, лента. */
-function Emblem({ color }: { color: string }) {
-  const rays = Array.from({ length: 16 }, (_, i) => {
-    const a = (i / 16) * Math.PI * 2;
-    return (
-      <line
-        key={i}
-        x1={100 + Math.cos(a) * 11}
-        y1={100 + Math.sin(a) * 11}
-        x2={100 + Math.cos(a) * 21}
-        y2={100 + Math.sin(a) * 21}
-        stroke={color}
-        strokeWidth={1.2}
-      />
-    );
-  });
-  return (
-    <g fill="none" stroke={color}>
-      <circle cx="100" cy="100" r="29" strokeWidth="1.6" />
-      <circle cx="100" cy="100" r="22" strokeWidth="1" />
-      <circle cx="100" cy="100" r="8" strokeWidth="1.4" />
-      <path d="M92 100 h16 M100 92 v16" strokeWidth="1.2" />
-      {rays}
-      {/* крылья */}
-      <path d="M71 96 C 64 88, 63 78, 68 70 C 70 80, 74 86, 76 90 M73 104 C 64 104, 58 98, 56 90 C 62 96, 68 98, 74 98" strokeWidth="1.3" />
-      <path d="M129 96 C 136 88, 137 78, 132 70 C 130 80, 126 86, 124 90 M127 104 C 136 104, 142 98, 144 90 C 138 96, 132 98, 126 98" strokeWidth="1.3" />
-      {/* звезда */}
-      <path d="M100 63 l2.4 5 5.4 .6 -4 3.7 1.1 5.3 -4.9 -2.7 -4.9 2.7 1.1 -5.3 -4 -3.7 5.4 -.6z" fill={color} strokeWidth="0.6" />
-      {/* лента */}
-      <path d="M80 128 Q100 136 120 128 L118 134 Q100 141 82 134 Z" strokeWidth="1" />
-    </g>
-  );
+/** Государственный герб (public/stamps/emblem.png — оттиск, уже в цвете чернил). */
+function Emblem({ r }: { r: number }) {
+  return <image href="/stamps/emblem.png" x={100 - r} y={100 - r} width={2 * r} height={2 * r} preserveAspectRatio="xMidYMid meet" />;
 }
 
 interface RoundProps {
@@ -73,7 +44,7 @@ interface RoundProps {
 }
 
 /** Круглая печать: внешнее кольцо текста, внутреннее (если есть), центр — герб или надпись. */
-export function RoundSeal({ outer, inner, center, emblem, color = INK, size = 104, rotate = -8, seed = 3, className }: RoundProps) {
+export function RoundSeal({ outer, inner, center, emblem, color = INK, size = 118, rotate = -8, seed = 3, className }: RoundProps) {
   const uid = useId().replace(/:/g, "");
   const fOuter = `so${uid}`;
   const fInner = `si${uid}`;
@@ -115,9 +86,7 @@ export function RoundSeal({ outer, inner, center, emblem, color = INK, size = 10
           </>
         )}
         {emblem ? (
-          <g transform={inner ? "translate(100 100) scale(0.95) translate(-100 -100)" : undefined}>
-            <Emblem color={color} />
-          </g>
+          <Emblem r={inner ? 45 : 66} />
         ) : (
           (center ?? []).map((line, i, all) => (
             <text
