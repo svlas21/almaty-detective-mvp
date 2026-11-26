@@ -91,26 +91,7 @@ function DebriefView({ debrief }: { debrief: Debrief }) {
           </li>
         ))}
       </ol>
-      {debrief.false_leads.length > 0 && (
-        <>
-          <h3 className="debrief-sub">Ложные следы</h3>
-          <div className="debrief-leads">
-            {debrief.false_leads.map((l, i) => (
-              <div key={i} className="debrief-lead">
-                <div className="debrief-lead-who">{tp(l.who)}</div>
-                <div className="debrief-lead-row">
-                  <span className="debrief-lead-label">Почему подозревали</span>
-                  <RichText text={l.why} />
-                </div>
-                <div className="debrief-lead-row is-not">
-                  <span className="debrief-lead-label">На самом деле</span>
-                  <RichText text={l.why_not} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {/* Ложные следы в разборе не показываем (решение автора). */}
     </div>
   );
 }
