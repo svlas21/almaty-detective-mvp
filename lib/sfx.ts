@@ -144,12 +144,24 @@ export function stamp() {
   burst(c, { dur: 0.09, freq: 700, q: 0.7, gain: 0.25, type: "lowpass" });
 }
 
-/** Шорох бумаги / листа дела */
+/** Шорох бумаги: тихий, едва слышный (вариант D) — мягкое шуршание без резких верхов */
 export function paper() {
   const c = ac();
   if (!c) return;
-  burst(c, { dur: 0.22, freq: 3200, q: 0.5, gain: 0.07, type: "highpass" });
-  burst(c, { dur: 0.16, freq: 1800, q: 0.6, gain: 0.05, when: 0.08 });
+  const t = c.currentTime;
+  const src = c.createBufferSource();
+  src.buffer = noise(c, 0.25);
+  const f = c.createBiquadFilter();
+  f.type = "bandpass";
+  f.frequency.value = 1600;
+  f.Q.value = 0.6;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.05, t + 0.06);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  src.connect(f).connect(g).connect(c.destination);
+  src.start(t);
+  src.stop(t + 0.27);
 }
 
 /** Тихий щелчок интерфейса */
