@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { setVoicePlaying } from "@/lib/sfx";
 
 // Кнопка озвучки реплики: «Послушать» / «Пауза» и тонкая полоска прогресса.
 // Звук останавливается, когда кнопка исчезает с экрана.
@@ -39,8 +40,13 @@ export default function VoiceButton({
     const end = () => { setPlaying(false); setProgress(0); cb.current?.(1); };
     // играет только одна реплика: остальные кнопки встают на паузу
     const other = (e: Event) => { if ((e as CustomEvent).detail !== a && !a.paused) { a.pause(); setPlaying(false); } };
+    const on = () => setVoicePlaying(a, true);
+    const off = () => setVoicePlaying(a, false);
     a.addEventListener("timeupdate", tick);
     a.addEventListener("ended", end);
+    a.addEventListener("play", on);
+    a.addEventListener("pause", off);
+    a.addEventListener("ended", off);
     window.addEventListener("voice:play", other);
     if (autoPlay) {
       window.dispatchEvent(new CustomEvent("voice:play", { detail: a }));
@@ -50,6 +56,10 @@ export default function VoiceButton({
     return () => {
       window.removeEventListener("voice:play", other);
       a.pause();
+      setVoicePlaying(a, false);
+      a.removeEventListener("play", on);
+      a.removeEventListener("pause", off);
+      a.removeEventListener("ended", off);
       a.removeEventListener("timeupdate", tick);
       a.removeEventListener("ended", end);
       audio.current = null;

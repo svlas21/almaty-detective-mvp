@@ -24,6 +24,14 @@ export function setMuted(m: boolean) {
   if (m) stopRing();
 }
 
+// Пока звучит голос реплики, машинка молчит.
+const playingVoices = new Set<HTMLAudioElement>();
+export function setVoicePlaying(a: HTMLAudioElement, on: boolean) {
+  if (on) playingVoices.add(a);
+  else playingVoices.delete(a);
+}
+const voiceOn = () => playingVoices.size > 0;
+
 function ac(): Ctx | null {
   if (typeof window === "undefined" || isMuted()) return null;
   try {
@@ -74,6 +82,7 @@ function tone(c: Ctx, { freq, dur, gain, type = "sine" as OscillatorType, when =
 
 /** Удар клавиши печатной машинки */
 export function key() {
+  if (voiceOn()) return;
   const c = ac();
   if (!c) return;
   const v = 0.8 + Math.random() * 0.4;
@@ -83,6 +92,7 @@ export function key() {
 
 /** Перевод каретки в конце абзаца — короткий «дзынь» */
 export function carriage() {
+  if (voiceOn()) return;
   const c = ac();
   if (!c) return;
   tone(c, { freq: 2100, dur: 0.5, gain: 0.05 });
