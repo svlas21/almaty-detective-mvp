@@ -368,6 +368,18 @@ function envVar(name) {
 
 // Загрузка готовых mp3 в Supabase Storage (бакет voice) и запись ссылки в базу.
 // Ссылку в базу пишет только для реплик, у которых в файле реплик есть "db": {table, id, column}.
+// Обрыв связи с Supabase («fetch failed»): повторить до 4 раз с паузой
+async function fetchRetry(url, opts) {
+  for (let i = 1; ; i++) {
+    try { return await fetch(url, opts); }
+    catch (e) {
+      if (i >= 4) throw new Error(`Нет связи с Supabase: ${e.cause?.code || e.message}. Повторите команду — загруженное просто перезапишется.`);
+      console.log(`  … нет связи с Supabase, повтор ${i}/3 через ${i * 10} с`);
+      await new Promise((r) => setTimeout(r, i * 10000));
+    }
+  }
+}
+
 async function upload() {
   const o = args();
   const ch = o.character || fail("Укажите --character");
@@ -376,7 +388,7 @@ async function upload() {
   const url = envVar("NEXT_PUBLIC_SUPABASE_URL").replace(/\/$/, "");
   const sk = envVar("SUPABASE_SERVICE_ROLE_KEY");
   const H = { Authorization: `Bearer ${sk}`, apikey: sk };
-  const b = await fetch(`${url}/storage/v1/bucket`, {
+  const b = await fetchRetry(`${url}/storage/v1/bucket`, {
     method: "POST", headers: { ...H, "Content-Type": "application/json" },
     body: JSON.stringify({ id: "voice", name: "voice", public: true }),
   });
@@ -385,7 +397,7 @@ async function upload() {
     const file = join(OUT, ch, set, `${l.id}.mp3`);
     if (!existsSync(file)) { console.log(`  – ${l.id}: нет файла ${file}, пропуск`); continue; }
     const path = `${o.case || "9704"}/${ch}/${l.id}.mp3`;
-    const r = await fetch(`${url}/storage/v1/object/voice/${path}`, {
+    const r = await fetchRetry(`${url}/storage/v1/object/voice/${path}`, {
       method: "POST", headers: { ...H, "Content-Type": "audio/mpeg", "x-upsert": "true" }, body: readFileSync(file),
     });
     if (!r.ok) fail(`Загрузка ${l.id}: ${r.status} ${await r.text()}`);
@@ -395,20 +407,20 @@ async function upload() {
       let value = pub;
       if (l.db.mapKey) {
         // словарь в jsonb-колонке: generic_audio["точный текст"] = ссылка
-        const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
+        const g = await fetchRetry(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
         const obj = (await g.json())?.[0]?.[l.db.column] || {};
         for (const k of [].concat(l.db.mapKey)) obj[k] = pub; // одна запись может закрывать несколько одинаковых по звуку текстов
         value = obj;
       } else if (l.db.index != null || l.db.match) {
         // ссылка внутри jsonb-массива: fixed_questions[index].audio_url или reaction_rules[id=R14].audio_url
-        const g = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
+        const g = await fetchRetry(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}&select=${l.db.column}`, { headers: H });
         const arr = (await g.json())?.[0]?.[l.db.column];
         const i = l.db.match ? (Array.isArray(arr) ? arr.findIndex((x) => x?.id === l.db.match) : -1) : l.db.index;
         if (!Array.isArray(arr) || i < 0 || !arr[i]) fail(`В базе нет ${l.db.column}[${l.db.match ?? l.db.index}]`);
         arr[i][l.db.key || "audio_url"] = pub;
         value = arr;
       }
-      const u = await fetch(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}`, {
+      const u = await fetchRetry(`${url}/rest/v1/${l.db.table}?id=eq.${l.db.id}`, {
         method: "PATCH", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify({ [l.db.column]: value }),
       });
@@ -435,7 +447,7 @@ async function cleanup() {
   // 1. Что игра сейчас использует
   const used = [];
   for (const [table, cols] of [["characters", "intro_audio_url,fixed_questions,reaction_rules"], ["phone_calls", "*"]]) {
-    const r = await fetch(`${url}/rest/v1/${table}?select=${cols}`, { headers: H });
+    const r = await fetchRetry(`${url}/rest/v1/${table}?select=${cols}`, { headers: H });
     if (!r.ok) fail(`Не прочитал ${table}: ${r.status} ${await r.text()}`);
     used.push(JSON.stringify(await r.json()));
   }
@@ -444,7 +456,7 @@ async function cleanup() {
   const files = [];
   for (const ch of olds) {
     const prefix = `${caseId}/${ch}`;
-    const r = await fetch(`${url}/storage/v1/object/list/voice`, { method: "POST", headers: H, body: JSON.stringify({ prefix, limit: 1000 }) });
+    const r = await fetchRetry(`${url}/storage/v1/object/list/voice`, { method: "POST", headers: H, body: JSON.stringify({ prefix, limit: 1000 }) });
     if (!r.ok) fail(`Не прочитал папку ${prefix}: ${r.status} ${await r.text()}`);
     for (const f of await r.json()) if (f.name && f.id) files.push(`${prefix}/${f.name}`);
   }
@@ -460,7 +472,7 @@ async function cleanup() {
   const ans = (await rl.question(`Удалить из хранилища ${files.length} старых файлов (${olds.join(", ")})? Это навсегда. Напишите «да»: `)).trim().toLowerCase();
   rl.close();
   if (ans !== "да") return console.log("Отменено, ничего не удалено.");
-  const d = await fetch(`${url}/storage/v1/object/voice`, { method: "DELETE", headers: H, body: JSON.stringify({ prefixes: files }) });
+  const d = await fetchRetry(`${url}/storage/v1/object/voice`, { method: "DELETE", headers: H, body: JSON.stringify({ prefixes: files }) });
   if (!d.ok) fail(`Удаление: ${d.status} ${await d.text()}`);
   console.log(`✔ Удалено ${(await d.json()).length ?? files.length} файлов.`);
 }
