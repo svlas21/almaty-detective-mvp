@@ -77,8 +77,8 @@ export function key() {
   const c = ac();
   if (!c) return;
   const v = 0.8 + Math.random() * 0.4;
-  burst(c, { dur: 0.035, freq: 2600 * v, q: 1.2, gain: 0.16 });
-  tone(c, { freq: 180 * v, dur: 0.04, gain: 0.05, type: "triangle" });
+  burst(c, { dur: 0.035, freq: 2600 * v, q: 1.2, gain: 0.22 });
+  tone(c, { freq: 180 * v, dur: 0.04, gain: 0.07, type: "triangle" });
 }
 
 /** Перевод каретки в конце абзаца — короткий «дзынь» */

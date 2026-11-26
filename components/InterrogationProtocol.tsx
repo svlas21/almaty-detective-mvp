@@ -16,11 +16,22 @@ export interface InterrogationQuestion {
 
 export function VoicedAnswer({ text, src, className = "dossier-answer" }: { text: string; src: string; className?: string }) {
   const [spoken, setSpoken] = useState(0);
+  // Сначала текст печатается на машинке (со звуком клавиш), потом — обычный текст
+  // с подсветкой по голосу. «Слушать» во время печати допечатывает сразу.
+  const [typed, setTyped] = useState(false);
+  const onProgress = (p: number) => {
+    if (p > 0 && !typed) setTyped(true);
+    setSpoken(p);
+  };
   return (
     <div className="voiced-answer">
-      <RichText text={text} className={className} animate spoken={spoken} />
+      {typed ? (
+        <RichText text={text} className={className} spoken={spoken} />
+      ) : (
+        <TypedText text={text} className={className} onDone={() => setTyped(true)} />
+      )}
       <div className="voiced-answer-btn">
-        <VoiceButton src={src} compact label="Слушать" onProgress={setSpoken} />
+        <VoiceButton src={src} compact label="Слушать" onProgress={onProgress} />
       </div>
     </div>
   );

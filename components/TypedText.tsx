@@ -8,11 +8,38 @@ import { carriage, key } from "@/lib/sfx";
  * Текст «печатается на машинке»: буквы появляются по одной, со звуком клавиш.
  * Клик по тексту — допечатать сразу. При «уменьшении движения» — без эффекта.
  */
-export default function TypedText({ text, className, speed = 55 }: { text: string | null | undefined; className?: string; speed?: number }) {
+export default function TypedText({
+  text,
+  className,
+  speed = 55,
+  onDone,
+  finishNow,
+}: {
+  text: string | null | undefined;
+  className?: string;
+  speed?: number;
+  /** Вызывается, когда текст допечатан (в том числе по клику). */
+  onDone?: () => void;
+  /** true — допечатать сразу (например, игрок нажал «Слушать»). */
+  finishNow?: boolean;
+}) {
   const full = text ?? "";
   const [n, setN] = useState(0);
   const done = n >= full.length;
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const doneCb = useRef(onDone);
+  doneCb.current = onDone;
+
+  useEffect(() => {
+    if (done && full.length > 0) doneCb.current?.();
+  }, [done, full]);
+
+  useEffect(() => {
+    if (finishNow) {
+      if (timer.current) clearInterval(timer.current);
+      setN(full.length);
+    }
+  }, [finishNow, full]);
 
   useEffect(() => {
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -28,7 +55,7 @@ export default function TypedText({ text, className, speed = 55 }: { text: strin
       i = Math.min(full.length, i + step);
       const chunk = full.slice(prev, i);
       if (/\n/.test(chunk)) carriage();
-      else if (/\S/.test(chunk) && Math.random() < 0.7) key();
+      else if (/\S/.test(chunk) && Math.random() < 0.85) key();
       setN(i);
       if (i >= full.length && timer.current) clearInterval(timer.current);
     }, 33);
