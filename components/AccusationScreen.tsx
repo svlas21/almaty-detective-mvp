@@ -1,5 +1,6 @@
 "use client";
 
+import CaseResult from "@/components/CaseResult";
 import RichText, { tp } from "@/components/RichText";
 import { SuspectAvatar } from "@/components/SuspectsList";
 import { img } from "@/lib/img";
@@ -220,6 +221,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
             <RichText text={endingText} className="rt-ending" />
           </div>
         </Sheet>
+        <CaseResult sessionId={sessionId} />
         {debrief && <DebriefView debrief={debrief} />}
       </>
     );
