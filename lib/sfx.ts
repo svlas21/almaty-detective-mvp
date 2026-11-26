@@ -85,7 +85,7 @@ export function key() {
   if (voiceOn()) return;
   const c = ac();
   if (!c) return;
-  burst(c, { dur: 0.012, freq: 6500 * (0.9 + Math.random() * 0.2), q: 0.8, gain: 0.07, type: "highpass" });
+  burst(c, { dur: 0.012, freq: 6500 * (0.9 + Math.random() * 0.2), q: 0.8, gain: 0.035, type: "highpass" });
 }
 
 /** Конец абзаца — тот же тик, чуть заметнее, без звонка */
@@ -93,7 +93,7 @@ export function carriage() {
   if (voiceOn()) return;
   const c = ac();
   if (!c) return;
-  burst(c, { dur: 0.02, freq: 5500, q: 0.8, gain: 0.08, type: "highpass" });
+  burst(c, { dur: 0.02, freq: 5500, q: 0.8, gain: 0.04, type: "highpass" });
 }
 
 /** Штамп: глухой удар и шлепок резины */
