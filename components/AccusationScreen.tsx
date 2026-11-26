@@ -134,6 +134,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<Set<string>>(new Set());
   const [organizerSubmitting, setOrganizerSubmitting] = useState(false);
   const [organizerWrong, setOrganizerWrong] = useState(false);
+  const [organizerHint, setOrganizerHint] = useState<string | null>(null);
 
   const [accompliceAnswers, setAccompliceAnswers] = useState<Record<string, number>>({});
   const [accompliceSubmitting, setAccompliceSubmitting] = useState(false);
@@ -186,6 +187,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
     if (data.correct) {
       setStage("accomplices");
     } else {
+      setOrganizerHint(data.hint ?? null);
       setOrganizerWrong(true);
       stamp();
     }
@@ -381,7 +383,9 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
       {organizerWrong && (
         <div className="accuse-rejected" role="alert">
           <span className="accuse-rejected-stamp">Возвращено</span>
-          Прокурор вернул дело на доработку: обвинение не сходится с доказательствами.
+          {organizerHint
+            ? tp(`Прокурор вернул дело на доработку: ${organizerHint}`)
+            : "Прокурор вернул дело на доработку: обвинение не сходится с доказательствами."}
         </div>
       )}
 

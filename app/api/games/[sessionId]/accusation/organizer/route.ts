@@ -59,7 +59,7 @@ export async function POST(
 
   const { data: accusation } = await db
     .from("case_accusation")
-    .select("required_evidence_ids, correct_organizer_character_id")
+    .select("required_evidence_ids, correct_organizer_character_id, required_hints")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
@@ -99,5 +99,16 @@ export async function POST(
     })
     .eq("session_id", sessionId);
 
-  return NextResponse.json({ correct });
+  // Конкретный отказ прокурора — только если обвиняемый верный и ВСЕ нужные улики
+  // уже лежат в папке, но игрок не приложил какую-то из них. Иначе — общий отказ,
+  // чтобы не подсказывать, что ещё искать.
+  let hint: string | null = null;
+  if (!correct && organizerCharacterId === accusation.correct_organizer_character_id) {
+    const allRequiredCollected = requiredEvidenceIds.every((id) => state.collected_evidence.includes(id));
+    const missing = requiredEvidenceIds.find((id) => !submittedEvidenceIds.includes(id));
+    const hints = (accusation.required_hints ?? {}) as Record<string, string>;
+    if (allRequiredCollected && missing && hints[missing]) hint = hints[missing];
+  }
+
+  return NextResponse.json({ correct, hint });
 }
