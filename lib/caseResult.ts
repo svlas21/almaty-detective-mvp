@@ -15,7 +15,7 @@ type LogEntry = { type?: string; stage?: string; correct?: boolean };
 export type CaseResult = {
   score: number;
   rank: string;
-  stars: number; // 1..5 — звёздочки на погонах
+  stars: number; // ступень звания 1..5 — по ней рисуется погон
   parts: { label: string; points: number; max: number }[];
   stats: {
     gameMinutes: number;
@@ -28,12 +28,13 @@ export type CaseResult = {
   };
 };
 
+// Специальные звания милиции; stars — ступень (1..5), по ней рисуется погон.
 const RANKS: { min: number; title: string; stars: number }[] = [
-  { min: 95, title: "Полковник угрозыска", stars: 5 },
-  { min: 85, title: "Майор", stars: 4 },
-  { min: 70, title: "Капитан", stars: 3 },
-  { min: 50, title: "Старший лейтенант", stars: 2 },
-  { min: 0, title: "Стажёр", stars: 1 },
+  { min: 95, title: "Полковник милиции", stars: 5 },
+  { min: 85, title: "Майор милиции", stars: 4 },
+  { min: 70, title: "Капитан милиции", stars: 3 },
+  { min: 50, title: "Старший лейтенант милиции", stars: 2 },
+  { min: 0, title: "Лейтенант милиции", stars: 1 },
 ];
 
 export function computeResult(params: {

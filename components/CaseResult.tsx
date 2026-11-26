@@ -2,26 +2,40 @@
 
 import { useEffect, useRef, useState } from "react";
 import { attemptsLabel, formatTerm, type CaseResult as Result } from "@/lib/caseResult";
-import { stamp } from "@/lib/sfx";
+import { epauletteSvg } from "@/lib/epaulette";
+import { gameDate, MONTHS_GEN } from "@/lib/gameClock";
+import { stamp, tick } from "@/lib/sfx";
 
 /**
- * Итог раскрытого дела: аттестация (счёт, звание, срок следствия) и карточка «Поделиться».
- * Карточка рисуется на canvas — та же картинка и показывается, и скачивается, и уходит в «Поделиться».
- * На карточке только цифры и звание: ни имён, ни ответов, чтобы не испортить игру друзьям.
+ * Итог раскрытого дела — приказ о присвоении звания и погон.
+ * Погон — главный образ: звание читается по звёздам и просветам, как на настоящем.
+ * Карточка «Поделиться» рисуется на canvas из тех же элементов; имён и разгадки на ней нет.
  */
 type Data = Result & { caseTitle: string | null };
 
 const W = 1080;
 const H = 1350;
+const C = { cloth: "#1f242b", paper: "#e6dcc3", ink: "#23201b", soft: "#6b624f", gold: "#c9a24a", red: "#a3242a" };
 
-function caseNumber(title: string | null) {
-  return title?.match(/№\s*(\d+)/)?.[1] ?? "9704";
+const caseNumber = (t: string | null) => t?.match(/№\s*(\d+)/)?.[1] ?? "9704";
+const caseName = (t: string | null) => t?.match(/«([^»]+)»/)?.[1] ?? "Угоревший";
+function orderDate(min: number) {
+  const d = gameDate(min);
+  return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]} ${d.getFullYear()} г.`;
 }
-function caseName(title: string | null) {
-  return title?.match(/«([^»]+)»/)?.[1] ?? "Угоревший";
+/** Сколько звёзд на погоне — для звука «пристёгивания». */
+function starCount(level: number) {
+  return level === 4 ? 1 : level === 5 ? 3 : level + 1;
 }
-function starsText(n: number) {
-  return "★".repeat(n) + "☆".repeat(5 - n);
+function ledger(d: Data) {
+  const s = d.stats;
+  const [o, a, t, e] = d.parts;
+  return [
+    { label: "Обвинение организатору", note: attemptsLabel(s.organizerAttempts), p: o },
+    { label: "Роли соучастников", note: attemptsLabel(s.accompliceAttempts), p: a },
+    { label: "Выезды", note: `${s.trips} при плане ${s.refTrips}`, p: t },
+    { label: "Улики", note: `${s.evidenceFound} из ${s.evidenceTotal}`, p: e },
+  ];
 }
 
 function loadImg(src: string): Promise<HTMLImageElement | null> {
@@ -32,11 +46,47 @@ function loadImg(src: string): Promise<HTMLImageElement | null> {
     i.src = src;
   });
 }
-
 function fontVar(name: string, fallback: string) {
-  if (typeof window === "undefined") return fallback;
   const v = getComputedStyle(document.body).getPropertyValue(name).trim();
   return v ? `${v}, ${fallback}` : fallback;
+}
+function wrap(g: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (const w of text.split(" ")) {
+    const t = line ? `${line} ${w}` : w;
+    if (g.measureText(t).width > maxW && line) {
+      out.push(line);
+      line = w;
+    } else line = t;
+  }
+  if (line) out.push(line);
+  return out;
+}
+/** Штамп «РАСКРЫТО» с потёртостями. */
+function stampCanvas(font: string): HTMLCanvasElement {
+  const s = document.createElement("canvas");
+  s.width = 460;
+  s.height = 130;
+  const g = s.getContext("2d")!;
+  g.strokeStyle = C.red;
+  g.fillStyle = C.red;
+  g.lineWidth = 8;
+  g.strokeRect(8, 8, 444, 114);
+  g.lineWidth = 3;
+  g.strokeRect(20, 20, 420, 90);
+  g.font = `bold 66px ${font}`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("РАСКРЫТО", 230, 68);
+  g.globalCompositeOperation = "destination-out";
+  for (let i = 0; i < 900; i++) {
+    g.globalAlpha = Math.random() * 0.9;
+    g.beginPath();
+    g.arc(Math.random() * 460, Math.random() * 130, Math.random() * 2.4, 0, Math.PI * 2);
+    g.fill();
+  }
+  return s;
 }
 
 async function drawCard(d: Data): Promise<HTMLCanvasElement> {
@@ -47,141 +97,110 @@ async function drawCard(d: Data): Promise<HTMLCanvasElement> {
   try {
     await document.fonts?.ready;
   } catch {
-    /* без шрифтов — запасные */
+    /* запасные шрифты */
   }
   const serif = fontVar("--font-pt-serif", "Georgia, serif");
   const mono = fontVar("--font-pt-mono", "Courier New, monospace");
-  const ink = "#2a2318";
-  const soft = "#6a604c";
-  const red = "#9c2b1f";
 
-  // фон: тёмный стол и лист бумаги
-  g.fillStyle = "#14110c";
+  // сукно шинели
+  g.fillStyle = C.cloth;
   g.fillRect(0, 0, W, H);
-  const px = 70, py = 70, pw = W - 140, ph = H - 140;
-  g.fillStyle = "#e9e0c9";
-  g.fillRect(px, py, pw, ph);
-  // лёгкое «зерно» бумаги
-  for (let i = 0; i < 2600; i++) {
-    g.fillStyle = `rgba(90,70,40,${Math.random() * 0.05})`;
-    g.fillRect(px + Math.random() * pw, py + Math.random() * ph, 2, 2);
-  }
-  // двойная рамка бланка
-  g.strokeStyle = ink;
-  g.lineWidth = 3;
-  g.strokeRect(px + 34, py + 34, pw - 68, ph - 68);
-  g.lineWidth = 1;
-  g.strokeRect(px + 44, py + 44, pw - 88, ph - 88);
-
-  const cx = W / 2;
-  g.textAlign = "center";
-  g.fillStyle = soft;
-  g.font = `26px ${mono}`;
-  g.fillText("ГУВД Г. АЛМАТЫ · УГОЛОВНЫЙ РОЗЫСК", cx, py + 120);
-  g.fillText("1996", cx, py + 156);
-
-  g.fillStyle = ink;
-  g.font = `30px ${mono}`;
-  g.fillText(`ДЕЛО № ${caseNumber(d.caseTitle)}`, cx, py + 240);
-  g.font = `bold 78px ${serif}`;
-  g.fillText(`«${caseName(d.caseTitle)}»`, cx, py + 330);
-
-  // разделитель
-  g.strokeStyle = soft;
-  g.setLineDash([6, 8]);
-  g.beginPath();
-  g.moveTo(px + 120, py + 385);
-  g.lineTo(px + pw - 120, py + 385);
-  g.stroke();
-  g.setLineDash([]);
-
-  // счёт
-  g.fillStyle = ink;
-  g.font = `bold 230px ${serif}`;
-  g.fillText(String(d.score), cx - 90, py + 610);
-  const numW = g.measureText(String(d.score)).width;
-  g.textAlign = "left";
-  g.fillStyle = soft;
-  g.font = `40px ${serif}`;
-  g.fillText("из 100", cx - 90 + numW / 2 + 16, py + 610);
-
-  // звание
-  g.textAlign = "center";
-  g.fillStyle = "#a97530";
-  g.font = `54px ${serif}`;
-  g.fillText(starsText(d.stars), cx, py + 700);
-  g.fillStyle = ink;
-  g.font = `bold 50px ${serif}`;
-  g.fillText(d.rank, cx, py + 770);
-
-  // цифры следствия 2×2
-  const s = d.stats;
-  const cells: [string, string][] = [
-    ["СРОК СЛЕДСТВИЯ", formatTerm(s.gameMinutes)],
-    ["ВЫЕЗДОВ", `${s.trips} · эталон ${s.refTrips}`],
-    ["ОБВИНЕНИЕ", attemptsLabel(s.organizerAttempts)],
-    ["УЛИК В ДЕЛЕ", `${s.evidenceFound} из ${s.evidenceTotal}`],
-  ];
-  const gx = px + 110, gy = py + 800, cw = (pw - 220) / 2, ch = 100;
-  cells.forEach(([k, v], i) => {
-    const x = gx + (i % 2) * cw;
-    const y = gy + Math.floor(i / 2) * ch;
-    g.textAlign = "left";
-    g.fillStyle = soft;
-    g.font = `22px ${mono}`;
-    g.fillText(k, x + 20, y + 30);
-    g.fillStyle = ink;
-    g.font = `bold 36px ${serif}`;
-    g.fillText(v, x + 20, y + 76);
-  });
-
-  // подпись следователя — справа внизу
-  const sig = await loadImg("/signatures/investigator.png");
-  const lx = px + pw - 440, ly = py + 1080;
-  g.strokeStyle = ink;
-  g.lineWidth = 1.5;
-  g.beginPath();
-  g.moveTo(lx, ly);
-  g.lineTo(lx + 300, ly);
-  g.stroke();
-  if (sig) {
-    const sh = 90, sw2 = Math.min((sig.width / sig.height) * sh, 260);
-    g.globalAlpha = 0.85;
-    g.drawImage(sig, lx + 20, ly - sh + 18, sw2, sh);
-    g.globalAlpha = 1;
-  }
-  g.fillStyle = soft;
-  g.font = `22px ${mono}`;
-  g.textAlign = "left";
-  g.fillText("СЛЕДОВАТЕЛЬ", lx, ly + 32);
-
-  // печать с гербом и штамп «РАСКРЫТО» — у счёта, справа
-  const emblem = await loadImg("/stamps/emblem.png");
   g.save();
-  g.translate(px + pw - 205, py + 495);
-  g.rotate(-0.18);
-  g.globalAlpha = 0.72;
-  if (emblem) g.drawImage(emblem, -105, -105, 210, 210);
+  g.globalAlpha = 0.05;
+  g.strokeStyle = "#ffffff";
+  for (let x = -H; x < W; x += 7) {
+    g.beginPath();
+    g.moveTo(x, 0);
+    g.lineTo(x + H, H);
+    g.stroke();
+  }
+  g.restore();
+  const vg = g.createRadialGradient(W * 0.35, H * 0.3, 100, W * 0.5, H * 0.5, 900);
+  vg.addColorStop(0, "rgba(255,255,255,0.05)");
+  vg.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.fillStyle = vg;
+  g.fillRect(0, 0, W, H);
+
+  // дело
+  g.textAlign = "left";
+  g.fillStyle = "rgba(230,220,195,.7)";
+  g.font = `30px ${mono}`;
+  g.fillText(`Дело № ${caseNumber(d.caseTitle)}`, 90, 120);
+  g.fillStyle = C.paper;
+  g.font = `bold 64px ${serif}`;
+  g.fillText(`«${caseName(d.caseTitle)}»`, 90, 192);
+
+  // погон
+  const ep = await loadImg(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(epauletteSvg(d.stars))}`);
+  if (ep) {
+    g.save();
+    g.shadowColor = "rgba(0,0,0,.6)";
+    g.shadowBlur = 40;
+    g.shadowOffsetY = 18;
+    g.translate(110, 250);
+    g.rotate(-0.04);
+    g.drawImage(ep, 0, 0, 280, 682);
+    g.restore();
+  }
+
+  // звание и оценка
+  g.fillStyle = C.gold;
+  g.font = `28px ${mono}`;
+  g.fillText("присвоено звание", 470, 360);
+  g.fillStyle = C.paper;
+  g.font = `bold 76px ${serif}`;
+  wrap(g, d.rank, 520).forEach((l, i) => g.fillText(l, 470, 450 + i * 84));
+  g.fillStyle = C.gold;
+  g.font = `bold 200px ${serif}`;
+  g.fillText(String(d.score), 462, 800);
+  const sw = g.measureText(String(d.score)).width;
+  g.fillStyle = "rgba(230,220,195,.6)";
+  g.font = `44px ${serif}`;
+  g.fillText("из 100", 470 + sw + 8, 800);
+
+  // полоска приказа
+  g.save();
+  g.translate(W / 2, 1075);
+  g.rotate(-0.018);
+  g.shadowColor = "rgba(0,0,0,.5)";
+  g.shadowBlur = 30;
+  g.shadowOffsetY = 12;
+  g.fillStyle = C.paper;
+  g.fillRect(-450, -150, 900, 290);
+  g.shadowColor = "transparent";
+  g.fillStyle = C.ink;
+  g.font = `bold 30px ${mono}`;
+  g.fillText(`Приказ № ${caseNumber(d.caseTitle)}-лс`, -400, -88);
+  g.fillStyle = C.soft;
+  g.font = `24px ${mono}`;
+  g.textAlign = "right";
+  g.fillText(orderDate(d.stats.gameMinutes), 400, -88);
+  g.textAlign = "left";
+  g.fillStyle = C.ink;
+  g.font = `26px ${mono}`;
+  const s = d.stats;
+  [
+    `Срок следствия: ${formatTerm(s.gameMinutes)}.`,
+    `Выездов: ${s.trips} при плане ${s.refTrips}.`,
+    `Обвинение предъявлено ${attemptsLabel(s.organizerAttempts)}.`,
+    `Улик приобщено: ${s.evidenceFound} из ${s.evidenceTotal}.`,
+  ].forEach((l, i) => g.fillText(l, -400, -36 + i * 40));
+  const st = stampCanvas(mono);
+  g.translate(270, 85);
+  g.rotate(-0.16);
   g.globalAlpha = 0.85;
-  g.strokeStyle = red;
-  g.lineWidth = 6;
-  g.strokeRect(-150, -34, 300, 68);
-  g.fillStyle = red;
-  g.font = `bold 44px ${mono}`;
-  g.textAlign = "center";
-  g.fillText("РАСКРЫТО", 0, 17);
+  g.drawImage(st, -150, -42, 300, 85);
   g.restore();
 
-  // низ
-  g.fillStyle = soft;
+  g.fillStyle = "rgba(230,220,195,.55)";
   g.textAlign = "center";
-  g.font = `26px ${serif}`;
-  g.fillText("Детектив Алматы · раскроете быстрее?", cx, py + ph - 62);
+  g.font = `28px ${serif}`;
+  g.fillText("Детектив Алматы. Раскроете быстрее?", W / 2, H - 60);
   return c;
 }
 
 function shareText(d: Data, url: string) {
-  return `Раскрыл дело № ${caseNumber(d.caseTitle)} «${caseName(d.caseTitle)}» в «Детективе Алматы»: ${d.score} из 100, звание — ${d.rank}. Срок следствия ${formatTerm(d.stats.gameMinutes)}. Раскроете быстрее? ${url}`;
+  return `Раскрыл дело № ${caseNumber(d.caseTitle)} «${caseName(d.caseTitle)}» в «Детективе Алматы» и получил звание «${d.rank}»: ${d.score} из 100. Раскроете быстрее? ${url}`;
 }
 
 export default function CaseResult({ sessionId }: { sessionId: string }) {
@@ -197,7 +216,10 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
       .then(async (d: Data | null) => {
         if (!alive || !d) return;
         setData(d);
-        setTimeout(() => stamp(), 350);
+        // звёзды «пристёгиваются» по одной, затем печать на приказ
+        const n = starCount(d.stars);
+        for (let i = 0; i < n; i++) setTimeout(() => tick(), 700 + i * 260);
+        setTimeout(() => stamp(), 1100 + n * 260);
         const c = await drawCard(d);
         c.toBlob((b) => {
           if (!alive || !b) return;
@@ -214,16 +236,16 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
   if (!data) return null;
   const url = typeof window !== "undefined" ? window.location.origin : "";
   const text = shareText(data, url);
-  const file = () => (blobRef.current ? new File([blobRef.current], `delo-${caseNumber(data.caseTitle)}.png`, { type: "image/png" }) : null);
+  const fileName = `delo-${caseNumber(data.caseTitle)}.png`;
 
   async function share() {
-    const f = file();
+    const f = blobRef.current ? new File([blobRef.current], fileName, { type: "image/png" }) : null;
     try {
       if (f && navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], text });
       else if (navigator.share) await navigator.share({ text, url });
       else await copy();
     } catch {
-      /* игрок закрыл окно — ничего страшного */
+      /* окно закрыли */
     }
   }
   async function copy() {
@@ -239,60 +261,79 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
     if (!img) return;
     const a = document.createElement("a");
     a.href = img;
-    a.download = `delo-${caseNumber(data!.caseTitle)}.png`;
+    a.download = fileName;
     a.click();
   }
 
   const s = data.stats;
   return (
-    <section className="case-result" aria-label="Итог следствия">
-      <div className="cr-attest">
-        <div className="cr-kicker">Аттестация по делу</div>
-        <div className="cr-main">
-          <div className="cr-score">
-            <span className="cr-score-n">{data.score}</span>
-            <span className="cr-score-of">из 100</span>
-          </div>
-          <div className="cr-rank">
-            <span className="cr-stars" aria-label={`${data.stars} из 5`}>{starsText(data.stars)}</span>
-            <span className="cr-rank-title">{data.rank}</span>
-          </div>
+    <section className="order" aria-label="Итог следствия">
+      <div className="order-sheet">
+        <div className="order-cloth">
+          <div className="order-ep" dangerouslySetInnerHTML={{ __html: epauletteSvg(data.stars) }} />
         </div>
-        <dl className="cr-stats">
-          <div><dt>Срок следствия</dt><dd>{formatTerm(s.gameMinutes)}</dd></div>
-          <div><dt>Выездов</dt><dd>{s.trips} <small>· эталон {s.refTrips}</small></dd></div>
-          <div><dt>Обвинение</dt><dd>{attemptsLabel(s.organizerAttempts)}</dd></div>
-          <div><dt>Улик в деле</dt><dd>{s.evidenceFound} <small>из {s.evidenceTotal}</small></dd></div>
-        </dl>
-        <div className="cr-parts">
-          {data.parts.map((p) => (
-            <div key={p.label} className="cr-part">
-              <span className="cr-part-label">{p.label}</span>
-              <span className="cr-part-bar"><span style={{ width: `${(100 * p.points) / p.max}%` }} /></span>
-              <span className="cr-part-n">{p.points}<small>/{p.max}</small></span>
-            </div>
-          ))}
+
+        <div className="order-paper">
+          <p className="order-org">
+            Министерство внутренних дел Республики Казахстан
+            <br />
+            ГУВД г. Алматы
+          </p>
+          <div className="order-titlerow">
+            <h2 className="order-title">Приказ № {caseNumber(data.caseTitle)}-лс</h2>
+            <span className="order-date">{orderDate(s.gameMinutes)}</span>
+          </div>
+          <p className="order-body">За раскрытие дела «{caseName(data.caseTitle)}» присвоить специальное звание</p>
+          <p className="order-rank">{data.rank}</p>
+
+          <p className="order-score">
+            Оценка работы <b>{data.score}</b> из 100
+          </p>
+          <ul className="order-ledger">
+            {ledger(data).map((r) => (
+              <li key={r.label}>
+                <span className="ol-label">
+                  {r.label}
+                  <small>{r.note}</small>
+                </span>
+                <span className="ol-dots" aria-hidden="true" />
+                <span className="ol-pts">
+                  {r.p.points} из {r.p.max}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="order-facts">Срок следствия по делу: {formatTerm(s.gameMinutes)}.</p>
+
+          <div className="order-sign">
+            <span>Начальник ГУВД г. Алматы</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="order-sig" src="/signatures/anon1.png" alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="order-seal" src="/stamps/emblem.png" alt="" />
+            <span className="order-stamp">Раскрыто</span>
+          </div>
         </div>
       </div>
 
-      <div className="cr-share">
-        <div className="cr-card">
+      <div className="order-share">
+        <div className="order-card">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={img} alt={`Карточка: дело раскрыто, ${data.score} из 100, ${data.rank}`} />
+            <img src={img} alt={`Карточка: ${data.rank}, ${data.score} из 100`} />
           ) : (
-            <div className="cr-card-wait">Печатаем карточку…</div>
+            <div className="order-card-wait">Готовим карточку</div>
           )}
         </div>
-        <div className="cr-share-side">
-          <h3>Поделиться результатом</h3>
-          <p>На карточке только цифры и звание — ни имён, ни разгадки. Друзьям не испортите.</p>
-          <div className="cr-btns">
-            <button className="cr-btn is-main" onClick={share}>Поделиться</button>
-            <a className="cr-btn" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">WhatsApp</a>
-            <a className="cr-btn" href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">Telegram</a>
-            <button className="cr-btn" onClick={download} disabled={!img}>Скачать картинку</button>
-            <button className="cr-btn" onClick={copy}>{copied ? "Скопировано" : "Скопировать текст"}</button>
+        <div className="order-share-side">
+          <h3>Похвастаться погонами</h3>
+          <p>На карточке звание и цифры следствия. Имён и разгадки нет, друзьям ничего не испортите.</p>
+          <div className="order-btns">
+            <button className="ob is-main" onClick={share}>Поделиться</button>
+            <a className="ob" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+            <a className="ob" href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">Telegram</a>
+            <button className="ob" onClick={download} disabled={!img}>Скачать картинку</button>
+            <button className="ob" onClick={copy}>{copied ? "Текст скопирован" : "Скопировать текст"}</button>
           </div>
         </div>
       </div>
