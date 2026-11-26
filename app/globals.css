@@ -3705,3 +3705,35 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
   .ev-form-seal { right: 16px; transform: scale(0.85); transform-origin: bottom right; }
   .stamp-corner { width: 190px; }
 }
+
+/* Что предъявили / зачитали — над ответом человека */
+.dossier-reaction-gist {
+  margin: 4px 0 12px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--paper-shadow);
+  background: rgba(255, 255, 255, 0.3);
+  font-family: var(--font-pt-serif), Georgia, serif;
+  font-size: 14.5px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.dossier-reaction-gist-label {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Текст «печатается на машинке» (components/TypedText.tsx) */
+.typed-text.is-typing { cursor: pointer; }
+.typed-text.is-typing > :last-child > :last-child::after {
+  content: "▌";
+  margin-left: 1px;
+  color: var(--ink-soft);
+  animation: typed-caret 0.9s steps(1) infinite;
+}
+@keyframes typed-caret { 50% { opacity: 0; } }

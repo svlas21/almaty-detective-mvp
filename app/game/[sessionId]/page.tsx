@@ -20,6 +20,9 @@ import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
 import PhoneCallOverlay, { PendingCall } from "@/components/PhoneCallOverlay";
 import CaseJournal, { type JournalEntry } from "@/components/CaseJournal";
+import TypedText from "@/components/TypedText";
+import SearchVerdict from "@/components/SearchVerdict";
+import { paper, stamp } from "@/lib/sfx";
 import HelpGuide from "@/components/HelpGuide";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
@@ -301,6 +304,8 @@ export default function GameScreen() {
         image: data.relevant ? data.image_url ?? null : null,
       };
       setLastResult(shown);
+      if (kind === "found") stamp();
+      else paper();
       if (kind !== "miss") setResultCache((prev) => ({ ...prev, [evidenceId]: shown }));
       setResultById((prev) => ({ ...prev, [evidenceId]: kind }));
       loadState({ silent: true });
@@ -734,7 +739,7 @@ export default function GameScreen() {
                   {lastResult.kind === "found" ? (
                     <EvidenceForm kind="thing" name={lastResult.name} text={lastResult.text} place={state.location?.name} criminalist={criminalist} />
                   ) : (
-                    <RichText text={lastResult.text} className="evidence-result-text" />
+                    <TypedText text={lastResult.text} className="evidence-result-text" />
                   )}
                   {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
                 </div>
@@ -742,13 +747,7 @@ export default function GameScreen() {
             )}
 
             {searchConcluded && (
-              <div className="search-verdict" role="status">
-                <div className="search-verdict-head">
-                  <span className="search-verdict-label">Итог осмотра · запись в протокол</span>
-                  <span className="search-verdict-stamp">Улик не обнаружено</span>
-                </div>
-                <RichText text={state.location!.search_note!} className="search-verdict-text" />
-              </div>
+              <SearchVerdict note={state.location!.search_note!} />
             )}
 
             <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>

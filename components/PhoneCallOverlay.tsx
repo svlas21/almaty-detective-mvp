@@ -2,7 +2,8 @@
 
 import RichText, { tp } from "@/components/RichText";
 import VoiceButton from "@/components/VoiceButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { paper, startRing, stopRing } from "@/lib/sfx";
 import { gameDate, MONTHS_NOM, WEEKDAYS } from "@/lib/gameClock";
 
 export interface PendingCall {
@@ -33,6 +34,27 @@ interface PhoneCallOverlayProps {
  */
 export default function PhoneCallOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOverlayProps) {
   const [phase, setPhase] = useState<"ringing" | "talking">("ringing");
+
+  // Звук: трубка звонит, пока не ответили; сцена начальства — шорох листа
+  // (внутренний телефон — короткий звонок).
+  useEffect(() => {
+    if (call.style === "scene") {
+      if (/телефон/i.test(call.callerRole ?? "")) {
+        startRing();
+        const t = setTimeout(stopRing, 2300);
+        return () => {
+          clearTimeout(t);
+          stopRing();
+        };
+      }
+      paper();
+      return;
+    }
+    if (phase === "ringing") {
+      startRing();
+      return () => stopRing();
+    }
+  }, [phase, call.style, call.callerRole]);
 
   if (call.style === "scene")
     return <SceneOverlay call={call} onAnswer={onAnswer} onClose={onClose} elapsedMinutes={elapsedMinutes} />;

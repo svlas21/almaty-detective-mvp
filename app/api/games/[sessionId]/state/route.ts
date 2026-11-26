@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { effectiveLocationId } from "@/lib/relocations";
 import { anyCollected, requiresAnySatisfied } from "@/lib/graphRules";
 import { cached } from "@/lib/caseCache";
 
@@ -365,6 +366,8 @@ export async function GET(
     const wanted = (suspect.role ?? "").toUpperCase().includes("РОЗЫСК");
     return {
       ...suspect,
+      // после событий партии человек может быть в другом месте (lib/relocations.ts)
+      location_id: effectiveLocationId(suspect.id, suspect.location_id, viewedCalls),
       fixed_questions: fixedQuestions,
       unlocked: true,
       mentioned: false,

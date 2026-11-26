@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import RichText, { tp } from "@/components/RichText";
+import TypedText from "@/components/TypedText";
 import VoiceButton from "@/components/VoiceButton";
 
 export interface InterrogationQuestion {
@@ -79,7 +80,7 @@ export default function InterrogationProtocol({
             (qa.audio_url ? (
               <VoicedAnswer text={qa.a} src={qa.audio_url} />
             ) : (
-              <RichText text={qa.a} className="dossier-answer" />
+              <TypedText text={qa.a} className="dossier-answer" />
             ))}
         </div>
       ))}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import RichText, { tp } from "@/components/RichText";
+import TypedText from "@/components/TypedText";
 import { img } from "@/lib/img";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
 import InterrogationProtocol, { VoicedAnswer } from "@/components/InterrogationProtocol";
@@ -184,7 +185,7 @@ export default function SuspectDetail({
               {topicAnswer && (
                 <div className="dossier-reaction">
                   <div className="dossier-reaction-label">{tp(topicAnswer.topicLabel)}</div>
-                  <RichText text={topicAnswer.text} className="dossier-reaction-text" />
+                  <TypedText text={topicAnswer.text} className="dossier-reaction-text" />
                 </div>
               )}
             </div>
@@ -274,10 +275,25 @@ export default function SuspectDetail({
               {reaction && (
                 <div className="dossier-reaction">
                   <div className="dossier-reaction-label">{tp(reaction.evidenceName)}</div>
+                  {(() => {
+                    // Что именно предъявили / зачитали — первая строка описания улики,
+                    // иначе ответ человека бывает непонятно к чему.
+                    const shown = collectedEvidence.find((e) => e.name === reaction.evidenceName);
+                    const gist = (shown?.description ?? "").split(/\n\s*\n/)[0].trim();
+                    if (!gist) return null;
+                    return (
+                      <div className="dossier-reaction-gist">
+                        <span className="dossier-reaction-gist-label">
+                          {shown?.kind === "testimony" ? "Вы зачитываете" : "Вы показываете"}
+                        </span>
+                        {tp(gist)}
+                      </div>
+                    );
+                  })()}
                   {reaction.audio ? (
                     <VoicedAnswer key={reaction.audio} text={reaction.text} src={reaction.audio} className="dossier-reaction-text" />
                   ) : (
-                    <RichText text={reaction.text} className="dossier-reaction-text" />
+                    <TypedText text={reaction.text} className="dossier-reaction-text" />
                   )}
                 </div>
               )}

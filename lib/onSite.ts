@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { effectiveLocationId } from "@/lib/relocations";
 
 /**
  * Свидетелей и подозреваемых допрашивают только на месте: следователь должен
@@ -12,14 +13,16 @@ export async function requireOnSite(
   sessionId: string,
   characterId: string
 ): Promise<NextResponse | null> {
-  const [sessionRes, characterRes] = await Promise.all([
+  const [sessionRes, characterRes, stateRes] = await Promise.all([
     db.from("game_sessions").select("current_location_id").eq("id", sessionId).single(),
     db.from("characters").select("location_id, is_expert").eq("id", characterId).single(),
+    db.from("session_state").select("viewed_calls").eq("session_id", sessionId).single(),
   ]);
   const here = sessionRes.data?.current_location_id;
   const ch = characterRes.data;
   if (!ch || ch.is_expert || !ch.location_id) return null;
-  if (ch.location_id !== here) {
+  const where = effectiveLocationId(characterId, ch.location_id, stateRes.data?.viewed_calls);
+  if (where !== here) {
     return NextResponse.json(
       { error: "Этот человек в другом месте. Допросить можно только на месте." },
       { status: 403 }

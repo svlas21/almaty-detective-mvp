@@ -4,6 +4,7 @@ import RichText, { tp } from "@/components/RichText";
 import { SuspectAvatar } from "@/components/SuspectsList";
 import { img } from "@/lib/img";
 import { useEffect, useState } from "react";
+import { stamp, tick } from "@/lib/sfx";
 
 interface CollectedEvidenceItem {
   id: string;
@@ -186,6 +187,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
       setStage("accomplices");
     } else {
       setOrganizerWrong(true);
+      stamp();
     }
   }
 
@@ -209,8 +211,10 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
       setEndingText(data.endingText ?? "");
       setDebrief(data.debrief ?? null);
       setStage("ending");
+      stamp();
     } else {
       setAccompliceWrong(true);
+      stamp();
     }
   }
 
@@ -326,6 +330,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
               onClick={() => {
                 setOrganizerWrong(false);
                 setSelectedOrganizerId(option.character_id);
+                tick();
               }}
             >
               <SuspectAvatar id={option.character_id} name={option.label} portraitUrl={person?.portrait_url} size={84} style={{ borderRadius: 3, display: "block" }} />

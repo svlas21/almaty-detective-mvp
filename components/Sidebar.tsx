@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isMuted, setMuted, tick } from "@/lib/sfx";
 import { useParams } from "next/navigation";
 
 export type SidebarTab = "map" | "suspects" | "expertise" | "evidence" | "accuse" | "log" | "help";
@@ -29,6 +30,14 @@ export default function Sidebar({ active, onChange }: SidebarProps) {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [muted, setMutedState] = useState(false);
+  useEffect(() => setMutedState(isMuted()), []);
+  function toggleSound() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+    if (!next) tick();
+  }
 
   async function confirmReset() {
     setResetting(true);
@@ -58,6 +67,15 @@ export default function Sidebar({ active, onChange }: SidebarProps) {
             {item.icon}
           </button>
         ))}
+
+        <button
+          className="sidebar-btn"
+          title={muted ? "Звуки выключены — включить" : "Звуки включены — выключить"}
+          aria-pressed={!muted}
+          onClick={toggleSound}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
 
         {IS_DEV && (
           <button
