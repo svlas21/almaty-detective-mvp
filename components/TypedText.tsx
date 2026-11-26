@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import RichText from "@/components/RichText";
-import { carriage, key } from "@/lib/sfx";
+import { carriage, key, preloadKeys } from "@/lib/sfx";
 
 // Тексты, которые уже печатались в этой вкладке: при повторном показе — сразу целиком, без звука.
 const SEEN_KEY = "typed-seen";
@@ -79,6 +79,7 @@ export default function TypedText({
       return;
     }
     markSeen(full);
+    preloadKeys();
     setN(0);
     let i = 0;
     const step = Math.max(1, Math.round(speed / 30)); // букв за тик (тик ~33 мс)

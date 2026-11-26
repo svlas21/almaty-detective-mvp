@@ -80,20 +80,60 @@ function tone(c: Ctx, { freq, dur, gain, type = "sine" as OscillatorType, when =
   o.stop(t + dur + 0.02);
 }
 
-/** Удар клавиши: «еле слышно» (вариант E) — лёгкий тик бумаги */
-export function key() {
+// Удары клавиш — запись настоящей машинки: 14 ударов в одном файле,
+// каждый в своём окне по 0,15 с (public/sfx/typewriter-keys.wav).
+const KEYS_URL = "/sfx/typewriter-keys.wav";
+const KEY_SLOT = 0.15;
+const KEY_LEN = 0.11;
+const KEY_COUNT = 14;
+const KEY_VOLUME = 0.35;
+let keysBuf: AudioBuffer | null = null;
+let keysLoading = false;
+function loadKeys(c: Ctx) {
+  if (keysBuf || keysLoading) return;
+  keysLoading = true;
+  fetch(KEYS_URL)
+    .then((r) => r.arrayBuffer())
+    .then((b) => c.decodeAudioData(b))
+    .then((buf) => {
+      keysBuf = buf;
+    })
+    .catch(() => {
+      keysLoading = false; // попробуем в следующий раз
+    });
+}
+let lastKey = -1;
+function playKey(gain: number) {
   if (voiceOn()) return;
   const c = ac();
   if (!c) return;
-  burst(c, { dur: 0.012, freq: 6500 * (0.9 + Math.random() * 0.2), q: 0.8, gain: 0.035, type: "highpass" });
+  if (!keysBuf) return loadKeys(c); // первые удары до загрузки — тихо
+  let i = Math.floor(Math.random() * KEY_COUNT);
+  if (i === lastKey) i = (i + 1) % KEY_COUNT; // один и тот же удар подряд звучит механически
+  lastKey = i;
+  const src = c.createBufferSource();
+  src.buffer = keysBuf;
+  src.playbackRate.value = 0.96 + Math.random() * 0.08;
+  const g = c.createGain();
+  g.gain.value = gain;
+  src.connect(g).connect(c.destination);
+  src.start(0, i * KEY_SLOT, KEY_LEN);
 }
 
-/** Конец абзаца — тот же тик, чуть заметнее, без звонка */
+/** Удар клавиши печатной машинки (запись) */
+export function key() {
+  playKey(KEY_VOLUME);
+}
+
+/** Конец абзаца — удар чуть громче, без звонка */
 export function carriage() {
-  if (voiceOn()) return;
+  playKey(KEY_VOLUME * 1.3);
+}
+
+/** Заранее загрузить звук клавиш (вызывается при первом показе печатающегося текста). */
+export function preloadKeys() {
   const c = ac();
-  if (!c) return;
-  burst(c, { dur: 0.02, freq: 5500, q: 0.8, gain: 0.04, type: "highpass" });
+  if (c) loadKeys(c);
 }
 
 /** Штамп: глухой удар и шлепок резины */
