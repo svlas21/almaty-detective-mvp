@@ -87,7 +87,9 @@ export function resolveReactionRules(
     ruleGrants.forEach((id) => grants.add(id));
   }
   for (const r of inherited) (r.grants ?? []).forEach((id) => grants.add(id));
-  // Звук — только если прозвучит ровно одна реплика целиком (иначе текст и голос разойдутся)
-  const audio = texts.length === 1 && audios.length === 1 ? audios[0] : null;
+  // Звук — если у каждой прозвучавшей реплики есть запись. Несколько записей идут
+  // одна за другой: ссылки через пробел (VoiceButton играет их как плейлист).
+  const audio =
+    audios.length > 0 && audios.length === texts.length && audios.every(Boolean) ? (audios as string[]).join(" ") : null;
   return { text: texts.join("\n\n"), grants: [...grants], audio };
 }

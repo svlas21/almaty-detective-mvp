@@ -27,41 +27,78 @@ export default function VoiceButton({
   const cb = useRef(onProgress);
   cb.current = onProgress;
 
+  // src может быть несколькими ссылками через пробел — реплики подряд (плейлист).
   useEffect(() => {
     if (!src) return;
-    const a = new Audio(src);
-    a.preload = "auto";
-    audio.current = a;
+    const list = src.split(/\s+/).filter(Boolean).map((u) => {
+      const a = new Audio(u);
+      a.preload = "auto";
+      return a;
+    });
+    let cur = 0;
+    audio.current = list[0];
+    // общая доля прослушанного: по длительности частей, пока она неизвестна — поровну
+    const total = () => {
+      const d = list.map((a) => (isFinite(a.duration) && a.duration > 0 ? a.duration : 0));
+      if (d.some((x) => x === 0)) return (cur + (list[cur].duration ? list[cur].currentTime / list[cur].duration : 0)) / list.length;
+      const sum = d.reduce((x, y) => x + y, 0);
+      const before = d.slice(0, cur).reduce((x, y) => x + y, 0);
+      return (before + list[cur].currentTime) / sum;
+    };
     const tick = () => {
-      const p = a.duration ? a.currentTime / a.duration : 0;
+      const p = total();
       setProgress(p);
       cb.current?.(p);
     };
-    const end = () => { setPlaying(false); setProgress(0); cb.current?.(1); };
+    const ended = () => {
+      if (cur < list.length - 1) {
+        cur += 1;
+        audio.current = list[cur];
+        void list[cur].play().catch(() => setPlaying(false));
+        return;
+      }
+      setPlaying(false);
+      setProgress(0);
+      cb.current?.(1);
+      cur = 0;
+      audio.current = list[0];
+      list.forEach((a) => (a.currentTime = 0));
+    };
     // играет только одна реплика: остальные кнопки встают на паузу
-    const other = (e: Event) => { if ((e as CustomEvent).detail !== a && !a.paused) { a.pause(); setPlaying(false); } };
-    const on = () => setVoicePlaying(a, true);
-    const off = () => setVoicePlaying(a, false);
-    a.addEventListener("timeupdate", tick);
-    a.addEventListener("ended", end);
-    a.addEventListener("play", on);
-    a.addEventListener("pause", off);
-    a.addEventListener("ended", off);
+    const other = (e: Event) => {
+      if (!list.includes((e as CustomEvent).detail) && !list[cur].paused) {
+        list[cur].pause();
+        setPlaying(false);
+      }
+    };
+    const offs: (() => void)[] = [];
+    for (const a of list) {
+      const on = () => setVoicePlaying(a, true);
+      const off = () => setVoicePlaying(a, false);
+      a.addEventListener("timeupdate", tick);
+      a.addEventListener("ended", ended);
+      a.addEventListener("play", on);
+      a.addEventListener("pause", off);
+      a.addEventListener("ended", off);
+      offs.push(() => {
+        a.pause();
+        setVoicePlaying(a, false);
+        a.removeEventListener("timeupdate", tick);
+        a.removeEventListener("ended", ended);
+        a.removeEventListener("play", on);
+        a.removeEventListener("pause", off);
+        a.removeEventListener("ended", off);
+      });
+    }
     window.addEventListener("voice:play", other);
     if (autoPlay) {
-      window.dispatchEvent(new CustomEvent("voice:play", { detail: a }));
+      window.dispatchEvent(new CustomEvent("voice:play", { detail: list[0] }));
       setStarted(true);
-      a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      list[0].play().then(() => setPlaying(true)).catch(() => setPlaying(false));
     }
     return () => {
       window.removeEventListener("voice:play", other);
-      a.pause();
-      setVoicePlaying(a, false);
-      a.removeEventListener("play", on);
-      a.removeEventListener("pause", off);
-      a.removeEventListener("ended", off);
-      a.removeEventListener("timeupdate", tick);
-      a.removeEventListener("ended", end);
+      offs.forEach((f) => f());
       audio.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
