@@ -16,12 +16,12 @@ export async function requireOnSite(
   const [sessionRes, characterRes, stateRes] = await Promise.all([
     db.from("game_sessions").select("current_location_id").eq("id", sessionId).single(),
     db.from("characters").select("location_id, is_expert").eq("id", characterId).single(),
-    db.from("session_state").select("viewed_calls").eq("session_id", sessionId).single(),
+    db.from("session_state").select("viewed_calls, collected_evidence").eq("session_id", sessionId).single(),
   ]);
   const here = sessionRes.data?.current_location_id;
   const ch = characterRes.data;
   if (!ch || ch.is_expert || !ch.location_id) return null;
-  const where = effectiveLocationId(characterId, ch.location_id, stateRes.data?.viewed_calls);
+  const where = effectiveLocationId(characterId, ch.location_id, stateRes.data?.viewed_calls, stateRes.data?.collected_evidence);
   if (where !== here) {
     return NextResponse.json(
       { error: "Этот человек в другом месте. Допросить можно только на месте." },

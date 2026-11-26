@@ -367,7 +367,7 @@ export async function GET(
     return {
       ...suspect,
       // после событий партии человек может быть в другом месте (lib/relocations.ts)
-      location_id: effectiveLocationId(suspect.id, suspect.location_id, viewedCalls),
+      location_id: effectiveLocationId(suspect.id, suspect.location_id, viewedCalls, state.collected_evidence),
       fixed_questions: fixedQuestions,
       unlocked: true,
       mentioned: false,
