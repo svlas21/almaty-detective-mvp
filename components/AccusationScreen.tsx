@@ -139,6 +139,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
   const [accompliceAnswers, setAccompliceAnswers] = useState<Record<string, number>>({});
   const [accompliceSubmitting, setAccompliceSubmitting] = useState(false);
   const [accompliceWrong, setAccompliceWrong] = useState(false);
+  const [accompliceHint, setAccompliceHint] = useState<string | null>(null);
 
   const [endingText, setEndingText] = useState<string | null>(null);
   const [debrief, setDebrief] = useState<Debrief | null>(null);
@@ -215,6 +216,7 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
       setStage("ending");
       stamp();
     } else {
+      setAccompliceHint(data.hint ?? null);
       setAccompliceWrong(true);
       stamp();
     }
@@ -284,7 +286,9 @@ export default function AccusationScreen({ sessionId, collectedEvidence, people 
         {accompliceWrong && (
           <div className="accuse-rejected" role="alert">
             <span className="accuse-rejected-stamp">Возвращено</span>
-            Прокурор вернул дело на доработку: в ролях фигурантов что-то не сходится.
+            {accompliceHint
+              ? tp(`Прокурор вернул дело на доработку: ${accompliceHint}`)
+              : "Прокурор вернул дело на доработку: в ролях фигурантов что-то не сходится."}
           </div>
         )}
 

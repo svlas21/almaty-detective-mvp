@@ -99,8 +99,30 @@ export async function POST(
     .eq("session_id", sessionId);
 
   if (!correct) {
+    // Все роли выбраны верно, но кого-то не допросили с нужной уликой —
+    // прокурор говорит, чьего протокола не хватает. Если неверна хоть одна роль —
+    // общий отказ, без подсказок.
+    let hint: string | null = null;
+    const allOptionsCorrect = accomplices.every((acc) => {
+      const answer = submittedAnswers.find((a) => a.characterId === acc.character_id);
+      return !!answer && acc.options[answer.optionIndex]?.correct === true;
+    });
+    if (allOptionsCorrect) {
+      const missing = accomplices.find(
+        (acc) => !viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
+      );
+      if (missing) {
+        const [{ data: who }, { data: ev }] = await Promise.all([
+          db.from("characters").select("name").eq("id", missing.character_id).maybeSingle(),
+          db.from("evidence").select("name").eq("id", missing.required_reaction_evidence_id).maybeSingle(),
+        ]);
+        if (who?.name && ev?.name) {
+          hint = `нет протокола допроса: ${who.name} — по улике «${ev.name}».`;
+        }
+      }
+    }
     await writeLog;
-    return NextResponse.json({ correct: false });
+    return NextResponse.json({ correct: false, hint });
   }
 
   await Promise.all([
