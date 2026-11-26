@@ -86,7 +86,7 @@ const KEYS_URL = "/sfx/typewriter-keys.wav";
 const KEY_SLOT = 0.15;
 const KEY_LEN = 0.11;
 const KEY_COUNT = 14;
-const KEY_VOLUME = 0.35;
+const KEY_VOLUME = 0.22;
 let keysBuf: AudioBuffer | null = null;
 let keysLoading = false;
 function loadKeys(c: Ctx) {

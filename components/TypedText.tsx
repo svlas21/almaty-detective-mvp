@@ -82,7 +82,7 @@ export default function TypedText({
     preloadKeys();
     setN(0);
     let i = 0;
-    const step = Math.max(1, Math.round(speed / 30)); // букв за тик (тик ~33 мс)
+    const step = Math.max(1, Math.round(speed / 30)); // букв за тик (тик 45 мс)
     timer.current = setInterval(() => {
       const prev = i;
       i = Math.min(full.length, i + step);
@@ -91,7 +91,7 @@ export default function TypedText({
       else if (/\S/.test(chunk) && Math.random() < 0.85) key();
       setN(i);
       if (i >= full.length && timer.current) clearInterval(timer.current);
-    }, 33);
+    }, 45); // ~44 знака в секунду
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
