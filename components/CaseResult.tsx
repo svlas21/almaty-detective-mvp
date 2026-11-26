@@ -139,7 +139,7 @@ async function drawCard(d: Data): Promise<HTMLCanvasElement> {
     g.shadowOffsetY = 18;
     g.translate(110, 250);
     g.rotate(-0.04);
-    g.drawImage(ep, 0, 0, 280, 682);
+    g.drawImage(ep, 0, 0, 280, 686);
     g.restore();
   }
 
