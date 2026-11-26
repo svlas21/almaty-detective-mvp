@@ -80,23 +80,20 @@ function tone(c: Ctx, { freq, dur, gain, type = "sine" as OscillatorType, when =
   o.stop(t + dur + 0.02);
 }
 
-/** Удар клавиши: «мягкие клавиши» (вариант A) — тихий короткий щелчок */
+/** Удар клавиши: «еле слышно» (вариант E) — лёгкий тик бумаги */
 export function key() {
   if (voiceOn()) return;
   const c = ac();
   if (!c) return;
-  const v = 0.9 + Math.random() * 0.2;
-  burst(c, { dur: 0.018, freq: 4200 * v, q: 0.9, gain: 0.15, type: "highpass" });
-  burst(c, { dur: 0.03, freq: 1200 * v, q: 1, gain: 0.05 });
+  burst(c, { dur: 0.012, freq: 6500 * (0.9 + Math.random() * 0.2), q: 0.8, gain: 0.07, type: "highpass" });
 }
 
-/** Конец абзаца — чуть более длинный мягкий щелчок, без звонка */
+/** Конец абзаца — тот же тик, чуть заметнее, без звонка */
 export function carriage() {
   if (voiceOn()) return;
   const c = ac();
   if (!c) return;
-  burst(c, { dur: 0.03, freq: 3600, q: 0.9, gain: 0.12, type: "highpass" });
-  burst(c, { dur: 0.06, freq: 900, q: 0.8, gain: 0.06, when: 0.01 });
+  burst(c, { dur: 0.02, freq: 5500, q: 0.8, gain: 0.08, type: "highpass" });
 }
 
 /** Штамп: глухой удар и шлепок резины */
