@@ -119,22 +119,44 @@ export function tick() {
   burst(c, { dur: 0.02, freq: 1800, q: 2, gain: 0.06 });
 }
 
-let ringTimer: ReturnType<typeof setInterval> | null = null;
-/** Звонок старого телефона: две трели, пауза; повторяется до stopRing() */
+let ring: HTMLAudioElement | null = null;
+let ringFade: ReturnType<typeof setInterval> | null = null;
+let fading: HTMLAudioElement | null = null;
+/**
+ * Звонок старого телефона — запись (public/sfx/phone-ring.mp3: одна трель ~2 с и пауза,
+ * всего 5,4 с), крутится по кругу до stopRing().
+ */
 export function startRing() {
   stopRing();
-  const once = () => {
-    const c = ac();
-    if (!c) return;
-    for (let i = 0; i < 14; i++) {
-      tone(c, { freq: 1180, dur: 0.045, gain: 0.05, type: "square", when: i * 0.05 });
-      tone(c, { freq: 1420, dur: 0.045, gain: 0.04, type: "square", when: i * 0.05 + 0.025 });
-    }
-  };
-  once();
-  ringTimer = setInterval(once, 2400);
+  if (typeof window === "undefined" || isMuted()) return;
+  try {
+    ring = new Audio("/sfx/phone-ring.mp3");
+    ring.loop = true;
+    ring.volume = 0.55;
+    void ring.play().catch(() => {
+      /* браузер не дал играть без клика — молча */
+    });
+  } catch {
+    ring = null;
+  }
 }
+/** Остановить звонок: короткое затухание, чтобы не обрывать трель щелчком. */
 export function stopRing() {
-  if (ringTimer) clearInterval(ringTimer);
-  ringTimer = null;
+  if (ringFade) clearInterval(ringFade);
+  ringFade = null;
+  fading?.pause(); // прежний звонок, который ещё затухал, — сразу тишина
+  fading = null;
+  const a = ring;
+  ring = null;
+  if (!a) return;
+  fading = a;
+  ringFade = setInterval(() => {
+    a.volume = Math.max(0, a.volume - 0.08);
+    if (a.volume <= 0.01) {
+      a.pause();
+      fading = null;
+      if (ringFade) clearInterval(ringFade);
+      ringFade = null;
+    }
+  }, 20);
 }
