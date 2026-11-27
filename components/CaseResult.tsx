@@ -130,15 +130,19 @@ async function drawCard(d: Data): Promise<HTMLCanvasElement> {
   // погон
   const ep = await loadImg(epUrl(d.stars));
   if (ep) {
-    const eh = 690, ew = (ep.width / ep.height) * eh;
-    g.save();
-    g.shadowColor = "rgba(0,0,0,.6)";
-    g.shadowBlur = 40;
-    g.shadowOffsetY = 18;
-    g.translate(250 - ew / 2, 245);
-    g.rotate(-0.04);
-    g.drawImage(ep, 0, 0, ew, eh);
-    g.restore();
+    const eh = 640, ew = (ep.width / ep.height) * eh;
+    const board = (x: number, y: number, rot: number) => {
+      g.save();
+      g.shadowColor = "rgba(0,0,0,.65)";
+      g.shadowBlur = 36;
+      g.shadowOffsetY = 18;
+      g.translate(x + ew / 2, y + eh / 2);
+      g.rotate(rot);
+      g.drawImage(ep, -ew / 2, -eh / 2, ew, eh);
+      g.restore();
+    };
+    board(70, 270, -0.09);
+    board(215, 250, 0.07);
   }
 
   // звание и оценка
@@ -265,49 +269,77 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
   return (
     <section className="order" aria-label="Итог следствия">
       <div className="order-sheet">
-        <div className="order-cloth">
+        <div className="order-cloth" aria-hidden="true">
+          {/* пара погон, как в комплекте */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="order-ep" src={epUrl(data.stars)} alt={`Погон: ${data.rank}`} />
+          <img className="order-ep is-left" src={epUrl(data.stars)} alt="" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="order-ep is-right" src={epUrl(data.stars)} alt="" />
         </div>
 
         <div className="order-paper">
-          <p className="order-org">
-            Министерство внутренних дел Республики Казахстан
-            <br />
-            ГУВД г. Алматы
-          </p>
-          <div className="order-titlerow">
-            <h2 className="order-title">Приказ № {caseNumber(data.caseTitle)}-лс</h2>
-            <span className="order-date">{orderDate(s.gameMinutes)}</span>
+          <div className="order-blank">
+            <p lang="kk">
+              Қазақстан Республикасы
+              <br />
+              Ішкі істер министрлігі
+              <br />
+              Алматы қаласы Ішкі істер бас басқармасы
+            </p>
+            <p>
+              Министерство внутренних дел
+              <br />
+              Республики Казахстан
+              <br />
+              ГУВД г. Алматы
+            </p>
           </div>
-          <p className="order-body">За раскрытие дела «{caseName(data.caseTitle)}» присвоить специальное звание</p>
-          <p className="order-rank">{data.rank}</p>
 
-          <p className="order-score">
-            Оценка работы <b>{data.score}</b> из 100
+          <h2 className="order-title">Приказ</h2>
+          <div className="order-meta">
+            <span>{orderDate(s.gameMinutes)}</span>
+            <span>№ {caseNumber(data.caseTitle)}-лс</span>
+            <span>г. Алматы</span>
+          </div>
+          <p className="order-subject">О присвоении специального звания</p>
+
+          <p className="order-body">
+            За раскрытие уголовного дела № {caseNumber(data.caseTitle)} «{caseName(data.caseTitle)}»
           </p>
-          <ul className="order-ledger">
-            {ledger(data).map((r) => (
-              <li key={r.label}>
-                <span className="ol-label">
-                  {r.label}
-                  <small>{r.note}</small>
-                </span>
-                <span className="ol-dots" aria-hidden="true" />
-                <span className="ol-pts">
-                  {r.p.points} из {r.p.max}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="order-facts">Срок следствия по делу: {formatTerm(s.gameMinutes)}.</p>
+          <p className="order-decree">Приказываю:</p>
+          <ol className="order-points">
+            <li>
+              Присвоить следователю специальное звание
+              <span className="order-rank">{data.rank}</span>
+            </li>
+            <li>
+              Основание — оценка работы по делу: <b className="order-score">{data.score}</b> из 100, в том числе:
+              <ul className="order-ledger">
+                {ledger(data).map((r) => (
+                  <li key={r.label}>
+                    <span className="ol-label">
+                      {r.label}
+                      <small>{r.note}</small>
+                    </span>
+                    <span className="ol-dots" aria-hidden="true" />
+                    <span className="ol-pts">
+                      {r.p.points} из {r.p.max}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+            <li>Срок следствия по делу: {formatTerm(s.gameMinutes)}.</li>
+          </ol>
 
           <div className="order-sign">
-            <span>Начальник ГУВД г. Алматы</span>
+            <span className="order-sign-who">
+              Начальник ГУВД г. Алматы
+              <br />
+              генерал-майор милиции
+            </span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="order-sig" src="/signatures/anon1.png" alt="" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="order-seal" src="/stamps/emblem.png" alt="" />
             <span className="order-stamp">Раскрыто</span>
           </div>
         </div>
