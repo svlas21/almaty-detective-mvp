@@ -2,13 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { attemptsLabel, formatTerm, type CaseResult as Result } from "@/lib/caseResult";
-import { epauletteSvg } from "@/lib/epaulette";
 import { gameDate, MONTHS_GEN } from "@/lib/gameClock";
-import { stamp, tick } from "@/lib/sfx";
+import { stamp } from "@/lib/sfx";
 
 /**
  * Итог раскрытого дела — приказ о присвоении звания и погон.
- * Погон — главный образ: звание читается по звёздам и просветам, как на настоящем.
+ * Погон — главный образ (картинки public/epaulettes/rank-1…5.webp): звание читается по звёздам и просветам.
  * Карточка «Поделиться» рисуется на canvas из тех же элементов; имён и разгадки на ней нет.
  */
 type Data = Result & { caseTitle: string | null };
@@ -23,10 +22,8 @@ function orderDate(min: number) {
   const d = gameDate(min);
   return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]} ${d.getFullYear()} г.`;
 }
-/** Сколько звёзд на погоне — для звука «пристёгивания». */
-function starCount(level: number) {
-  return level === 4 ? 1 : level === 5 ? 3 : level + 1;
-}
+/** Погон по ступени звания (1 лейтенант … 5 полковник), public/epaulettes. */
+const epUrl = (level: number) => `/epaulettes/rank-${Math.min(5, Math.max(1, level))}.webp`;
 function ledger(d: Data) {
   const s = d.stats;
   const [o, a, t, e] = d.parts;
@@ -131,15 +128,16 @@ async function drawCard(d: Data): Promise<HTMLCanvasElement> {
   g.fillText(`«${caseName(d.caseTitle)}»`, 90, 192);
 
   // погон
-  const ep = await loadImg(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(epauletteSvg(d.stars))}`);
+  const ep = await loadImg(epUrl(d.stars));
   if (ep) {
+    const eh = 690, ew = (ep.width / ep.height) * eh;
     g.save();
     g.shadowColor = "rgba(0,0,0,.6)";
     g.shadowBlur = 40;
     g.shadowOffsetY = 18;
-    g.translate(110, 250);
+    g.translate(250 - ew / 2, 245);
     g.rotate(-0.04);
-    g.drawImage(ep, 0, 0, 280, 686);
+    g.drawImage(ep, 0, 0, ew, eh);
     g.restore();
   }
 
@@ -216,10 +214,8 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
       .then(async (d: Data | null) => {
         if (!alive || !d) return;
         setData(d);
-        // звёзды «пристёгиваются» по одной, затем печать на приказ
-        const n = starCount(d.stars);
-        for (let i = 0; i < n; i++) setTimeout(() => tick(), 700 + i * 260);
-        setTimeout(() => stamp(), 1100 + n * 260);
+        // погон ложится на сукно, затем печать на приказ
+        setTimeout(() => stamp(), 1500);
         const c = await drawCard(d);
         c.toBlob((b) => {
           if (!alive || !b) return;
@@ -270,7 +266,8 @@ export default function CaseResult({ sessionId }: { sessionId: string }) {
     <section className="order" aria-label="Итог следствия">
       <div className="order-sheet">
         <div className="order-cloth">
-          <div className="order-ep" dangerouslySetInnerHTML={{ __html: epauletteSvg(data.stars) }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="order-ep" src={epUrl(data.stars)} alt={`Погон: ${data.rank}`} />
         </div>
 
         <div className="order-paper">

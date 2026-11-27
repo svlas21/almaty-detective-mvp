@@ -3747,11 +3747,8 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
   background:
     repeating-linear-gradient(35deg, rgba(255,255,255,.035) 0 2px, transparent 2px 6px),
     radial-gradient(circle at 40% 30%, #2b323b, var(--cloth) 70%); }
-.order-ep { width: 150px; filter: drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform: rotate(-3deg);
+.order-ep { width: 140px; height: auto; display: block; filter: drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform: rotate(-3deg);
   animation: ep-in .7s cubic-bezier(.2,.9,.3,1.15) both .15s; }
-.order-ep svg { width: 100%; height: auto; display: block; }
-.order-ep .ep-star { transform-box: fill-box; transform-origin: center;
-  animation: star-pin .32s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(.7s + var(--i) * .26s); }
 .order-paper { position: relative; background: var(--order-paper); color: var(--order-ink); padding: 28px 38px 30px;
   background-image: radial-gradient(rgba(90,70,40,.06) 1px, transparent 1px); background-size: 5px 5px; }
 .order-org { margin: 0; font-family: var(--font-pt-mono), monospace; font-size: 12.5px; line-height: 1.5; color: var(--order-soft); }
@@ -3776,7 +3773,7 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
 .order-stamp { position: absolute; right: 0; bottom: 12px; padding: 4px 14px; border: 3px double var(--kant); color: var(--kant);
   font-family: var(--font-pt-mono), monospace; font-weight: 700; font-size: 24px; letter-spacing: .08em; text-transform: uppercase;
   transform: rotate(-9deg); opacity: .88; mix-blend-mode: multiply;
-  animation: stamp-slam .35s cubic-bezier(.5,0,.7,1.4) both; animation-delay: calc(1.1s + 3 * .26s); }
+  animation: stamp-slam .35s cubic-bezier(.5,0,.7,1.4) both; animation-delay: 1.5s; }
 .order-share { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: center; padding: 8px 4px; }
 .order-card img { width: 100%; display: block; border-radius: 3px; box-shadow: 0 16px 36px rgba(0,0,0,.6); transform: rotate(-2deg); transition: transform .25s; }
 .order-card img:hover { transform: rotate(0deg) scale(1.02); }
@@ -3792,9 +3789,8 @@ details[open] > summary .journal-more { transform: rotate(45deg); }
 .ob.is-main:hover { background: #d8b358; }
 .ob:disabled { opacity: .45; cursor: default; }
 @keyframes ep-in { from { transform: translateY(24px) rotate(-8deg); opacity: 0; } to { transform: rotate(-3deg); opacity: 1; } }
-@keyframes star-pin { from { transform: scale(2.2); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes stamp-slam { from { transform: rotate(-9deg) scale(2.4); opacity: 0; } to { transform: rotate(-9deg); opacity: .88; } }
-@media (prefers-reduced-motion: reduce) { .order-ep, .order-ep .ep-star, .order-stamp { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .order-ep, .order-stamp { animation: none; } }
 @media (max-width: 720px) {
   .order-sheet { grid-template-columns: 1fr; }
   .order-cloth { padding: 24px; } .order-ep { width: 110px; }
