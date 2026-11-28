@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { stamp } from "@/lib/journal";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function POST(
 
   const { data: session, error: sessionError } = await db
     .from("game_sessions")
-    .select("purchase_id")
+    .select("purchase_id, elapsed_minutes")
     .eq("id", sessionId)
     .single();
 
@@ -42,7 +43,7 @@ export async function POST(
 
   const { data: state, error: stateError } = await db
     .from("session_state")
-    .select("viewed_reactions")
+    .select("viewed_reactions, log")
     .eq("session_id", sessionId)
     .single();
 
@@ -58,7 +59,7 @@ export async function POST(
 
   const { data: accusation } = await db
     .from("case_accusation")
-    .select("accomplices, ending_text")
+    .select("accomplices, ending_text, debrief")
     .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
@@ -86,14 +87,48 @@ export async function POST(
       return optionCorrect && reactionSeen;
     });
 
+  // Ежедневник: итог второй части обвинения
+  const writeLog = db
+    .from("session_state")
+    .update({
+      log: [
+        ...(state.log ?? []),
+        ...stamp([{ type: "accuse", stage: "accomplices", correct, at: new Date().toISOString() }], session.elapsed_minutes ?? null),
+      ],
+    })
+    .eq("session_id", sessionId);
+
   if (!correct) {
-    return NextResponse.json({ correct: false });
+    // Все роли выбраны верно, но кого-то не допросили с нужной уликой —
+    // прокурор говорит, чьего протокола не хватает. Если неверна хоть одна роль —
+    // общий отказ, без подсказок.
+    let hint: string | null = null;
+    const allOptionsCorrect = accomplices.every((acc) => {
+      const answer = submittedAnswers.find((a) => a.characterId === acc.character_id);
+      return !!answer && acc.options[answer.optionIndex]?.correct === true;
+    });
+    if (allOptionsCorrect) {
+      const missing = accomplices.find(
+        (acc) => !viewedReactions.includes(`${acc.character_id}:${acc.required_reaction_evidence_id}`)
+      );
+      if (missing) {
+        const [{ data: who }, { data: ev }] = await Promise.all([
+          db.from("characters").select("name").eq("id", missing.character_id).maybeSingle(),
+          db.from("evidence").select("name").eq("id", missing.required_reaction_evidence_id).maybeSingle(),
+        ]);
+        if (who?.name && ev?.name) {
+          hint = `нет протокола допроса: ${who.name} — по улике «${ev.name}».`;
+        }
+      }
+    }
+    await writeLog;
+    return NextResponse.json({ correct: false, hint });
   }
 
-  await db
-    .from("game_sessions")
-    .update({ status: "finished", finished_at: new Date().toISOString() })
-    .eq("id", sessionId);
+  await Promise.all([
+    writeLog,
+    db.from("game_sessions").update({ status: "finished", finished_at: new Date().toISOString() }).eq("id", sessionId),
+  ]);
 
-  return NextResponse.json({ correct: true, endingText: accusation.ending_text });
+  return NextResponse.json({ correct: true, endingText: accusation.ending_text, debrief: accusation.debrief ?? null });
 }

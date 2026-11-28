@@ -1,5 +1,8 @@
 "use client";
 
+import { img } from "@/lib/img";
+import { byGender } from "@/lib/gender";
+import { tp } from "@/components/RichText";
 import { useState } from "react";
 
 export interface SuspectListItem {
@@ -9,6 +12,7 @@ export interface SuspectListItem {
   name?: string;
   role?: string | null;
   intro_text?: string | null;
+  intro_audio_url?: string | null;
   fixed_questions?: { q: string; a: string }[];
   location_id?: string | null;
   portrait_url?: string | null;
@@ -17,6 +21,7 @@ export interface SuspectListItem {
   is_case_subject?: boolean;
   specialization?: string | null;
   viewed?: boolean;
+  interviewed?: boolean;
   wanted?: boolean;
   has_reactions?: boolean;
 }
@@ -24,6 +29,9 @@ export interface SuspectListItem {
 interface SuspectsListProps {
   suspects: SuspectListItem[];
   onSelect: (suspect: SuspectListItem) => void;
+  /** Где сейчас следователь и названия локаций — для подписи «здесь / где» */
+  currentLocationId?: string | null;
+  locationNames?: Record<string, string>;
 }
 
 const AVATAR_COLORS = ["#b5451b", "#2f6f8f", "#5a7d3a", "#7a4a9c", "#a3792f"];
@@ -61,7 +69,9 @@ export function SuspectAvatar({
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={portraitUrl}
+        src={img(portraitUrl, { w: Math.max(200, size * 2) })}
+        loading="lazy"
+        decoding="async"
         alt={name ?? ""}
         style={{
           width: size,
@@ -96,7 +106,7 @@ export function SuspectAvatar({
   );
 }
 
-export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) {
+export default function SuspectsList({ suspects, onSelect, currentLocationId, locationNames }: SuspectsListProps) {
   const [mentionPopup, setMentionPopup] = useState<SuspectListItem | null>(null);
   const cardCount = suspects.filter((s) => s.unlocked || s.mentioned).length;
 
@@ -116,7 +126,7 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                 <div className="polaroid-photo">
                   {s.portrait_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.portrait_url} alt={s.name ?? ""} className="polaroid-photo-img" />
+                    <img src={img(s.portrait_url, { w: 400 })} alt={s.name ?? ""} className="polaroid-photo-img" loading="lazy" decoding="async" />
                   ) : (
                     <div className="polaroid-photo-fallback" style={{ background: avatarColor(s.id) }}>
                       {initials(s.name ?? "")}
@@ -127,13 +137,18 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                       применим, статус "опрошен" не показываем, в отличие от
                       is_suspect (которое лишь различает "подозреваемый"/
                       "свидетель" и не отражает этот случай). */}
-                  {s.viewed && s.is_case_subject !== false && (
-                    <span className="stamp stamp-militia">ОПРОШЕН</span>
+                  {s.interviewed && s.is_case_subject !== false && !s.is_expert && (
+                    <span className="stamp stamp-militia">{byGender(s.name, "ОПРОШЕН", "ОПРОШЕНА")}</span>
                   )}
                   {s.wanted && <span className="stamp stamp-wanted">В РОЗЫСКЕ</span>}
                 </div>
-                <strong className="polaroid-name">{s.name}</strong>
-                {s.role && <p className="polaroid-role">{s.role}</p>}
+                <strong className="polaroid-name">{tp(s.name)}</strong>
+                {s.role && <p className="polaroid-role">{tp(s.role)}</p>}
+                {s.location_id && !s.wanted && locationNames?.[s.location_id] && (
+                  <p className={`polaroid-place${s.location_id === currentLocationId ? " is-here" : ""}`}>
+                    {s.location_id === currentLocationId ? "Здесь" : tp(locationNames[s.location_id])}
+                  </p>
+                )}
               </div>
             );
           }
@@ -144,10 +159,10 @@ export default function SuspectsList({ suspects, onSelect }: SuspectsListProps) 
                 <div className="pin" />
                 <div className="polaroid-photo polaroid-photo-unknown">
                   <div className="unknown-silhouette" />
-                  <span className="stamp stamp-unmet">НЕ ОПРОШЕН</span>
+                  <span className="stamp stamp-unmet">{byGender(s.name, "НЕ ОПРОШЕН", "НЕ ОПРОШЕНА")}</span>
                 </div>
-                <strong className="polaroid-name">{s.name}</strong>
-                {s.role && <p className="polaroid-role">{s.role}</p>}
+                <strong className="polaroid-name">{tp(s.name)}</strong>
+                {s.role && <p className="polaroid-role">{tp(s.role)}</p>}
               </div>
             );
           }

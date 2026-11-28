@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import RichText, { tp } from "@/components/RichText";
+import VoiceButton from "@/components/VoiceButton";
+import { useEffect, useState } from "react";
+import { paper, startRing, stopRing } from "@/lib/sfx";
+import { gameDate, MONTHS_NOM, WEEKDAYS } from "@/lib/gameClock";
 
 export interface PendingCall {
   id: string;
   callerName: string;
   callerRole: string | null;
   dialogueText: string;
+  /** "mobile" — трубка (по умолчанию); "scene" — сцена в ГУВД: записка, коридор, внутренний телефон. */
+  style?: string;
+  /** Озвучка сцены начальства (supabase/046, tools/voice/lines/chief-scenes.json). Нет — кнопки нет. */
+  audioUrl?: string | null;
 }
 
 interface PhoneCallOverlayProps {
@@ -15,6 +23,8 @@ interface PhoneCallOverlayProps {
   onAnswer: () => void | Promise<void>;
   /** Закрывает оверлей и обновляет state экрана (после "Положить трубку"). */
   onClose: () => void;
+  /** Игровое время (минуты от начала дела) — для даты на листке календаря. */
+  elapsedMinutes?: number;
 }
 
 /**
@@ -22,8 +32,32 @@ interface PhoneCallOverlayProps {
  * у Nokia 2110i), пассивный: игрок жмёт "Ответить", слушает реплику
  * звонящего и кладёт трубку. Клавиатура и вторая софт-клавиша декоративные.
  */
-export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallOverlayProps) {
+export default function PhoneCallOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOverlayProps) {
   const [phase, setPhase] = useState<"ringing" | "talking">("ringing");
+
+  // Звук: трубка звонит, пока не ответили; сцена начальства — шорох листа
+  // (внутренний телефон — короткий звонок).
+  useEffect(() => {
+    if (call.style === "scene") {
+      if (/телефон/i.test(call.callerRole ?? "")) {
+        startRing();
+        const t = setTimeout(stopRing, 2300);
+        return () => {
+          clearTimeout(t);
+          stopRing();
+        };
+      }
+      paper();
+      return;
+    }
+    if (phase === "ringing") {
+      startRing();
+      return () => stopRing();
+    }
+  }, [phase, call.style, call.callerRole]);
+
+  if (call.style === "scene")
+    return <SceneOverlay call={call} onAnswer={onAnswer} onClose={onClose} elapsedMinutes={elapsedMinutes} />;
 
   function handleAnswer() {
     setPhase("talking");
@@ -65,7 +99,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
                 ВЫЗОВ
               </div>
               <div className="phone-call-caller-name">{call.callerName}</div>
-              {call.callerRole && <div className="phone-call-caller-role">{call.callerRole}</div>}
+              {call.callerRole && <div className="phone-call-caller-role">{tp(call.callerRole)}</div>}
               <div className="phone-call-softkeys">
                 <span>Ответ</span>
                 <span>Меню</span>
@@ -76,7 +110,7 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
               <div className="phone-call-caller-name" style={{ marginBottom: 10 }}>
                 {call.callerName}
               </div>
-              <p className="phone-call-dialogue">{call.dialogueText}</p>
+              <RichText text={call.dialogueText} className="phone-call-dialogue" />
               <div className="phone-call-softkeys">
                 <span>Сброс</span>
                 <span>Меню</span>
@@ -99,6 +133,116 @@ export default function PhoneCallOverlay({ call, onAnswer, onClose }: PhoneCallO
           {Array.from({ length: 9 }).map((_, i) => (
             <span key={i} />
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Записка: «повествование: «текст записки»». Если в тексте нет кавычек-ёлочек,
+ * это не записка, а обычная сцена.
+ */
+/** Подсветка строки записки вслед за голосом: доли длины, как в RichText. */
+function noteSync(lines: string[], i: number, spoken: number | null): string | undefined {
+  if (!spoken || spoken <= 0) return undefined;
+  const total = lines.reduce((n, l) => n + l.length, 0) || 1;
+  const from = lines.slice(0, i).reduce((n, l) => n + l.length, 0) / total;
+  const to = from + lines[i].length / total;
+  return spoken >= to ? "rt-past" : spoken >= from ? "rt-now" : "rt-future";
+}
+
+function splitNote(text: string): { narration: string; lines: string[] } | null {
+  const open = text.indexOf("«");
+  const close = text.lastIndexOf("»");
+  if (open < 0 || close <= open) return null;
+  const narration = text.slice(0, open).trim().replace(/:$/, ".");
+  const lines = text
+    .slice(open + 1, close)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return { narration, lines };
+}
+
+/**
+ * Сцена начальства (supabase/039): записка на столе, разговор в коридоре,
+ * звонок по внутреннему — без мобильного телефона (1996 год).
+ * callerRole — подпись сцены («Записка на столе»), callerName — кто.
+ * Записка рисуется листком перекидного календаря, почерк синим карандашом.
+ */
+function SceneOverlay({ call, onAnswer, onClose, elapsedMinutes }: PhoneCallOverlayProps) {
+  const [closing, setClosing] = useState(false);
+  // Доля прозвучавшего текста 0..1 — для подсветки строк вслед за голосом; null — звука нет.
+  const [spoken, setSpoken] = useState<number | null>(call.audioUrl ? 0 : null);
+  const voice = call.audioUrl ? (
+    <VoiceButton src={call.audioUrl} compact label="Слушать" onProgress={setSpoken} />
+  ) : null;
+
+  async function handleClose() {
+    if (closing) return;
+    setClosing(true);
+    await onAnswer();
+    await onClose();
+  }
+
+  const isNote = /записк/i.test(call.callerRole ?? "");
+  const note = isNote ? splitNote(call.dialogueText) : null;
+
+  if (note) {
+    const day = gameDate(elapsedMinutes ?? 0);
+    return (
+      <div className="phone-call-overlay">
+        <div className="scene-window" role="dialog" aria-label={call.callerRole ?? call.callerName}>
+          <div className="scene-window-head">
+            <span className="scene-window-place">{tp(call.callerRole ?? "")}</span>
+            <button className="scene-window-x" onClick={handleClose} disabled={closing} aria-label="Закрыть">
+              ×
+            </button>
+          </div>
+          {note.narration && <p className="scene-window-narration">{tp(note.narration)}</p>}
+
+          <div className="calendar-sheet">
+            <div className="calendar-sheet-holes" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+            <div className="calendar-sheet-date">
+              <span className="calendar-sheet-month">{MONTHS_NOM[day.getMonth()]}</span>
+              <span className="calendar-sheet-day">{day.getDate()}</span>
+              <span className="calendar-sheet-weekday">{WEEKDAYS[day.getDay()]}</span>
+            </div>
+            <div className={`calendar-sheet-hand${spoken ? " rt-sync" : ""}`}>
+              {note.lines.map((line, i) => (
+                <p key={i} className={noteSync(note.lines, i, spoken)}>
+                  {tp(line)}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div className="scene-window-actions">
+            {voice}
+            <button className="scene-window-btn" onClick={handleClose} disabled={closing}>
+              Понятно
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="phone-call-overlay">
+      <div className="scene-call-sheet" role="dialog" aria-label={call.callerRole ?? call.callerName}>
+        {call.callerRole && <div className="scene-call-place">{tp(call.callerRole)}</div>}
+        <div className="scene-call-who">{tp(call.callerName)}</div>
+        <RichText text={call.dialogueText} className="scene-call-text" spoken={spoken} />
+        <div className="scene-call-actions">
+          {voice}
+          <button className="scene-call-btn" onClick={handleClose} disabled={closing}>
+            Понятно
+          </button>
         </div>
       </div>
     </div>

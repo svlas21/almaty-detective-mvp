@@ -12,7 +12,9 @@ export const dynamic = "force-dynamic";
  * не трогая purchases/profiles. Недоступен вне dev-окружения.
  */
 export async function POST(req: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
+  // Пока идёт разработка, сброс работает и в рабочем режиме (npm start).
+  // Перед запуском для игроков выключить: NEXT_PUBLIC_DEV_TOOLS=off в .env.
+  if (process.env.NEXT_PUBLIC_DEV_TOOLS === "off") {
     return NextResponse.json({ error: "Недоступно в проде" }, { status: 403 });
   }
 

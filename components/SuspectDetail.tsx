@@ -1,12 +1,18 @@
 "use client";
 
+import { useState } from "react";
+import RichText, { tp } from "@/components/RichText";
+import TypedText from "@/components/TypedText";
+import { img } from "@/lib/img";
 import { SuspectAvatar, type SuspectListItem } from "@/components/SuspectsList";
-import InterrogationProtocol from "@/components/InterrogationProtocol";
+import InterrogationProtocol, { VoicedAnswer } from "@/components/InterrogationProtocol";
 
 interface CollectedEvidenceItem {
   id: string;
   name: string;
   description: string | null;
+  kind?: "thing" | "testimony" | "expertise" | "document" | null;
+  image_url?: string | null;
 }
 
 interface TopicItem {
@@ -18,9 +24,11 @@ interface TopicItem {
 interface SuspectDetailProps {
   suspect: SuspectListItem;
   collectedEvidence: CollectedEvidenceItem[];
-  reaction: { evidenceName: string; text: string } | null;
+  reaction: { evidenceName: string; text: string; audio?: string | null } | null;
   confession: string | null;
   presentingId: string | null;
+  /** Улики, которые этому персонажу уже предъявляли */
+  presentedIds?: Set<string>;
   onPresent: (evidence: CollectedEvidenceItem) => void;
   onInterrogationComplete: (characterId: string) => void;
   onQuestionViewed: (characterId: string, questionIndex: number) => void;
@@ -28,6 +36,13 @@ interface SuspectDetailProps {
   topicAnswer: { topicLabel: string; text: string } | null;
   askingTopicId: string | null;
   onAsk: (topic: TopicItem) => void;
+  /** Следователь в той же локации, что и человек (эксперты — всегда true) */
+  onSite?: boolean;
+  /** Где человек сейчас — для плашки «в другом месте» */
+  placeName?: string | null;
+  /** Поехать туда (тратит игровое время на дорогу) */
+  onTravel?: () => void;
+  traveling?: boolean;
 }
 
 export default function SuspectDetail({
@@ -36,6 +51,7 @@ export default function SuspectDetail({
   reaction,
   confession,
   presentingId,
+  presentedIds,
   onPresent,
   onInterrogationComplete,
   onQuestionViewed,
@@ -43,11 +59,38 @@ export default function SuspectDetail({
   topicAnswer,
   askingTopicId,
   onAsk,
+  onSite = true,
+  placeName,
+  onTravel,
+  traveling,
 }: SuspectDetailProps) {
   // Тема не должна предлагать спросить у персонажа про самого себя
   // (см. supabase/009_topic_subject_character.sql) — сравнение по id,
   // а не по label/name, чтобы не зависеть от текстовых совпадений.
   const visibleTopics = topics.filter((t) => t.subject_character_id !== suspect.id);
+
+  // Две вкладки: вещи, документы и заключения — отдельно, показания — отдельно.
+  // У эксперта: «на экспертизу» / «обсудить», у остальных: «предъявить» / «зачитать».
+  const isExpert = suspect.is_expert === true;
+  const [evidenceTab, setEvidenceTab] = useState<"items" | "testimony">("items");
+  const isTestimonyTab = evidenceTab === "testimony";
+  const shownEvidence = collectedEvidence.filter((e) => (e.kind === "testimony") === isTestimonyTab);
+  // Счётчик на вкладке — сколько ещё не предъявляли (всё предъявлено → 0).
+  const notDone = collectedEvidence.filter((e) => !presentedIds?.has(e.id));
+  const leftTestimony = notDone.filter((e) => e.kind === "testimony").length;
+  const leftItems = notDone.length - leftTestimony;
+  const tabLabels = isExpert
+    ? { items: "Передать на экспертизу", testimony: "Обсудить показания" }
+    : { items: "Предъявить улику", testimony: "Зачитать показания" };
+  const KIND_LABEL: Record<string, string> = {
+    thing: "Вещдок",
+    document: "Документ",
+    expertise: "Экспертиза",
+    testimony: "Показания",
+  };
+  const doneLabel = isExpert
+    ? isTestimonyTab ? "Обсуждено" : "Передано на экспертизу"
+    : isTestimonyTab ? "Зачитано" : "Предъявлено";
 
   return (
     <div className="dossier-page">
@@ -69,14 +112,18 @@ export default function SuspectDetail({
           </div>
         </div>
 
-        <h2 className="dossier-name">{suspect.name}</h2>
+        <h2 className="dossier-name">{tp(suspect.name)}</h2>
         {suspect.role && (
           <div className="dossier-role-row">
-            <span className="dossier-role">{suspect.role}</span>
+            <span className="dossier-role">{tp(suspect.role)}</span>
           </div>
         )}
 
-        {suspect.intro_text && <p className="dossier-quote">{suspect.intro_text}</p>}
+        {suspect.intro_audio_url && suspect.intro_text ? (
+          <VoicedAnswer text={suspect.intro_text} src={suspect.intro_audio_url} className="dossier-quote" />
+        ) : (
+          <RichText text={suspect.intro_text} className="dossier-quote" />
+        )}
       </div>
 
       {/* «В розыске» (Дело №9704) — псевдоним/поддельный документ, лично не
@@ -85,7 +132,20 @@ export default function SuspectDetail({
           "Спросить про..." и "Предъявить улику" целиком одним статусом —
           иначе "Спросить про..." (не завязана на fixed_questions/is_suspect)
           всё равно позволила бы полноценно опросить такого персонажа. */}
-      {suspect.wanted ? (
+      {!suspect.wanted && !suspect.is_expert && !onSite ? (
+        <div className="dossier-card dossier-offsite">
+          <p className="dossier-offsite-text">
+            Сейчас находится: <strong>{tp(placeName ?? "в другом месте")}</strong>.
+            <br />
+            Допросить, задать вопрос или предъявить улику можно только на месте.
+          </p>
+          {onTravel && (
+            <button className="dossier-btn" onClick={onTravel} disabled={traveling}>
+              {traveling ? "Едем…" : `Поехать: ${placeName ?? "к нему"}`}
+            </button>
+          )}
+        </div>
+      ) : suspect.wanted ? (
         <div className="dossier-card">
           <p className="dossier-wanted-notice">
             Разыскивается. Актуальное местонахождение неизвестно.
@@ -117,15 +177,15 @@ export default function SuspectDetail({
                     className={`dossier-evidence-tag${askingTopicId && askingTopicId !== t.id ? " is-busy" : ""}`}
                     onClick={() => (askingTopicId ? undefined : onAsk(t))}
                   >
-                    {t.label}
+                    {tp(t.label)}
                   </div>
                 ))}
               </div>
 
               {topicAnswer && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{topicAnswer.topicLabel}</div>
-                  <p>{topicAnswer.text}</p>
+                  <div className="dossier-reaction-label">{tp(topicAnswer.topicLabel)}</div>
+                  <TypedText text={topicAnswer.text} className="dossier-reaction-text" />
                 </div>
               )}
             </div>
@@ -142,24 +202,71 @@ export default function SuspectDetail({
           {(suspect.is_suspect === true || suspect.is_expert === true || suspect.has_reactions === true) &&
             (suspect.fixed_questions?.length ?? 0) > 0 && (
             <div className="dossier-card">
-              <div className="dossier-section-label">
-                {suspect.is_expert ? "Передать на экспертизу" : "Предъявить улику"}
+              <div className="dossier-tabs" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={!isTestimonyTab}
+                  className={`dossier-tabs-btn${!isTestimonyTab ? " is-active" : ""}`}
+                  onClick={() => setEvidenceTab("items")}
+                >
+                  {tabLabels.items}
+                  <span className={`dossier-tabs-count${leftItems === 0 ? " is-zero" : ""}`}>{leftItems}</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={isTestimonyTab}
+                  className={`dossier-tabs-btn${isTestimonyTab ? " is-active" : ""}`}
+                  onClick={() => setEvidenceTab("testimony")}
+                >
+                  {tabLabels.testimony}
+                  <span className={`dossier-tabs-count${leftTestimony === 0 ? " is-zero" : ""}`}>{leftTestimony}</span>
+                </button>
               </div>
 
-              {collectedEvidence.length === 0 ? (
+              {shownEvidence.length === 0 ? (
                 <div className="dossier-evidence-empty">
                   <div className="dossier-evidence-empty-icon" />
-                  <span>Улик для предъявления пока нет — соберите их на месте происшествия.</span>
+                  <span>
+                    {isTestimonyTab
+                      ? "Показаний пока нет — допросите свидетелей."
+                      : "Улик для предъявления пока нет — соберите их на месте происшествия."}
+                  </span>
                 </div>
               ) : (
                 <div className="dossier-evidence-grid">
-                  {collectedEvidence.map((e) => (
+                  {shownEvidence.map((e) => (
                     <div
                       key={e.id}
-                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}`}
+                      className={`dossier-evidence-tag${presentingId && presentingId !== e.id ? " is-busy" : ""}${
+                        presentedIds?.has(e.id) ? (suspect.is_expert ? " is-submitted" : " is-presented") : ""
+                      }${reaction?.evidenceName === e.name ? " is-active" : ""}`}
                       onClick={() => (presentingId ? undefined : onPresent(e))}
+                      title={
+                        presentedIds?.has(e.id)
+                          ? `${doneLabel} — нажмите, чтобы перечитать ответ`
+                          : undefined
+                      }
                     >
-                      {e.name}
+                      <span className="dossier-evidence-kind">{KIND_LABEL[e.kind ?? ""] ?? "Улика"}</span>
+                      <span className="dossier-evidence-body">
+                        <span className="dossier-evidence-name">{tp(e.name)}</span>
+                        {e.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className="dossier-evidence-thumb"
+                            src={img(e.image_url, { w: 160, q: 70 })}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                      </span>
+                      {presentedIds?.has(e.id) &&
+                        (isExpert ? (
+                          <span className="dossier-submitted-status">{doneLabel}</span>
+                        ) : (
+                          <span className="dossier-presented-mark">{doneLabel}</span>
+                        ))}
                     </div>
                   ))}
                 </div>
@@ -167,15 +274,34 @@ export default function SuspectDetail({
 
               {reaction && (
                 <div className="dossier-reaction">
-                  <div className="dossier-reaction-label">{reaction.evidenceName}</div>
-                  <p>{reaction.text}</p>
+                  <div className="dossier-reaction-label">{tp(reaction.evidenceName)}</div>
+                  {(() => {
+                    // Что именно предъявили / зачитали — первая строка описания улики,
+                    // иначе ответ человека бывает непонятно к чему.
+                    const shown = collectedEvidence.find((e) => e.name === reaction.evidenceName);
+                    const gist = (shown?.description ?? "").split(/\n\s*\n/)[0].trim();
+                    if (!gist) return null;
+                    return (
+                      <div className="dossier-reaction-gist">
+                        <span className="dossier-reaction-gist-label">
+                          {shown?.kind === "testimony" ? "Вы зачитываете" : "Вы показываете"}
+                        </span>
+                        {tp(gist)}
+                      </div>
+                    );
+                  })()}
+                  {reaction.audio ? (
+                    <VoicedAnswer key={reaction.audio} text={reaction.text} src={reaction.audio} className="dossier-reaction-text" />
+                  ) : (
+                    <TypedText text={reaction.text} className="dossier-reaction-text" />
+                  )}
                 </div>
               )}
 
               {confession && (
                 <div className="dossier-confession">
                   <span className="dossier-confession-label">Признание</span>
-                  <p>{confession}</p>
+                  <RichText text={confession} className="dossier-confession-text" />
                 </div>
               )}
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isMuted, setMuted, tick } from "@/lib/sfx";
 import { useParams } from "next/navigation";
 
 export type SidebarTab = "map" | "suspects" | "expertise" | "evidence" | "accuse" | "log" | "help";
@@ -16,19 +17,27 @@ const ITEMS: { id: SidebarTab; icon: string; label: string }[] = [
   { id: "expertise", icon: "🧪", label: "Экспертиза" },
   { id: "evidence", icon: "🗂", label: "Улики" },
   { id: "accuse", icon: "⚖", label: "Обвинение" },
-  { id: "log", icon: "🕒", label: "Журнал" },
-  { id: "help", icon: "❓", label: "Помощь" },
+  { id: "log", icon: "📒", label: "Ежедневник" },
+  { id: "help", icon: "📋", label: "Памятка" },
 ];
 
-// process.env.NODE_ENV инлайнится сборщиком и в клиентском бандле —
-// проверка тут лишь прячет кнопку в UI, реальная защита — на сервере
-// в app/api/dev/reset-session/route.ts.
-const IS_DEV = process.env.NODE_ENV !== "production";
+// Кнопка «Начать заново» видна, пока идёт разработка — и в npm run dev, и в
+// npm start. Перед запуском для игроков: NEXT_PUBLIC_DEV_TOOLS=off в .env
+// (прячет кнопку; сервер в app/api/dev/reset-session/route.ts тоже откажет).
+const IS_DEV = process.env.NEXT_PUBLIC_DEV_TOOLS !== "off";
 
 export default function Sidebar({ active, onChange }: SidebarProps) {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [muted, setMutedState] = useState(false);
+  useEffect(() => setMutedState(isMuted()), []);
+  function toggleSound() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+    if (!next) tick();
+  }
 
   async function confirmReset() {
     setResetting(true);
@@ -58,6 +67,15 @@ export default function Sidebar({ active, onChange }: SidebarProps) {
             {item.icon}
           </button>
         ))}
+
+        <button
+          className="sidebar-btn"
+          title={muted ? "Звуки выключены — включить" : "Звуки включены — выключить"}
+          aria-pressed={!muted}
+          onClick={toggleSound}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
 
         {IS_DEV && (
           <button

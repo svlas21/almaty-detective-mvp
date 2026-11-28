@@ -10,13 +10,16 @@ export async function POST(
   const db = supabaseAdmin();
   const { sessionId } = params;
 
-  const { data: state } = await db
-    .from("session_state")
-    .select("discovered_locations")
-    .eq("session_id", sessionId)
-    .single();
+  // Круг 1: всё, что нужно прочитать (параллельно). Раньше — 7 запросов подряд.
+  const [stateRes, sessionRes, targetRes, charsRes] = await Promise.all([
+    db.from("session_state").select("discovered_locations, discovered_characters, log").eq("session_id", sessionId).single(),
+    db.from("game_sessions").select("elapsed_minutes").eq("id", sessionId).single(),
+    db.from("locations").select("name").eq("id", locationId).single(),
+    db.from("characters").select("id").eq("location_id", locationId),
+  ]);
+  const state = stateRes.data;
 
-  if (!state) {
+  if (!state || !sessionRes.data) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
 
@@ -27,62 +30,43 @@ export async function POST(
     );
   }
 
-  const { data: session, error } = await db
-    .from("game_sessions")
-    .update({ current_location_id: locationId })
-    .eq("id", sessionId)
-    .select()
-    .single();
-
-  if (error || !session) {
-    return NextResponse.json({ error: "Не удалось перейти в локацию" }, { status: 500 });
-  }
-
-  const { data: updated, error: timeError } = await db
-    .from("game_sessions")
-    .update({ elapsed_minutes: session.elapsed_minutes + TIME_COSTS.TRAVEL_BETWEEN_LOCATIONS })
-    .eq("id", sessionId)
-    .select()
-    .single();
-
-  if (timeError || !updated) {
-    return NextResponse.json({ error: "Не удалось обновить игровое время" }, { status: 500 });
-  }
-
-  const { data: targetLocation } = await db
-    .from("locations")
-    .select("name")
-    .eq("id", locationId)
-    .single();
-
-  const { data: locationCharacters } = await db
-    .from("characters")
-    .select("id")
-    .eq("location_id", locationId);
-
-  const { data: currentState } = await db
-    .from("session_state")
-    .select("log, discovered_characters")
-    .eq("session_id", sessionId)
-    .single();
-
   const mergedCharacters = Array.from(
-    new Set([
-      ...(currentState?.discovered_characters ?? []),
-      ...(locationCharacters ?? []).map((c) => c.id),
-    ])
+    new Set([...(state.discovered_characters ?? []), ...(charsRes.data ?? []).map((c) => c.id)])
   );
 
-  await db
-    .from("session_state")
-    .update({
-      discovered_characters: mergedCharacters,
-      log: [
-        ...(currentState?.log ?? []),
-        { type: "travel", text: `Прибыли: ${targetLocation?.name ?? "локация"}`, at: new Date().toISOString() },
-      ],
-    })
-    .eq("session_id", sessionId);
+  // Круг 2: переход + время одной записью, состояние — параллельно
+  const [updRes] = await Promise.all([
+    db
+      .from("game_sessions")
+      .update({
+        current_location_id: locationId,
+        elapsed_minutes: sessionRes.data.elapsed_minutes + TIME_COSTS.TRAVEL_BETWEEN_LOCATIONS,
+      })
+      .eq("id", sessionId)
+      .select()
+      .single(),
+    db
+      .from("session_state")
+      .update({
+        discovered_characters: mergedCharacters,
+        log: [
+          ...(state.log ?? []),
+          {
+            type: "travel",
+            text: `Прибыли: ${targetRes.data?.name ?? "локация"}`,
+            locationName: targetRes.data?.name ?? null,
+            at: new Date().toISOString(),
+            gm: sessionRes.data.elapsed_minutes + TIME_COSTS.TRAVEL_BETWEEN_LOCATIONS,
+          },
+        ],
+      })
+      .eq("session_id", sessionId),
+  ]);
+  const updated = updRes.data;
+
+  if (updRes.error || !updated) {
+    return NextResponse.json({ error: "Не удалось перейти в локацию" }, { status: 500 });
+  }
 
   return NextResponse.json({ session: updated });
 }

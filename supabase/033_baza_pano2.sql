@@ -1,0 +1,19 @@
+-- База: новая панорама (240°), стулья и вешалка в облаке
+begin;
+update locations set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-baza-wide2.jpg', pano_haov = 240 where id = '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed';
+delete from case_decoy_categories where location_id = '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed';
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Фикус', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Фикус в кадке у двери. Засох совсем, листья на полу. Поливать было некому: секретаршу Сартаков отпустил ещё летом.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Стулья', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Ряд стульев для посетителей в коридоре. Пустые. Сегодня приёма нет.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Вешалка', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Вешалка на стене в приёмной. Ни одного пальто: секретаршу отпустили ещё летом.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Телефон секретаря', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Кнопочный телефон на пустом столе. Гудок есть. Рядом ни записной книжки, ни бумажки с номерами.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Урна', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Корзина для бумаг под столом. Пустая и чистая, будто её вымыли.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Сейф', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Зелёный сейф в кабинете Ахметова. Заперт. Ключ у самого Ахметова.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Папки', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Папки на полке подписаны по годам: 1993, 1994, 1995, 1996. Стоят ровно, корешок к корешку.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Ксерокс', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Ксерокс под матерчатым чехлом. Чехол чистый, без пыли: снимали недавно.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Календарь', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Японский календарь с «Тойотой Ленд Крузер». Подарок поставщиков. Листы не оторваны с весны.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Карта города', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Карта Алматы на стене. Ни флажков, ни пометок.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Часы', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Настенные часы. Идут точно, по радио сверены.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Грузовик', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'За окном «КамАЗ» с китайскими ящиками. Водитель ждёт разгрузки и курит в кабине.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Шлагбаум', '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed', 'Шлагбаум и будка КПП за окном. В будке горит свет, там дежурит охрана.');
+commit;
+select (select count(*) from case_decoy_categories where location_id = '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed') decoys, (select pano_haov from locations where id = '92cac3d9-0cc0-5a14-b4bc-91a65f6e04ed') haov;

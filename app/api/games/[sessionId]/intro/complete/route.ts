@@ -78,6 +78,7 @@ export async function POST(
           type: "location",
           text: `Открыта новая локация: ${orionLocation.name}`,
           at: new Date().toISOString(),
+          gm: 0,
         },
       ];
     }

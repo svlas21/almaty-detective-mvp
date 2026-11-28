@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export async function POST(
 ) {
   const db = supabaseAdmin();
   const { sessionId, callId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   const { data: state, error: stateError } = await db
     .from("session_state")
@@ -29,7 +32,7 @@ export async function POST(
 
   const { data: call, error: callError } = await db
     .from("phone_calls")
-    .select("dialogue_text, unlocks_location_id, grants_evidence_id, characters(name)")
+    .select("dialogue_text, unlocks_location_id, grants_evidence_id, caller_name, caller_role, style, characters(name)")
     .eq("id", callId)
     .single();
 
@@ -54,7 +57,7 @@ export async function POST(
       ? [...state.collected_evidence, call.grants_evidence_id]
       : state.collected_evidence;
 
-  const callerName = (call.characters as { name: string } | null)?.name ?? "Неизвестный";
+  const callerName = (call.characters as unknown as { name: string } | null)?.name ?? call.caller_name ?? "Неизвестный";
 
   // Журнал расследования (Дело №9704): если звонок выдаёт улику, это тоже
   // отдельная "evidence"-запись — по тому же принципу, что и в present/ask/
@@ -88,13 +91,17 @@ export async function POST(
       collected_evidence: collectedEvidence,
       log: [
         ...(state.log ?? []),
+        ...stamp([
         {
           type: "call",
           callerName,
+          callerRole: call.caller_role ?? null,
+          style: call.style ?? null,
           dialogueText: call.dialogue_text,
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
+        ], await gmPromise),
       ],
     })
     .eq("session_id", sessionId);

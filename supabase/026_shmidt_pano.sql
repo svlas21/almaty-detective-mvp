@@ -1,0 +1,14 @@
+-- Дом Шмидтов: частичная панорама 180° и предметы «есть, но не улика»
+begin;
+update locations set image_url = 'https://zhdvfvrqgunjickiaoqi.supabase.co/storage/v1/object/public/location-images/v2-shmidt-wide.jpg', pano_haov = 180 where id = '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7';
+delete from case_decoy_categories where location_id = '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7';
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Коробки', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Три коробки, перевязанные бечёвкой. Маркером: «Köln». Посуда, книги, бельё. Хозяева собирались, да всё не увезли.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Календарь', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Настенный календарь на 1994 год, немецкий, с картинкой: домик в горах. С тех пор его никто не перевернул.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Чайник', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Эмалированный чайник на плите. Сухой внутри, в накипи. Им давно не пользовались.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Умывальник', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Умывальник с бачком, эмаль побита. Бачок пустой, вода давно высохла.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Шкаф', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Платяной шкаф, двери настежь. Полки пустые, только бумага на дне. Вещи увезли в Германию.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Вешалка', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Вешалка у двери, на крючках голые плечики. Пальто хозяева забрали с собой.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Табличка', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'За окном на калитке табличка «Продаётся», написана от руки. Буквы уже выцвели.');
+insert into case_decoy_categories (case_id, label, location_id, found_text) values ('029e23c3-01e0-5d19-a0e7-3e0c2446ebab', 'Входная дверь', '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7', 'Входная дверь, обитая дерматином, с пуговицами. Замок цел, следов взлома нет.');
+commit;
+select (select label from case_decoy_categories where location_id = '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7' limit 1) as first_decoy, (select count(*) from case_decoy_categories where location_id = '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7') as decoys, (select pano_haov from locations where id = '9ee66fb3-ffa5-5945-8a41-2fb9ca9c14e7') as haov;

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { gameMinutes, stamp } from "@/lib/journal";
+import { requireOnSite } from "@/lib/onSite";
 
 export const dynamic = "force-dynamic";
 
@@ -29,18 +31,25 @@ export async function POST(
   const { topicId } = await req.json();
   const db = supabaseAdmin();
   const { sessionId, characterId } = params;
+  // Игровое время для ежедневника — параллельно с остальными запросами
+  const gmPromise = gameMinutes(db, sessionId);
 
   if (!topicId) {
     return NextResponse.json({ error: "topicId обязателен" }, { status: 400 });
   }
 
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select(
-      "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, viewed_questions, log"
-    )
-    .eq("session_id", sessionId)
-    .single();
+  const [offSite, stateRes] = await Promise.all([
+    requireOnSite(db, sessionId, characterId),
+    db
+      .from("session_state")
+      .select(
+        "discovered_characters, collected_evidence, discovered_evidence, viewed_characters, discovered_locations, viewed_reactions, viewed_questions, log"
+      )
+      .eq("session_id", sessionId)
+      .single(),
+  ]);
+  if (offSite) return offSite;
+  const { data: state, error: stateError } = stateRes;
 
   if (stateError || !state) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
@@ -150,6 +159,7 @@ export async function POST(
       discovered_evidence: discoveredEvidence,
       log: [
         ...(state.log ?? []),
+        ...stamp([
         {
           type: "ask",
           characterName: character.name,
@@ -158,6 +168,7 @@ export async function POST(
           at: new Date().toISOString(),
         },
         ...grantedEvidenceLogEntries,
+        ], await gmPromise),
       ],
     })
     .eq("session_id", sessionId);

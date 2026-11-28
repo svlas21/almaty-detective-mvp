@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { effectiveLocationId } from "@/lib/relocations";
+import { anyCollected, requiresAnySatisfied } from "@/lib/graphRules";
+import { cached } from "@/lib/caseCache";
 
 export const dynamic = "force-dynamic";
 
@@ -10,73 +13,125 @@ export async function GET(
   const db = supabaseAdmin();
   const { sessionId } = params;
 
-  const { data: session, error: sessionError } = await db
-    .from("game_sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .single();
+  // Запросы сгруппированы по зависимостям и идут параллельно: раньше их было
+  // 16 подряд (каждый — полный сетевой круг до Supabase, ~0.35 с), теперь 4 круга.
+  const NO_ID = "00000000-0000-0000-0000-000000000000";
 
-  if (sessionError || !session) {
+  // Круг 1: партия и её состояние
+  const [sessionRes, stateRes] = await Promise.all([
+    db.from("game_sessions").select("*").eq("id", sessionId).single(),
+    db.from("session_state").select("*").eq("session_id", sessionId).single(),
+  ]);
+  const session = sessionRes.data;
+  if (sessionRes.error || !session) {
     return NextResponse.json({ error: "Партия не найдена" }, { status: 404 });
   }
-
-  const { data: state, error: stateError } = await db
-    .from("session_state")
-    .select("*")
-    .eq("session_id", sessionId)
-    .single();
-
-  if (stateError || !state) {
+  const state = stateRes.data;
+  if (stateRes.error || !state) {
     return NextResponse.json({ error: "Состояние партии не найдено" }, { status: 404 });
   }
 
-  const { data: location } = await db
-    .from("locations")
-    .select("*")
-    .eq("id", session.current_location_id)
-    .single();
+  // Круг 2: дело по покупке (кэш — не меняется)
+  const caseId = await cached(`purchase-case:${session.purchase_id}`, async () => {
+    const { data } = await db.from("purchases").select("case_id").eq("id", session.purchase_id).single();
+    return data?.case_id ?? NO_ID;
+  });
 
-  const { data: purchase } = await db
-    .from("purchases")
-    .select("case_id")
-    .eq("id", session.purchase_id)
-    .single();
+  // Круг 3: всё по делу — одновременно, из короткого кэша (данные дела, не партии)
+  const [
+    caseRecordRes,
+    caseLocationsRes,
+    caseSuspectsRes,
+    caseExpertsRes,
+    autoGrantRes,
+    phoneCallsRes,
+    avtomobilRes,
+    topicsRes,
+    accusationRes,
+  ] = await cached(`case-static:${caseId}`, () => Promise.all([
+    db.from("cases").select("map_image_url").eq("id", caseId).single(),
+    // все поля: отсюда же берётся текущая локация (без отдельного запроса)
+    db.from("locations").select("*").eq("case_id", caseId),
+    db
+      .from("characters")
+      .select(
+        "id, name, role, intro_text, intro_audio_url, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions, unlock_evidence_ids"
+      )
+      .eq("case_id", caseId)
+      .eq("is_expert", false),
+    // Эксперты-консультанты — доступны всей карточкой с начала игры (вкладка «Экспертиза»).
+    db
+      .from("characters")
+      .select("id, name, role, specialization, intro_text, intro_audio_url, fixed_questions, portrait_url")
+      .eq("case_id", caseId)
+      .eq("is_expert", true),
+    // Автовыдача улик (supabase/011_graph_rules.sql)
+    db.from("evidence").select("id, name, requires_any").eq("case_id", caseId).eq("auto_grant", true),
+    db
+      .from("phone_calls")
+      // "*": колонка audio_url появляется миграцией 046; до неё запрос не падает
+      .select("*, characters(name)")
+      .eq("case_id", caseId)
+      .order("order_index", { ascending: true }),
+    db.from("evidence").select("id").eq("case_id", caseId).eq("name", "Автомобиль потерпевшего").maybeSingle(),
+    db
+      .from("topics")
+      .select(
+        "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, unlock_question_character_id, unlock_question_index, subject_character_id"
+      )
+      .eq("case_id", caseId)
+      .order("order_index", { ascending: true }),
+    db.from("case_accusation").select("required_evidence_ids, accomplices").eq("case_id", caseId).maybeSingle(),
+  ]));
+  const location = (caseLocationsRes.data ?? []).find((l: { id: string }) => l.id === session.current_location_id) ?? null;
+  const caseRecord = caseRecordRes.data;
+  const caseLocations = caseLocationsRes.data;
+  const caseSuspects = caseSuspectsRes.data;
+  const caseExperts = caseExpertsRes.data;
+  const autoGrantEvidence = autoGrantRes.data;
+  const casePhoneCalls = phoneCallsRes.data;
+  const avtomobilEvidence = avtomobilRes.data;
+  const caseTopics = topicsRes.data;
+  const accusation = accusationRes.data;
 
-  const { data: caseRecord } = await db
-    .from("cases")
-    .select("map_image_url")
-    .eq("id", purchase?.case_id)
-    .single();
+  // Все записи в session_state за этот запрос собираем в одну (круг 4)
+  const stateUpdate: Record<string, unknown> = {};
 
-  const { data: caseLocations } = await db
-    .from("locations")
-    .select("id, name, image_url, map_pos_x, map_pos_y, preview_image_url, short_description, is_searchable")
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000");
+  const autoGranted = (autoGrantEvidence ?? []).filter(
+    (e) => !state.collected_evidence.includes(e.id) && requiresAnySatisfied(e.requires_any, state.collected_evidence)
+  );
+  if (autoGranted.length > 0) {
+    const now = new Date().toISOString();
+    state.collected_evidence = [...state.collected_evidence, ...autoGranted.map((e) => e.id)];
+    state.discovered_evidence = Array.from(
+      new Set([...(state.discovered_evidence ?? []), ...autoGranted.map((e) => e.id)])
+    );
+    state.log = [
+      ...(state.log ?? []),
+      ...autoGranted.map((e) => ({ type: "evidence", outcome: "found", evidenceName: e.name, source: "ГУВД", at: now, gm: session.elapsed_minutes })),
+    ];
+    stateUpdate.collected_evidence = state.collected_evidence;
+    stateUpdate.discovered_evidence = state.discovered_evidence;
+    stateUpdate.log = state.log;
+  }
 
-  const { data: caseSuspects } = await db
-    .from("characters")
-    .select(
-      "id, name, role, intro_text, fixed_questions, location_id, portrait_url, is_suspect, is_case_subject, mentions, reactions"
-    )
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .eq("is_expert", false);
-
-  // Эксперты-консультанты (ГУВД технически, но в игре живут отдельно от
-  // "Подозреваемых и свидетелей") — доступны всей карточкой с начала игры,
-  // без discovered/mentioned-механики: см. вкладку "Экспертиза".
-  // Аскар Бейсенов (id 56dd82a2-a097-4bc3-beb2-0372ff083b81) раньше был
-  // явно исключён отсюда по решению сценариста — его реакции на "Содержимое
-  // мусорного ведра"/"Опрос соседки" (намёк на роль Ерлана-наводчика) при
-  // этом оставались в БД, но были физически недостижимы игроком. Решение
-  // пересмотрено — он снова в списке.
-  const { data: caseExperts } = await db
-    .from("characters")
-    .select("id, name, role, specialization, intro_text, fixed_questions, portrait_url")
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .eq("is_expert", true);
+  // Вопросы протокола с условием (поле requires у элемента fixed_questions):
+  // показываются, только когда все указанные улики собраны.
+  const visibleQuestions = (questions: unknown) =>
+    Array.isArray(questions)
+      ? questions
+          // idx — индекс в полном протоколе: после скрытия вопросов с условием
+          // позиции на клиенте съезжают, а question-viewed ищет вопрос по полному списку
+          .map((q: { requires?: string[] }, idx: number) => ({ ...q, idx }))
+          .filter(
+            (q: { requires?: string[] }) =>
+              !q?.requires || q.requires.every((id) => state.collected_evidence.includes(id))
+          )
+      : questions;
 
   const experts = (caseExperts ?? []).map((expert) => ({
     ...expert,
+    fixed_questions: visibleQuestions(expert.fixed_questions),
     is_expert: true,
     is_suspect: false,
     unlocked: true,
@@ -115,24 +170,35 @@ export async function GET(
     all_experts_interviewed: allExpertsInterviewed,
   };
 
-  const { data: casePhoneCalls } = await db
-    .from("phone_calls")
-    .select(
-      "id, caller_role, unlock_condition_key, dialogue_text, unlocks_location_id, order_index, characters(name)"
-    )
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .order("order_index", { ascending: true });
+
+  // Общие ключи условий (supabase/039): «evidence:<id>[,<id>…]» — у игрока есть
+  // все перечисленные улики; «any:<id>|<id>…» — есть хотя бы одна.
+  // id — это id улик в БД. Остальные ключи — именованные условия выше.
+  const callConditionMet = (key: string): boolean => {
+    if (key.startsWith("evidence:")) {
+      const ids = key.slice("evidence:".length).split(",").map((x) => x.trim()).filter(Boolean);
+      return ids.length > 0 && ids.every((id) => state.collected_evidence.includes(id));
+    }
+    if (key.startsWith("any:")) {
+      const ids = key.slice("any:".length).split("|").map((x) => x.trim()).filter(Boolean);
+      return ids.some((id) => state.collected_evidence.includes(id));
+    }
+    return !!callUnlockConditions[key];
+  };
 
   const pendingCallRow = (casePhoneCalls ?? []).find(
-    (c) => !viewedCalls.includes(c.id) && callUnlockConditions[c.unlock_condition_key]
+    (c) => !viewedCalls.includes(c.id) && callConditionMet(c.unlock_condition_key)
   );
 
   const pendingCall = pendingCallRow
     ? {
         id: pendingCallRow.id,
-        callerName: (pendingCallRow.characters as { name: string } | null)?.name ?? "",
+        callerName:
+          (pendingCallRow.characters as unknown as { name: string } | null)?.name ?? pendingCallRow.caller_name ?? "",
         callerRole: pendingCallRow.caller_role,
         dialogueText: pendingCallRow.dialogue_text,
+        style: pendingCallRow.style ?? "mobile",
+        audioUrl: (pendingCallRow as { audio_url?: string | null }).audio_url ?? null,
       }
     : null;
 
@@ -158,12 +224,6 @@ export async function GET(
   // Рината на "Автомобиль потерпевшего" (тот же паттерн, что и открытие
   // Кв. «Марата» через реакцию Рината на "Звонок Марата", см. .../present).
   // Раньше условием был допрос Валентины — заменено полностью, без fallback.
-  const { data: avtomobilEvidence } = await db
-    .from("evidence")
-    .select("id")
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .eq("name", "Автомобиль потерпевшего")
-    .maybeSingle();
 
   const parkingUnlockCondition =
     !!rinatCharacter &&
@@ -171,20 +231,27 @@ export async function GET(
     viewedReactions.includes(`${rinatCharacter.id}:${avtomobilEvidence.id}`);
   if (parkingLocation && parkingUnlockCondition) discoveredLocationIds.add(parkingLocation.id);
 
+  // Открытие локаций по уликам из данных (locations.unlock_evidence_ids,
+  // supabase/011_graph_rules.sql): достаточно любой из перечисленных улик.
+  for (const loc of caseLocations ?? []) {
+    const ids = (loc as { unlock_evidence_ids?: string[] | null }).unlock_evidence_ids;
+    if (ids && ids.length > 0 && anyCollected(ids, state.collected_evidence)) {
+      discoveredLocationIds.add(loc.id);
+    }
+  }
+
   const newlyDiscoveredLocationIds = [...discoveredLocationIds].filter(
     (id) => !state.discovered_locations.includes(id)
   );
   if (newlyDiscoveredLocationIds.length > 0) {
-    await db
-      .from("session_state")
-      .update({ discovered_locations: [...discoveredLocationIds] })
-      .eq("session_id", sessionId);
+    stateUpdate.discovered_locations = [...discoveredLocationIds];
   }
 
   const allLocations = (caseLocations ?? []).map((loc) => {
     const unlocked = discoveredLocationIds.has(loc.id);
     if (unlocked) {
-      return { ...loc, unlocked: true };
+      const { unlock_evidence_ids: _unlockIds, ...publicLoc } = loc as typeof loc & { unlock_evidence_ids?: unknown };
+      return { ...publicLoc, unlocked: true };
     }
     return { id: loc.id, map_pos_x: loc.map_pos_x, map_pos_y: loc.map_pos_y, unlocked: false };
   });
@@ -201,13 +268,6 @@ export async function GET(
   // "Спросить про..." (Дело №9704): темы, открытые по улике — доступны для
   // вопроса любому обнаруженному персонажу (см. ask/route.ts), не привязаны
   // к конкретной карточке в отличие от fixed_questions/reactions.
-  const { data: caseTopics } = await db
-    .from("topics")
-    .select(
-      "id, label, unlock_evidence_id, unlock_character_id, unlock_location_id, unlock_reaction_character_id, unlock_reaction_evidence_id, unlock_question_character_id, unlock_question_index, subject_character_id"
-    )
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .order("order_index", { ascending: true });
 
   // Условия открытия темы (см. supabase/008_topic_unlock_conditions.sql,
   // 010_viewed_questions.sql) — та же проверка, что в ask/route.ts, здесь
@@ -248,22 +308,37 @@ export async function GET(
     }
   }
 
+  // «Опрошен» = с человеком реально говорили: открыт ответ протокола,
+  // задан вопрос по теме или предъявлена улика. Просто открыть карточку — не допрос.
+  const interviewedIds = new Set<string>();
+  for (const k of [...viewedQuestions, ...viewedReactions]) interviewedIds.add(k.split(":")[0]);
+  const askedNames = new Set<string>(
+    ((state.log ?? []) as { type?: string; characterName?: string }[])
+      .filter((e) => e.type === "ask" && e.characterName)
+      .map((e) => e.characterName as string)
+  );
+
   const allSuspects = (caseSuspects ?? []).map((suspectRow) => {
     // reactions не спредим в ответ клиенту как есть — это спойлер (текст
     // реакции на конкретную улику до того, как игрок её предъявил, см.
     // present/route.ts). Наружу отдаём только has_reactions: непустой ли
     // объект, признак того, что для этого персонажа есть настоящий контент
     // "Предъявить улику" — не только is_suspect=true (см. Валентина/007).
-    const { mentions: _mentions, reactions, ...suspect } = suspectRow;
+    const { mentions: _mentions, reactions, unlock_evidence_ids: unlockEvidenceIds, ...suspect } = suspectRow;
+    // Персонаж с unlock_evidence_ids (supabase/011_graph_rules.sql) остаётся
+    // скрытым, пока не собрана любая из этих улик, даже если игрок уже был в его локации.
+    const unlockedByEvidence = anyCollected(unlockEvidenceIds, state.collected_evidence);
     const hasReactions = Object.keys(reactions ?? {}).length > 0;
     const isValentina = suspect.id === valentinaCharacter?.id;
 
     // Валентину показывает/скрывает ТОЛЬКО motherUnlocked — mentions-механика
     // её не касается ни в какую сторону (см. п.4 ТЗ), поэтому для неё mentions
     // не проверяется вовсе, что бы ни было в session_state.
-    const discovered = isValentina
-      ? state.discovered_characters.includes(suspect.id) && motherUnlocked
-      : state.discovered_characters.includes(suspect.id);
+    const discovered =
+      unlockedByEvidence &&
+      (isValentina
+        ? state.discovered_characters.includes(suspect.id) && motherUnlocked
+        : state.discovered_characters.includes(suspect.id));
     const mentioned = !isValentina && !discovered && mentionedIds.has(suspect.id);
 
     if (!discovered && !mentioned) {
@@ -285,12 +360,14 @@ export async function GET(
     const fixedQuestions =
       isAliya && aliyaStage2
         ? [...(suspect.fixed_questions ?? []), ALIYA_FOLLOWUP_QUESTION]
-        : suspect.fixed_questions;
+        : visibleQuestions(suspect.fixed_questions);
     // "В розыске" берётся из текста role (например «В РОЗЫСКЕ — личность не
     // установлена» у «Марата») — отдельного поля-статуса в схеме нет.
     const wanted = (suspect.role ?? "").toUpperCase().includes("РОЗЫСК");
     return {
       ...suspect,
+      // после событий партии человек может быть в другом месте (lib/relocations.ts)
+      location_id: effectiveLocationId(suspect.id, suspect.location_id, viewedCalls, state.collected_evidence),
       fixed_questions: fixedQuestions,
       unlocked: true,
       mentioned: false,
@@ -301,25 +378,53 @@ export async function GET(
       // показывать бейдж (например, только для is_suspect на "Люди здесь")
       // решают уже потребители поля, не этот флаг.
       viewed: viewedCharacters.includes(suspect.id),
+      interviewed: interviewedIds.has(suspect.id) || askedNames.has(suspect.name),
       wanted,
       has_reactions: hasReactions,
     };
   });
 
-  const { data: collectedEvidenceDetails } = await db
-    .from("evidence")
-    .select("id, name, description, generic_category")
-    .in("id", state.collected_evidence.length ? state.collected_evidence : ["00000000-0000-0000-0000-000000000000"]);
+  // Круг 4: детали собранных улик + запись изменений состояния — параллельно
+  const [collectedRes] = await Promise.all([
+    db
+      .from("evidence")
+      .select("id, name, description, generic_category, image_url, kind")
+      .in("id", state.collected_evidence.length ? state.collected_evidence : [NO_ID]),
+    Object.keys(stateUpdate).length > 0
+      ? db.from("session_state").update(stateUpdate).eq("session_id", sessionId)
+      : Promise.resolve(null),
+  ]);
+  // Кто подписал документ: тот, кто выдал улику (реакция, вопрос протокола,
+  // granted_by). Нужна для подписей на бланках (components/EvidenceForm.tsx).
+  const signers = await cached(`case-signers:${caseId}`, async () => {
+    const [charsRes, evRes] = await Promise.all([
+      db.from("characters").select("id, name, is_expert, reaction_rules, fixed_questions").eq("case_id", caseId),
+      db.from("evidence").select("id, granted_by_character_id").eq("case_id", caseId),
+    ]);
+    const map: Record<string, { id: string; name: string }> = {};
+    const chars = charsRes.data ?? [];
+    const byId = new Map(chars.map((c) => [c.id as string, { id: c.id as string, name: c.name as string }]));
+    for (const e of evRes.data ?? []) {
+      const who = e.granted_by_character_id ? byId.get(e.granted_by_character_id) : undefined;
+      if (who) map[e.id] = who;
+    }
+    for (const c of chars) {
+      const me = { id: c.id as string, name: c.name as string };
+      for (const q of (c.fixed_questions ?? []) as { grants_evidence_id?: string }[]) {
+        if (q?.grants_evidence_id && !map[q.grants_evidence_id]) map[q.grants_evidence_id] = me;
+      }
+      for (const r of (c.reaction_rules ?? []) as { grants?: string[] }[]) {
+        for (const g of r?.grants ?? []) if (!map[g]) map[g] = me;
+      }
+    }
+    return map;
+  });
+  const collectedEvidenceDetails = (collectedRes.data ?? []).map((e) => ({ ...e, signer: signers[e.id] ?? null }));
 
   // Готовность к финальному экрану "Обвинение" (Дело №9704): считается на
   // сервере из уже собранных полей session_state, наружу отдаётся только
   // булев флаг — ни required_evidence_ids, ни organizer/accomplices сюда
   // не попадают, чтобы не спойлерить условия до самого экрана.
-  const { data: accusation } = await db
-    .from("case_accusation")
-    .select("required_evidence_ids, accomplices")
-    .eq("case_id", purchase?.case_id ?? "00000000-0000-0000-0000-000000000000")
-    .maybeSingle();
 
   const requiredEvidenceIds: string[] = accusation?.required_evidence_ids ?? [];
   const accomplices: { character_id: string; required_reaction_evidence_id: string }[] =
@@ -346,5 +451,7 @@ export async function GET(
     collectedEvidenceCount: state.collected_evidence.length,
     collectedEvidence: collectedEvidenceDetails ?? [],
     log: state.log ?? [],
+    // «персонаж:улика» — что игрок уже предъявлял (для пометки в «Предъявить улику»)
+    viewedReactions,
   });
 }

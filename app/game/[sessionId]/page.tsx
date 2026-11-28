@@ -1,5 +1,10 @@
 "use client";
 
+import { img, panoUrl, preloadImage } from "@/lib/img";
+
+import RichText, { tp } from "@/components/RichText";
+import EvidencePhoto from "@/components/EvidencePhoto";
+import EvidenceForm from "@/components/EvidenceForm";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import PanoramaViewer from "@/components/PanoramaViewer";
@@ -7,12 +12,18 @@ import EvidenceSearch from "@/components/EvidenceSearch";
 import MapView from "@/components/MapView";
 import Sidebar, { SidebarTab } from "@/components/Sidebar";
 import Loader from "@/components/Loader";
+import { byGender } from "@/lib/gender";
 import SuspectsList, { SuspectListItem } from "@/components/SuspectsList";
 import ExpertsList from "@/components/ExpertsList";
 import SuspectDetail from "@/components/SuspectDetail";
 import IntroScreen from "@/components/IntroScreen";
 import AccusationScreen from "@/components/AccusationScreen";
 import PhoneCallOverlay, { PendingCall } from "@/components/PhoneCallOverlay";
+import CaseJournal, { type JournalEntry } from "@/components/CaseJournal";
+import TypedText from "@/components/TypedText";
+import SearchVerdict from "@/components/SearchVerdict";
+import { paper, stamp } from "@/lib/sfx";
+import HelpGuide from "@/components/HelpGuide";
 import { getEvidenceIcon } from "@/lib/evidenceIcons";
 
 const PLACEHOLDER_PANORAMA = "https://pannellum.org/images/alma.jpg";
@@ -38,18 +49,25 @@ interface LockedLocation {
 
 type MapLocation = UnlockedLocation | LockedLocation;
 
-interface LogEntry {
-  type: string;
-  text: string;
-  at: string;
-}
+type LogEntry = JournalEntry;
 
 interface CollectedEvidenceItem {
   id: string;
   name: string;
   description: string | null;
   generic_category?: string | null;
+  image_url?: string | null;
+  kind?: "thing" | "testimony" | "expertise" | "document" | null;
+  signer?: { id: string; name: string } | null;
 }
+
+// Разделы папки дела и шапки машинописных листов
+const EVIDENCE_SECTIONS: { kind: NonNullable<CollectedEvidenceItem["kind"]>; title: string; doc: string }[] = [
+  { kind: "thing", title: "Вещественные доказательства", doc: "ПРОТОКОЛ ОСМОТРА" },
+  { kind: "testimony", title: "Показания", doc: "ИЗ ПРОТОКОЛА ДОПРОСА" },
+  { kind: "expertise", title: "Заключения экспертов", doc: "ЗАКЛЮЧЕНИЕ ЭКСПЕРТА" },
+  { kind: "document", title: "Справки и документы", doc: "СПРАВКА" },
+];
 
 interface TopicItem {
   id: string;
@@ -65,6 +83,11 @@ interface StateResponse {
     image_url: string | null;
     short_description: string | null;
     is_searchable: boolean;
+    pano_haov?: number | null;
+    search_note?: string | null;
+    pano_yaw?: number | null;
+    pano_pitch?: number | null;
+    pano_min_pitch?: number | null;
   } | null;
   allLocations: MapLocation[];
   allSuspects: SuspectListItem[];
@@ -76,6 +99,7 @@ interface StateResponse {
   mapImageUrl: string | null;
   collectedEvidence: CollectedEvidenceItem[];
   log: LogEntry[];
+  viewedReactions?: string[];
 }
 
 interface EvidencePoolItem {
@@ -89,12 +113,32 @@ function formatTime(minutes: number) {
   return `${h}:${m}`;
 }
 
+/** Пустая локация: после скольких проверенных предметов показать итог «ничего нет». */
+const SEARCH_NOTE_AFTER = 3;
+
 export default function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [state, setState] = useState<StateResponse | null>(null);
   const [pool, setPool] = useState<EvidencePoolItem[]>([]);
   const [triedIds, setTriedIds] = useState<Set<string>>(new Set());
-  const [lastResult, setLastResult] = useState<{ name: string; text: string; relevant: boolean } | null>(null);
+  // kind: found — настоящая улика; present — предмет есть, но не улика;
+  // miss — такого здесь нет; pending — ждём ответ сервера.
+  type ResultKind = "found" | "present" | "miss" | "pending";
+  const [lastResult, setLastResult] = useState<{ id?: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null } | null>(null);
+  // предъявленные в этой сессии экрана (до того, как фоном обновится состояние)
+  const [presentedLocal, setPresentedLocal] = useState<string[]>([]);
+  // с кем уже говорили в этой вкладке — штамп «Опрошен» ставим сразу, не дожидаясь /state
+  const [interviewedLocal, setInterviewedLocal] = useState<string[]>([]);
+  const markInterviewed = (id: string) => setInterviewedLocal((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  const isInterviewed = (p: { id: string; interviewed?: boolean }) => !!p.interviewed || interviewedLocal.includes(p.id);
+  // штамп «Опрошен / Не опрошен» — всем фигурантам дела (подозреваемым и свидетелям),
+  // кроме экспертов (наши сотрудники) и нарративных персонажей вводной
+  const stampable = (p: { is_expert?: boolean; is_case_subject?: boolean }) => !p.is_expert && p.is_case_subject !== false;
+  const [resultById, setResultById] = useState<Record<string, ResultKind>>({});
+  // Кэш показанных результатов: повторный клик по найденной улике / осмотренному
+  // предмету снова открывает его карточку без запроса и без траты времени.
+  type ShownResult = { id: string; name: string; text: string; relevant: boolean; kind: ResultKind; image?: string | null };
+  const [resultCache, setResultCache] = useState<Record<string, ShownResult>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<SidebarTab>("map");
   const [mapView, setMapView] = useState<"map" | "location">("map");
@@ -102,12 +146,15 @@ export default function GameScreen() {
   const [secondsLeft, setSecondsLeft] = useState(40);
   const [panoramaReady, setPanoramaReady] = useState(false);
   const [selectedSuspect, setSelectedSuspect] = useState<SuspectListItem | null>(null);
-  const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string } | null>(null);
+  const [suspectReaction, setSuspectReaction] = useState<{ evidenceName: string; text: string; audio?: string | null } | null>(null);
   const [suspectConfession, setSuspectConfession] = useState<string | null>(null);
   const [presentingEvidenceId, setPresentingEvidenceId] = useState<string | null>(null);
   const [topicAnswer, setTopicAnswer] = useState<{ topicLabel: string; text: string } | null>(null);
   const [askingTopicId, setAskingTopicId] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  // Пустая локация (search_note): итог «ничего нет» показываем не сразу,
+  // а после ответа «Нет» или когда игрок проверил несколько предметов.
+  const [saidNo, setSaidNo] = useState(false);
 
   async function loadState(options?: { silent?: boolean }) {
     if (!options?.silent) setLoading(true);
@@ -129,6 +176,12 @@ export default function GameScreen() {
     }
   }
 
+  // Панораму текущей локации начинаем грузить сразу, пока игрок читает
+  // описание и людей: к нажатию «Обыскать» она уже в кэше браузера.
+  useEffect(() => {
+    if (state?.location?.image_url) preloadImage(panoUrl(state.location.image_url, state.location.pano_haov));
+  }, [state?.location?.image_url, state?.location?.pano_haov]);
+
   useEffect(() => {
     if (sessionId) {
       loadState();
@@ -147,6 +200,32 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [locationPhase, secondsLeft, panoramaReady]);
 
+  const locationNames: Record<string, string> = Object.fromEntries(
+    (state?.allLocations ?? [])
+      .map((l) => [l.id, (l as { name?: string | null }).name ?? ""] as [string, string])
+      .filter(([, name]) => name)
+  );
+  const [traveling, setTraveling] = useState(false);
+
+  /** Переезд к человеку прямо из его карточки: экран не меняем, только локацию. */
+  async function travelTo(locationId: string) {
+    setTraveling(true);
+    try {
+      await fetch(`/api/games/${sessionId}/travel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId }),
+      });
+      setTriedIds(new Set());
+      setResultById({});
+      setResultCache({});
+      setLastResult(null);
+      await loadState({ silent: true });
+    } finally {
+      setTraveling(false);
+    }
+  }
+
   async function visitLocation(locationId: string) {
     setNavigating(true);
     try {
@@ -158,6 +237,8 @@ export default function GameScreen() {
         });
       }
       setTriedIds(new Set());
+      setResultById({});
+      setResultCache({});
       setLastResult(null);
       // Данные новой локации грузятся ДО переключения экрана — иначе hub
       // на миг рендерится с state.location от предыдущей локации (race
@@ -172,6 +253,8 @@ export default function GameScreen() {
   }
 
   function startSearch() {
+    setLastResult(null);
+    setSaidNo(false);
     setLocationPhase("searching");
     setSecondsLeft(40);
     setPanoramaReady(false);
@@ -179,6 +262,31 @@ export default function GameScreen() {
 
   async function guessEvidence(evidenceId: string) {
     const guessedItem = pool.find((p) => p.id === evidenceId);
+    // Уже открывали в этом осмотре — просто показываем снова
+    const cached = resultCache[evidenceId];
+    if (cached) {
+      setLastResult(cached);
+      return;
+    }
+    // Улика уже в папке (найдена раньше) — берём текст и фото из папки
+    const inFolder = state?.collectedEvidence.find((e) => e.id === evidenceId);
+    if (inFolder) {
+      const shown: ShownResult = {
+        id: evidenceId,
+        name: guessedItem?.name ?? inFolder.name,
+        text: inFolder.description ?? "",
+        relevant: true,
+        kind: "found",
+        image: inFolder.image_url ?? null,
+      };
+      setResultCache((prev) => ({ ...prev, [evidenceId]: shown }));
+      setLastResult(shown);
+      return;
+    }
+    // Мгновенный отклик: карточка гаснет и сразу видно, что идёт проверка,
+    // не дожидаясь ответа сервера.
+    setTriedIds((prev) => new Set(prev).add(evidenceId));
+    setLastResult({ name: guessedItem?.name ?? "", text: "Проверяем…", relevant: false, kind: "pending" });
     const res = await fetch(`/api/games/${sessionId}/evidence/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -186,28 +294,41 @@ export default function GameScreen() {
     });
     if (res.ok) {
       const data = await res.json();
-      setLastResult({
+      const kind: ResultKind = data.relevant ? "found" : data.present ? "present" : "miss";
+      const shown: ShownResult = {
+        id: evidenceId,
         name: guessedItem?.name ?? "",
         text: data.relevant ? data.description : data.message,
         relevant: data.relevant,
-      });
-      setTriedIds((prev) => new Set(prev).add(evidenceId));
+        kind,
+        image: data.relevant ? data.image_url ?? null : null,
+      };
+      setLastResult(shown);
+      if (kind === "found") stamp();
+      else paper();
+      if (kind !== "miss") setResultCache((prev) => ({ ...prev, [evidenceId]: shown }));
+      setResultById((prev) => ({ ...prev, [evidenceId]: kind }));
       loadState({ silent: true });
+    } else {
+      // Сервер не ответил — возвращаем карточку, чтобы можно было нажать ещё раз.
+      setTriedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(evidenceId);
+        return next;
+      });
+      setLastResult({ name: guessedItem?.name ?? "", text: "Не удалось проверить. Попробуйте ещё раз.", relevant: false, kind: "miss" });
     }
   }
 
   async function openSuspect(person: SuspectListItem) {
-    setNavigating(true);
-    try {
-      setSuspectReaction(null);
-      setSuspectConfession(null);
-      setTopicAnswer(null);
-      await fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" });
-      await loadState({ silent: true });
-      setSelectedSuspect(person);
-    } finally {
-      setNavigating(false);
-    }
+    // карточку открываем сразу; отметку «просмотрен» и обновление состояния — фоном
+    setSuspectReaction(null);
+    setSuspectConfession(null);
+    setTopicAnswer(null);
+    setSelectedSuspect(person);
+    fetch(`/api/games/${sessionId}/suspects/${person.id}/view`, { method: "POST" }).then(() =>
+      loadState({ silent: true })
+    );
   }
 
   async function completeInterrogation(characterId: string) {
@@ -216,6 +337,7 @@ export default function GameScreen() {
   }
 
   async function questionViewed(characterId: string, questionIndex: number) {
+    markInterviewed(characterId);
     await fetch(`/api/games/${sessionId}/suspects/${characterId}/question-viewed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -227,6 +349,8 @@ export default function GameScreen() {
   async function presentEvidenceToSuspect(evidence: CollectedEvidenceItem) {
     if (!selectedSuspect) return;
     setPresentingEvidenceId(evidence.id);
+    setSuspectConfession(null);
+    setSuspectReaction({ evidenceName: evidence.name, text: "…" });
     const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/present`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -234,16 +358,20 @@ export default function GameScreen() {
     });
     if (res.ok) {
       const data = await res.json();
-      setSuspectReaction({ evidenceName: evidence.name, text: data.reaction });
+      setSuspectReaction({ evidenceName: evidence.name, text: data.reaction, audio: data.audio ?? null });
+      setPresentedLocal((prev) => [...prev, `${selectedSuspect.id}:${evidence.id}`]);
+      markInterviewed(selectedSuspect.id);
       if (data.confession) setSuspectConfession(data.confession);
-      await loadState({ silent: true });
     }
+    // реакцию показываем сразу, состояние партии обновляем фоном
     setPresentingEvidenceId(null);
+    if (res.ok) loadState({ silent: true });
   }
 
   async function askTopic(topic: TopicItem) {
     if (!selectedSuspect) return;
     setAskingTopicId(topic.id);
+    setTopicAnswer({ topicLabel: topic.label, text: "…" });
     const res = await fetch(`/api/games/${sessionId}/suspects/${selectedSuspect.id}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -252,9 +380,10 @@ export default function GameScreen() {
     if (res.ok) {
       const data = await res.json();
       setTopicAnswer({ topicLabel: topic.label, text: data.text });
-      await loadState({ silent: true });
+      markInterviewed(selectedSuspect.id);
     }
     setAskingTopicId(null);
+    if (res.ok) loadState({ silent: true });
   }
 
   async function answerCall(callId: string) {
@@ -297,7 +426,10 @@ export default function GameScreen() {
 
     const introCharacter = state.allSuspects.find(
       (s) => s.unlocked && s.name === "Азамат Нурланович"
-    );
+    ) ??
+      // Другие дела: персонаж вводной сцены — не фигурант дела (is_case_subject=false)
+      // в стартовой локации, см. supabase/005_case_subject_flag.sql.
+      state.allSuspects.find((s) => s.unlocked && s.is_case_subject === false);
     return (
       <div className="container">
         {introCharacter && (
@@ -307,11 +439,18 @@ export default function GameScreen() {
     );
   }
 
+  // Сколько предметов на этой локации уже проверено (кроме найденных улик)
+  const checkedHere = Object.values(resultById).filter((k) => k === "present" || k === "miss").length;
+  // Эксперт-криминалист подписывает протоколы осмотра
+  const criminalist = state?.experts?.find((x: { name?: string }) => /Сеитова/.test(x.name ?? "")) ?? null;
+  const searchConcluded = !!state?.location?.search_note && (saidNo || checkedHere >= SEARCH_NOTE_AFTER);
+
   return (
     <div className="game-shell">
-      {state.pendingCall && (
+      {state.pendingCall && !selectedSuspect && locationPhase !== "searching" && !navigating && (
         <PhoneCallOverlay
           call={state.pendingCall}
+          elapsedMinutes={state.session.elapsed_minutes}
           onAnswer={() => answerCall(state.pendingCall!.id)}
           onClose={closeCall}
         />
@@ -342,6 +481,14 @@ export default function GameScreen() {
               reaction={suspectReaction}
               confession={suspectConfession}
               presentingId={presentingEvidenceId}
+              presentedIds={
+                new Set([
+                  ...(state.viewedReactions ?? [])
+                    .filter((k) => k.startsWith(`${selectedSuspect.id}:`))
+                    .map((k) => k.slice(selectedSuspect.id.length + 1)),
+                  ...presentedLocal.filter((k) => k.startsWith(`${selectedSuspect.id}:`)).map((k) => k.slice(selectedSuspect.id.length + 1)),
+                ])
+              }
               onPresent={presentEvidenceToSuspect}
               onInterrogationComplete={completeInterrogation}
               onQuestionViewed={questionViewed}
@@ -349,6 +496,12 @@ export default function GameScreen() {
               topicAnswer={topicAnswer}
               askingTopicId={askingTopicId}
               onAsk={askTopic}
+              onSite={!selectedSuspect.location_id || selectedSuspect.location_id === state.location?.id}
+              placeName={selectedSuspect.location_id ? locationNames[selectedSuspect.location_id] : null}
+              onTravel={
+                selectedSuspect.location_id ? () => travelTo(selectedSuspect.location_id as string) : undefined
+              }
+              traveling={traveling}
             />
           </>
         ) : (
@@ -379,14 +532,14 @@ export default function GameScreen() {
         {tab === "map" && mapView === "location" && locationPhase === "hub" && (
           <>
             <div className="card">
-              <h2>{state.location?.name}</h2>
+              <h2>{tp(state.location?.name)}</h2>
               {state.location?.short_description && (
-                <p className="muted">{state.location.short_description}</p>
+                <RichText text={state.location.short_description} className="rt-location muted" />
               )}
             </div>
 
             <div className="people-sheet-tab-row">
-              <span className="people-sheet-tab">Место · {state.location?.name}</span>
+              <span className="people-sheet-tab">Место · {tp(state.location?.name)}</span>
             </div>
             <div className="people-sheet-card">
               {(() => {
@@ -421,7 +574,7 @@ export default function GameScreen() {
                             return (
                               <div key={person.id} className="people-slip people-slip-locked">
                                 <div className="people-slip-info">
-                                  <p className="people-slip-name">{person.name}</p>
+                                  <p className="people-slip-name">{tp(person.name)}</p>
                                   <p className="people-slip-role">
                                     Вернитесь после разговора с Алией Сартаковой
                                   </p>
@@ -441,7 +594,9 @@ export default function GameScreen() {
                                 {person.portrait_url ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={person.portrait_url}
+                                    src={img(person.portrait_url, { w: 200 })}
+                                    loading="lazy"
+                                    decoding="async"
                                     alt={person.name ?? ""}
                                     className="people-slip-photo"
                                   />
@@ -459,19 +614,19 @@ export default function GameScreen() {
                               </div>
 
                               <div className="people-slip-info">
-                                <p className="people-slip-name">{person.name}</p>
-                                {person.role && <p className="people-slip-role">{person.role}</p>}
+                                <p className="people-slip-name">{tp(person.name)}</p>
+                                {person.role && <p className="people-slip-role">{tp(person.role)}</p>}
                               </div>
 
                               <div className="people-slip-side">
-                                {person.is_suspect && person.viewed && (
+                                {stampable(person) && isInterviewed(person) && (
                                   <span className="people-slip-stamp people-slip-stamp-interviewed">
-                                    Опрошен
+                                    {byGender(person.name, "Опрошен", "Опрошена")}
                                   </span>
                                 )}
-                                {person.is_suspect && !person.viewed && (
+                                {stampable(person) && !isInterviewed(person) && (
                                   <span className="people-slip-stamp people-slip-stamp-not-interviewed">
-                                    Не опрошен
+                                    {byGender(person.name, "Не опрошен", "Не опрошена")}
                                   </span>
                                 )}
                                 <span className="people-slip-cta">{interviewLabel}</span>
@@ -541,9 +696,13 @@ export default function GameScreen() {
             </div>
 
             <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-              <h3>Осмотр места «{state.location?.name}»</h3>
+              <h3>Осмотр места «{tp(state.location?.name)}»</h3>
               <PanoramaViewer
-                imageUrl={state.location?.image_url || PLACEHOLDER_PANORAMA}
+                imageUrl={panoUrl(state.location?.image_url, state.location?.pano_haov) || PLACEHOLDER_PANORAMA}
+                haov={state.location?.pano_haov}
+                startYaw={state.location?.pano_yaw}
+                startPitch={state.location?.pano_pitch}
+                minPitch={state.location?.pano_min_pitch}
                 onReady={() => setPanoramaReady(true)}
               />
             </div>
@@ -555,22 +714,57 @@ export default function GameScreen() {
             <h2 className="evidence-timeout-title">⏱ Время осмотра истекло</h2>
             <p className="evidence-timeout-subtitle">Вы можете вернуться и осмотреть место ещё раз.</p>
 
-            <EvidenceSearch pool={pool} onGuess={guessEvidence} triedIds={triedIds} />
+            <EvidenceSearch
+              pool={pool}
+              onGuess={guessEvidence}
+              triedIds={triedIds}
+              resultById={resultById}
+              activeId={lastResult?.id}
+              foundIds={new Set(state.collectedEvidence.map((e) => e.id))}
+              onAnswerNo={() => setSaidNo(true)}
+            />
 
             {lastResult && (
-              <div className={`evidence-result${lastResult.relevant ? " is-relevant" : ""}`}>
-                <div className="evidence-result-label">{lastResult.name}</div>
-                <p>{lastResult.text}</p>
+              <div
+                key={lastResult.name + lastResult.kind}
+                className={`evidence-result is-${lastResult.kind}${lastResult.relevant ? " is-relevant" : ""}`}
+              >
+                <div className="evidence-result-head">
+                  <div className="evidence-result-label">{tp(lastResult.name)}</div>
+                  {lastResult.kind === "found" && <span className="evidence-stamp">Улика · в папке дела</span>}
+                  {lastResult.kind === "present" && <span className="evidence-badge">К делу не относится</span>}
+                  {lastResult.kind === "miss" && <span className="evidence-badge is-muted">Не найдено</span>}
+                </div>
+                <div className={lastResult.image ? "evidence-result-body has-photo" : "evidence-result-body"}>
+                  {lastResult.kind === "found" ? (
+                    <EvidenceForm kind="thing" name={lastResult.name} text={lastResult.text} place={state.location?.name} criminalist={criminalist} />
+                  ) : (
+                    <TypedText text={lastResult.text} className="evidence-result-text" />
+                  )}
+                  {lastResult.image && <EvidencePhoto src={lastResult.image} caption={lastResult.name} />}
+                </div>
               </div>
             )}
 
+            {searchConcluded && (
+              <SearchVerdict note={state.location!.search_note!} />
+            )}
+
             <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
-              <button className="people-sheet-search-btn" onClick={startSearch}>
-                🔍 Осмотреть снова
-              </button>
-              <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
-                ✅ Закончить осмотр
-              </button>
+              {!searchConcluded && (
+                <button className="people-sheet-search-btn" onClick={startSearch}>
+                  🔍 Осмотреть снова
+                </button>
+              )}
+              {searchConcluded ? (
+                <button className="people-sheet-search-btn" onClick={() => setLocationPhase("hub")}>
+                  👥 Поговорить с людьми
+                </button>
+              ) : (
+                <button className="map-return-btn" onClick={() => setLocationPhase("hub")}>
+                  ✅ Закончить осмотр
+                </button>
+              )}
               <button className="map-return-btn" onClick={() => setMapView("map")}>
                 🗺 Карта Алматы
               </button>
@@ -578,7 +772,14 @@ export default function GameScreen() {
           </div>
         )}
 
-        {tab === "suspects" && <SuspectsList suspects={state.allSuspects} onSelect={openSuspect} />}
+        {tab === "suspects" && (
+          <SuspectsList
+            suspects={state.allSuspects.map((s) => (isInterviewed(s) ? { ...s, interviewed: true } : s))}
+            onSelect={openSuspect}
+            currentLocationId={state.location?.id}
+            locationNames={locationNames}
+          />
+        )}
 
         {tab === "expertise" && <ExpertsList experts={state.experts} onSelect={openSuspect} />}
 
@@ -597,19 +798,43 @@ export default function GameScreen() {
                 <span>Пока ничего не найдено — осмотрите локации.</span>
               </div>
             ) : (
-              <div className="evidence-doc-list">
-                {state.collectedEvidence.map((e) => {
-                  const Icon = getEvidenceIcon(e);
+              <div className="evidence-sections">
+                {EVIDENCE_SECTIONS.map((sec) => {
+                  const items = state.collectedEvidence.filter((e) => (e.kind ?? "thing") === sec.kind);
+                  if (items.length === 0) return null;
                   return (
-                    <div key={e.id} className="evidence-doc">
-                      <div className="evidence-doc-body">
-                        <h3 className="evidence-doc-name">
-                          <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
-                          {e.name}
-                        </h3>
-                        <p className="evidence-doc-description">{e.description}</p>
+                    <section key={sec.kind} className={`evidence-section is-${sec.kind}`}>
+                      <h2 className="evidence-section-title">
+                        <span>{sec.title}</span>
+                        <span className="evidence-section-count">{items.length}</span>
+                      </h2>
+                      <div className="evidence-doc-list">
+                        {items.map((e) => {
+                          const Icon = getEvidenceIcon(e);
+                          return (
+                            <div key={e.id} className={`evidence-doc is-${sec.kind}`}>
+                              <div className="evidence-doc-body">
+                                <h3 className="evidence-doc-name">
+                                  <Icon className="evidence-doc-icon" strokeWidth={1.75} aria-hidden />
+                                  {tp(e.name)}
+                                </h3>
+                                <div className={e.image_url ? "evidence-result-body has-photo" : undefined}>
+                                  <EvidenceForm
+                                    kind={sec.kind}
+                                    name={e.name}
+                                    text={e.description}
+                                    sheet={state.collectedEvidence.findIndex((x) => x.id === e.id) + 1}
+                                    signer={e.signer}
+                                    criminalist={criminalist}
+                                  />
+                                  {e.image_url && <EvidencePhoto src={e.image_url} caption={e.name} />}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
+                    </section>
                   );
                 })}
               </div>
@@ -618,33 +843,12 @@ export default function GameScreen() {
         )}
 
         {tab === "accuse" && (
-          <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} />
+          <AccusationScreen sessionId={sessionId} collectedEvidence={state.collectedEvidence} people={state.allSuspects} />
         )}
 
-        {tab === "log" && (
-          <div className="card">
-            <h2>Журнал действий</h2>
-            {state.log.length === 0 && <p className="muted">Пока пусто.</p>}
-            {[...state.log].reverse().map((entry, i) => (
-              <div key={i} className="log-entry">
-                <div className="time">
-                  {new Date(entry.at).toLocaleTimeString("ru-RU")}
-                </div>
-                {entry.text}
-              </div>
-            ))}
-          </div>
-        )}
+        {tab === "log" && <CaseJournal entries={state.log} />}
 
-        {tab === "help" && (
-          <div className="card">
-            <h2>Как играть</h2>
-            <p>1. На карте кликайте открытые точки → «Осмотреть».</p>
-            <p>2. На месте нажмите «Да» на вопрос про улики и выбирайте варианты из облака.</p>
-            <p>3. Собранные улики смотрите во вкладке «Улики».</p>
-            <p>4. Когда будете готовы — переходите в «Обвинение» (скоро).</p>
-          </div>
-        )}
+        {tab === "help" && <HelpGuide />}
           </>
         )}
       </div>
